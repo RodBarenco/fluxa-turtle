@@ -36,6 +36,8 @@ lab/frames/
 *.mp4
 *.webm
 *.gif
+# ...except the published artworks, which are part of the documentation
+!docs/artworks/*.mp4
 
 # --- Verification harness output -----------------------------
 lab/*.png

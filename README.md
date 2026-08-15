@@ -212,8 +212,15 @@ purpose. Uncomment **one stage**, save, and see what shows up. Then the next.
 The image at the top of this page is what those stages produce — captured from
 the window, not an illustration.
 
-**[docs/ARTWORKS.md](docs/ARTWORKS.md)** has eight complete compositions ready
-to paste — rosettes, spirals, mandalas, a flower. Each one comes with the image
+**[docs/artworks/one-night.md](docs/artworks/one-night.md)** is the piece to
+read first: a nest opening after dark, eight hatchlings running for the
+moonlight, and one that turns the wrong way. It comes with the video, the story
+behind it, and the whole thing ready to paste.
+
+[![One Night](docs/artworks/one-night.png)](docs/artworks/one-night.md)
+
+**[docs/ARTWORKS.md](docs/ARTWORKS.md)** has eight more compositions ready to
+paste — rosettes, spirals, mandalas, a flower. Each one comes with the image
 that this exact code produces.
 
 **[docs/RECIPES.md](docs/RECIPES.md)** has the loose pieces: ready-made

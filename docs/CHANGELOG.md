@@ -3,7 +3,32 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.5.0] — 2026-08-15
+## [0.6.0] — 2026-08-15
+
+### Added
+
+- **"One Night"** — the first artwork with a story, a video and its own
+  document: [docs/artworks/one-night.md](artworks/one-night.md). A nest opens
+  after dark, eight hatchlings run for the moonlight on the water, and one turns
+  the wrong way toward a lamp on the road. Twenty-one turtles, 83 steps, 621
+  actions.
+
+  It is also the piece that shows what the tool grew this week: the tracks are
+  dotted on the sand and solid in the water because appearance belongs to the
+  step where it is written (0.2.0); the eight of them leave on the same step and
+  arrive at their own pace; the video is one line, `export.Video(1, 0, 30)`
+  (0.5.0); and the whole thing needs 21 of the 32 turtles the stage now holds
+  (0.4.0).
+
+  The document's code block was extracted, pasted into a copy of `main.flx` and
+  rendered: pixel-identical to the published image. `lab/one_night.flx` is the
+  same artwork as a harness.
+
+- `docs/artworks/one-night.mp4` — ten seconds, written by `export.Video`, and
+  the first video the repository carries. `.gitignore` keeps ignoring `*.mp4`
+  except under `docs/artworks/`.
+
+
 
 ### Changed
 
