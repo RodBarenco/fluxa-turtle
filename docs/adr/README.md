@@ -15,3 +15,4 @@ because it came out of a runtime constraint measured in practice.
 | [0007](0007-export-as-a-png-sequence.md) | Export as a PNG sequence |
 | [0008](0008-opacity-by-mixing-with-the-background.md) | Opacity by mixing with the background |
 | [0009](0009-appearance-is-a-timeline-event.md) | An appearance change is a timeline event |
+| [0010](0010-the-video-is-a-second-pass-over-the-frames.md) | The video is a second pass over the frames |

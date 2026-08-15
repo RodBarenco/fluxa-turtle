@@ -6,11 +6,12 @@
 // by the machine's clock. A slow machine takes longer to generate, but the
 // result has the exact frame rate and the animation comes out just as smooth.
 //
-// What comes out is a sequence of numbered PNGs. Fluxa has no video encoder
-// today — no MP4, no WebM, no GIF — and there is no process spawn in the
-// stdlib. So the last step (joining the frames) is an external command, which
-// finish() prints ready to paste. Once a std.video exists it only has to
-// replace this last stage: everything else in §8 is already here.
+// What comes out is a sequence of numbered PNGs, and `to_video` turns them into
+// an MP4 without leaving Fluxa — `std.video` encodes H.264 with no external
+// process and no ffmpeg. The frames stay the primary output (adr 0007): they are
+// what an editor, a print or a contact sheet wants, and the video is one pass
+// over them (adr 0010). `finish` still prints the ffmpeg commands, for the
+// formats std.video does not write.
 
 Block Exporter {
     int on         = 0
@@ -22,6 +23,8 @@ Block Exporter {
     int hold_end   = 0        // still frames after the last one
     str dir        = "export"
     str prefix     = "frame_"
+
+    int arr guard[1] = 0      // hot-loop anchor
 
     // ── configuration ─────────────────────────────────────────────
 
@@ -81,14 +84,27 @@ Block Exporter {
         return out
     }
 
-    fn save(dyn win) nil {
-        if on == 0 { return }
-
-        str num  = pad(count)
+    // The path of frame number `i`. Built in pieces and released right after,
+    // like pad does — a chain of strings.concat that is not reassigned leaks on
+    // every call (guide §12.5). The caller owns what comes back.
+    fn frame_path(int i) str {
+        str num  = pad(i)
         str p1   = strings.concat(dir, "/")
         str p2   = strings.concat(p1, prefix)
         str p3   = strings.concat(p2, num)
         str path = strings.concat(p3, ".png")
+
+        free(num)
+        free(p1)
+        free(p2)
+        free(p3)
+        return path
+    }
+
+    fn save(dyn win) nil {
+        if on == 0 { return }
+
+        str path = frame_path(count)
 
         danger {
             dyn shot = graph.capture(win)
@@ -97,12 +113,52 @@ Block Exporter {
         }
         if err != nil { print("[export] frame ", count, ": ", err[0]) }
 
-        free(num)
-        free(p1)
-        free(p2)
-        free(p3)
         free(path)
         count = count + 1
+    }
+
+    // ── the video ─────────────────────────────────────────────────
+    //
+    // A second pass over the frames just written: each PNG is read back and
+    // appended to the video. It is not threaded through the animation loop
+    // because the video cursor is a `dyn`, and a Block cannot hold one as a
+    // field — so it lives in main.flx, next to the window and the canvas, and
+    // arrives here as a parameter (adr 0010).
+    //
+    // `keep` = 1 leaves the PNGs on disk, 0 deletes each one as it goes in and
+    // removes the folder at the end. The video is finalised by whoever opened
+    // it, with video.close — release is the caller's job, as everywhere else.
+    fn to_video(dyn v, int keep) nil {
+        int wrote = 0
+        int i = 0
+        while i < count {
+            guard[0] = i         // anchor FIRST
+            str path = frame_path(i)
+
+            danger {
+                dyn fr = image.load(path)
+                video.frame(v, fr)
+                image.discard(fr)
+            }
+            if err != nil { print("[export] video frame ", i, ": ", err[0]) }
+            if err == nil { wrote = wrote + 1 }
+
+            if keep == 0 {
+                danger { fs.delete(path) }
+                if err != nil { print("[export] could not delete ", path, ": ", err[0]) }
+            }
+
+            free(path)
+            i = i + 1
+        }
+
+        if keep == 0 {
+            danger { fs.rmdir(dir) }
+            if err != nil { print("[export] the folder ", dir, "/ was left behind: ", err[0]) }
+        }
+
+        print("[export] ", wrote, " frames written into the video, at ", fps, " fps")
+        if wrote < count { print("[export] ", count - wrote, " frames did NOT go in") }
     }
 
     // The command is built with strings.concat, not with a print of several
@@ -124,10 +180,13 @@ Block Exporter {
         str gif  = strings.concat(base, " -vf split[a][b];[a]palettegen[p];[b][p]paletteuse saida.gif")
 
         print("[export] ", count, " frames written to ", dir, "/")
-        print("[export] to assemble the video, one of these:")
-        print(mp4)
+        print("[export] for an MP4 without leaving Fluxa, hand the Exporter a video:")
+        print("  danger { dyn v = video.open(\"artwork.mp4\", 800, 600, ", fps, ")  exporter.Exporter.to_video(v, 0)  video.close(v) }")
+        print("[export] for the formats std.video does not write:")
         print(webm)
         print(gif)
+        print("[export] or, for x264 with your own settings:")
+        print(mp4)
 
         free(f)
         free(a1)

@@ -21,6 +21,7 @@ import std math
 import std strings
 import std time
 import std fs
+import std video
 import static config
 import static stage
 import static pool
@@ -144,12 +145,24 @@ leo.go(1, 500.0, 0.0)
 // ═══════════════════ STAGE 6 — export ═══════════════════
 //
 // Redoes the artwork from step 1 and writes one PNG per frame. Time advances
-// 1/fps per frame, so the result does not depend on the machine's speed. At
-// the end, the command to assemble the video is printed in the terminal.
+// 1/fps per frame, so the result does not depend on the machine's speed: a slow
+// machine takes longer to generate and the video comes out exactly the same.
 
 // exporter.Exporter.setup("export", 60)
 // exporter.Exporter.hold(30, 90)
 // runner.Runner.export(win, canvas, bg)
+
+// The MP4 is a second pass over those frames, written by Fluxa itself — no
+// ffmpeg. The video cursor is a `dyn`, so it lives here, like the window and the
+// canvas, and the Exporter takes it as a parameter. The 0 deletes the PNGs once
+// they are in the video; pass 1 to keep both.
+
+// danger {
+//     dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
+//     exporter.Exporter.to_video(mp4, 0)
+//     video.close(mp4)
+// }
+// if err != nil { print("video: ", err[0]) }
 
 
 // ═══════════════════════════ execution ═══════════════════════════

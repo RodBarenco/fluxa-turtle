@@ -91,7 +91,7 @@ never open. `ffmpeg` is worth having too, but only to turn an export into a
 video.
 
 The libs this project uses are already declared in `fluxa.toml`: `std.graph`,
-`std.image`, `std.math`, `std.time`, `std.strings` and `std.fs`.
+`std.image`, `std.math`, `std.time`, `std.strings`, `std.fs` and `std.video`.
 
 ### Windows
 
@@ -162,7 +162,7 @@ purpose. Uncomment **one stage**, save, and see what shows up. Then the next.
 | 3 | a second turtle drawing at the same time, entering without a trail |
 | 4 | the stroke changing from the step where you change it |
 | 5 | an image as the background |
-| 6 | exporting the artwork as frames |
+| 6 | exporting the artwork as frames and as an MP4 |
 
 The image at the top of this page is what those stages produce — captured from
 the window, not an illustration.
@@ -292,12 +292,30 @@ beginning and renders each frame with time advancing `1/fps` per frame — never
 by the clock. A slow machine takes longer to generate, and the video comes out
 exactly the same. Two runs produce byte-identical frames.
 
-What comes out is a sequence of numbered PNGs. Fluxa does not have a video
-encoder yet, so the last step is an external command — which the program itself
-prints, ready to paste, when it finishes:
+What comes out is a sequence of numbered PNGs. To get an **MP4**, hand the
+Exporter a video — Fluxa writes H.264 itself, with no ffmpeg and no external
+process:
+
+```fluxa
+danger {
+    dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
+    exporter.Exporter.to_video(mp4, 0)   // 0 deletes the PNGs, 1 keeps them
+    video.close(mp4)
+}
+if err != nil { print("video: ", err[0]) }
+```
+
+The video is a second pass over the frames that were just written, not a
+different render — the same exact images, in order
+([adr 0010](docs/adr/0010-the-video-is-a-second-pass-over-the-frames.md)). The
+cursor lives in `main.flx`, like the window and the canvas, because a `dyn`
+cannot be a Block field; whoever opens it closes it.
+
+For WebM or GIF the frames are still there, and `finish()` prints the ffmpeg
+command ready to paste:
 
 ```bash
-ffmpeg -framerate 60 -i export/frame_%06d.png -c:v libx264 -pix_fmt yuv420p -crf 18 out.mp4
+ffmpeg -framerate 60 -i export/frame_%06d.png -vf split[a][b];[a]palettegen[p];[b][p]paletteuse out.gif
 ```
 
 ---
@@ -334,7 +352,8 @@ comes later in the list. That is why `runner` is last.
 - **Opacity is not an alpha channel.** `graph.draw_line` only takes R, G and B,
   so transparency is obtained by mixing with the background. Two translucent
   paths crossing do not add up.
-- **No video encoder.** Exporting delivers numbered PNGs.
+- **MP4 only, for video.** `std.video` writes H.264; WebM and GIF still go
+  through ffmpeg, from the frames.
 - **Saving in the middle of a movement restarts that step.** Only finished
   steps count; partial progress does not survive the reload yet.
 - **512 appearance changes** across the whole artwork. Past that the extra ones
@@ -353,6 +372,7 @@ The harnesses in `lab/` check the behaviour and produce an image:
 ./fluxa run lab/speed.flx       # each step's duration against the expected one
 ./fluxa run lab/stress.flx      # 3000 steps: rebuild and per-frame cost
 ./fluxa run lab/export.flx      # frame count and determinism
+./fluxa run lab/video.flx       # the MP4: frame count, size and frame rate
 ./fluxa run lab/background.flx  # the three background image modes
 ./fluxa run lab/preview.flx     # the main.flx artwork with everything on
 ```

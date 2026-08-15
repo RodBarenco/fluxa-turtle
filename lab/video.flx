@@ -1,0 +1,85 @@
+// lab/video.flx — the export as an MP4 (pillars §8).
+// Run from the project root:  ./fluxa run lab/video.flx
+//
+// Exports a small artwork as frames, turns those frames into a video, then
+// reads the video back and checks it against what was declared: the frame
+// count, the size and the frame rate. The PNGs are deleted on the way in, so
+// the folder must be gone at the end too.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+dyn win    = graph.init(800, 600, "video")
+dyn canvas = image.new(800, 600)
+dyn bg     = image.new(1, 1)
+
+stage.Stage.background(18, 18, 26)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+// Three steps of one second each at 30 fps, plus the stills: 5 + 90 + 5 = 100
+// frames. The speed is declared so the arithmetic is exact — 300 px at 300 px/s
+// is one second, whatever the machine does.
+Block a typeof turtle.Turtle
+a.spawn(100.0, 300.0)
+a.color(90, 200, 255)
+a.path_color(90, 200, 255)
+a.path_width(6)
+a.speed(300.0)
+a.ring(1, 3, 300.0, 25.0)
+
+exporter.Exporter.setup("lab/frames", 30)
+exporter.Exporter.hold(5, 5)
+runner.Runner.export(win, canvas, bg)
+
+int declared = exporter.Exporter.frames()
+print("frames exported ......  ", declared, "   (expected 100: 5 + 90 + 5)")
+
+danger {
+    dyn mp4 = video.open("lab/artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
+    exporter.Exporter.to_video(mp4, 0)
+    video.close(mp4)
+}
+if err != nil { print("video write: ", err[0]) }
+
+print("frames folder left ...  ", fs.isdir("lab/frames"), "   (expected false)")
+print("video on disk ........  ", fs.size("lab/artwork.mp4"), " bytes")
+
+danger {
+    dyn p = video.play_open("lab/artwork.mp4")
+    dyn n = video.info(p)
+    print("read back ............  ", n[0], "x", n[1], " at ", n[2], " fps, ", n[3], " frames")
+
+    // Decoding to the middle of the artwork and saving that frame: the check
+    // that what came out is the drawing, not a hundred empty frames. Every
+    // frame has to be released — the collector runs at a safe point and this
+    // loop never reaches one, so an undiscarded frame stays resident.
+    int i = 0
+    while i < 60 {
+        dyn fr = video.play_frame(p)
+        if i == 59 { image.save(fr, "lab/video_frame.png") }
+        image.discard(fr)
+        i = i + 1
+    }
+    print("frame 60 saved to ....  lab/video_frame.png")
+
+    video.play_close(p)
+}
+if err != nil { print("video read: ", err[0]) }
+
+image.discard(bg)
+image.discard(canvas)
+graph.close(win)

@@ -33,6 +33,11 @@ side.
   otherwise: it prints the command.
 - Once a `std.video` exists it only replaces that last stage — `Exporter.save()`
   starts feeding the encoder instead of the disk, and nothing else changes.
+  *(It arrived in language v0.30, and that last part turned out to be wrong: the
+  video cursor is a `dyn`, which a Block cannot hold, so the encoder is fed by a
+  second pass over the frames instead of from inside the frame loop — see
+  [0010](0010-the-video-is-a-second-pass-over-the-frames.md). The PNG sequence
+  stayed the primary output.)*
 - The command must be built with `strings.concat`, not with a multi-argument
   `print`: `print` separates its arguments with spaces and the result does not
   paste into a terminal.

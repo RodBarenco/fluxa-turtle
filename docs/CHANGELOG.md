@@ -3,6 +3,32 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] — 2026-08-15
+
+### Added
+
+- **Export straight to MP4**, with no ffmpeg and no external process.
+  `Exporter.to_video(v, keep)` reads back the frames the export just wrote and
+  appends them to a `std.video` cursor; `keep = 0` deletes each PNG as it goes in
+  and removes the folder at the end. The cursor is opened and closed in
+  `main.flx`, because a `dyn` cannot be a Block field — which is also why the
+  video is a second pass instead of being fed from inside the frame loop
+  ([adr 0010](adr/0010-the-video-is-a-second-pass-over-the-frames.md)).
+- `Exporter.frame_path(i)` — the path of a numbered frame, now shared by `save`
+  and `to_video`.
+- `lab/video.flx` — exports 100 frames, turns them into an MP4, checks the
+  folder is gone, then reads the video back: 800×600 at 30 fps, 100 frames, and
+  a decoded frame from the middle saved as a PNG to prove it is the artwork and
+  not a hundred empty images.
+- `std.video` in `fluxa.toml`.
+
+### Changed
+
+- The render path is untouched: the export is byte-identical to 0.2.0 and the
+  video is a function of those exact frames.
+- `finish()` now prints the in-Fluxa MP4 recipe first, and keeps the ffmpeg
+  commands for WebM, GIF and a hand-tuned x264.
+
 ## [0.2.0] — 2026-08-15
 
 ### Changed
