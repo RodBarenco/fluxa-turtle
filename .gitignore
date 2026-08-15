@@ -1,0 +1,50 @@
+# ============================================================
+# Fluxa Turtle
+# ============================================================
+
+# --- Working notes, not part of the product ------------------
+AGENTS.md
+FLUXA_GAPS.md
+*.pdf
+
+# --- Reference project, not part of this code ----------------
+# nave/ (The Starfight Rebellion) is here only as an example of
+# the Fluxa programming pattern. It has its own repository.
+nave/
+
+# --- The runtime, built from the language repository ---------
+# github.com/RodBarenco/fluxa-lang — a platform-specific binary
+# does not belong in the source of an artwork tool. The README
+# says how to build it.
+/fluxa
+
+# --- The language documentation, copied here to work offline -
+# It belongs to the language repository and drifts from it.
+fluxa-docs/
+
+# --- Working renders -----------------------------------------
+# docs/artworks/ is published (ARTWORKS.md shows those images).
+# docs/obras/ is the scratch folder they came out of.
+docs/obras/
+
+# --- Export output -------------------------------------------
+# Frames and videos are generated from the source code: what is
+# worth versioning is the artwork (main.flx), not its render.
+export/
+lab/frames/
+*.mp4
+*.webm
+*.gif
+
+# --- Verification harness output -----------------------------
+lab/*.png
+
+# --- System --------------------------------------------------
+core
+core.*
+*.core
+.DS_Store
+*.swp
+*.log
+.vscode/
+.idea/

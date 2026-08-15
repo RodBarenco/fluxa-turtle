@@ -1,0 +1,45 @@
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+dyn win    = graph.init(800, 600, "batch")
+dyn canvas = image.new(800, 600)
+dyn bg     = image.new(1, 1)
+pool.Pool.reset()
+timeline.Timeline.reset()
+stage.Stage.background(16, 17, 24)
+
+Block leo typeof turtle.Turtle
+leo.spawn(150.0, 321.9)
+leo.color(90, 230, 230)
+leo.path_color(90, 230, 230)
+leo.path_width(1)
+leo.hide()
+
+leo.go(1, 470.0, 0.0)
+leo.ring(2, 35, 470.0, 170.0)
+
+print("rosette via ring: actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+
+runner.Runner.rebuild(win, canvas, bg, timeline.Timeline.max_step())
+runner.Runner.frame(win, canvas)
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/batch.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+image.discard(bg)
+image.discard(canvas)
+graph.close(win)

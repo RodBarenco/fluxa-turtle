@@ -1,0 +1,18 @@
+// static/config.flx — the numbers the whole project shares.
+// Every Block that owns a subject keeps its own knobs in its fields.
+
+fn W()   int { return 800 }
+fn H()   int { return 600 }
+fn FPS() int { return 60 }
+
+fn MAX_TURTLES()  int { return 8 }       // pool size in pool.flx
+fn MAX_ACTIONS()  int { return 8192 }    // queue size in timeline.flx
+fn MAX_SEGMENTS() int { return 2048 }    // not-yet-baked segments, per save
+
+fn SPEED()      float { return 200.0 }   // pixels per second, default
+fn SIZE()       float { return 9.0 }     // turtle body radius
+fn PATH_WIDTH()   int { return 2 }
+
+fn BG_R() int { return 18 }
+fn BG_G() int { return 18 }
+fn BG_B() int { return 26 }

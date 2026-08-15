@@ -1,0 +1,95 @@
+// lab/shot.flx — visual check of the pillar rules.
+// Run from the project root:  ./fluxa run lab/shot.flx
+//
+// Covers: simultaneity on the same step, action conflict (the second one is
+// ignored), go_silent (moves without drawing), path_off, face and speed.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+dyn win = graph.init(800, 600, "shot")
+graph.set_fps(win, 60)
+
+stage.Stage.background(18, 18, 26)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+// green square, starts pointing right
+Block leo typeof turtle.Turtle
+leo.spawn(180.0, 200.0)
+leo.color(0, 220, 140)
+leo.path_color(0, 220, 140)
+leo.path_width(3)
+
+// red, starts pointing up (face 90)
+Block ana typeof turtle.Turtle
+ana.spawn(600.0, 480.0)
+ana.color(255, 120, 90)
+ana.path_color(255, 120, 90)
+ana.path_width(2)
+ana.face(90.0)
+
+// blue: used for go_silent — the displacement leaves no trail
+Block bia typeof turtle.Turtle
+bia.spawn(120.0, 520.0)
+bia.color(90, 160, 255)
+bia.path_color(90, 160, 255)
+bia.path_width(4)
+
+// steps 1..4 — leo closes a square; ana goes up and turns; both move together
+leo.go(1, 140.0, 0.0)
+ana.go(1, 100.0, 0.0)
+
+leo.go(2, 140.0, 90.0)
+ana.go(2, 100.0, 270.0)
+
+leo.go(3, 140.0, 90.0)
+
+leo.go(4, 140.0, 90.0)
+
+// CONFLICT: leo already has an action on step 4 — this one must be ignored
+leo.go(4, 999.0, 45.0)
+
+// bia enters without drawing (step 1) and only then draws (step 2)
+bia.go_silent(1, 200.0, 0.0)
+bia.go(2, 120.0, 60.0)
+
+// rebuilds the whole composition without animating, bakes and draws a frame
+dyn canvas = image.new(800, 600)
+pool.Pool.home_all()
+painter.Painter.reset()
+graph.begin_frame(win)
+stage.Stage.clear(win)
+int s = 1
+while s <= timeline.Timeline.max_step() {
+    runner.Runner.instant(win, s)
+    s = s + 1
+}
+graph.end_frame(win)
+painter.Painter.bake(win, canvas)
+runner.Runner.frame(win, canvas)
+
+print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+print("conflicts_ignored=", timeline.Timeline.conflicts())
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/shot.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(canvas)
+graph.close(win)

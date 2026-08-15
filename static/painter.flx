@@ -1,0 +1,184 @@
+// static/painter.flx — the trail the turtles leave behind
+//
+// The whole artwork's path lives in a texture: at the start of every run the
+// finished composition is redrawn once and "baked" into the canvas with
+// graph.capture + image.blit. From then on the path costs ONE graph.draw_image
+// per frame — the texture stays cached on the GPU and is only re-uploaded when
+// the pixels change. The per-frame cost does not depend on the artwork's size.
+//
+// Measured on this machine:
+//   5000 draw_line per frame ............ 4 ms/frame
+//   3000 segments baked into a texture .. 1 ms/frame
+//
+// The pool below holds only the segments born in THIS run — the steps you just
+// wrote, not yet baked. On the next save they go into the texture and the pool
+// returns to zero. Each segment records the look it was drawn with, resolved at
+// the moment it closed: a colour change declared between two steps has to leave
+// the earlier ones alone, and these segments are redrawn every frame until the
+// next bake.
+
+Block Painter {
+    float arr ax[2048] = 0.0
+    float arr ay[2048] = 0.0
+    float arr bx[2048] = 0.0
+    float arr by[2048] = 0.0
+
+    int arr sr[2048]    = 0      // colour already mixed with the background
+    int arr sg[2048]    = 0
+    int arr sb[2048]    = 0
+    int arr sw[2048]    = 0
+    int arr sstyle[2048] = 0
+    int arr sdash[2048] = 0
+    int arr sgap[2048]  = 0
+
+    int n = 0
+    int full = 0
+    int arr guard[1] = 0     // hot-loop anchor
+
+    fn reset() nil {
+        n = 0
+        full = 0
+    }
+
+    fn add(int t, float x1, float y1, float x2, float y2) nil {
+        int opa = pool.Pool.get_opa(t)
+        if opa <= 0 { return }          // invisible: there is nothing to keep
+        if n >= 2048 {
+            full = 1
+            return
+        }
+        ax[n] = x1
+        ay[n] = y1
+        bx[n] = x2
+        by[n] = y2
+
+        sr[n]     = mix(pool.Pool.get_pr(t), stage.Stage.r(), opa)
+        sg[n]     = mix(pool.Pool.get_pg(t), stage.Stage.g(), opa)
+        sb[n]     = mix(pool.Pool.get_pb(t), stage.Stage.b(), opa)
+        sw[n]     = pool.Pool.get_pw(t)
+        sstyle[n] = pool.Pool.get_style(t)
+        sdash[n]  = pool.Pool.get_dash(t)
+        sgap[n]   = pool.Pool.get_gap(t)
+
+        n = n + 1
+    }
+
+    fn count() int { return n }
+    fn is_full() int { return full }
+
+    fn draw(dyn win) nil {
+        int i = 0
+        while i < n {
+            guard[0] = i         // anchor FIRST
+            paint(win, ax[i], ay[i], bx[i], by[i], sr[i], sg[i], sb[i], sw[i], sstyle[i], sdash[i], sgap[i])
+            i = i + 1
+        }
+    }
+
+    // Pins the just-presented frame into the path texture.
+    // graph.capture only sees the COMPLETE frame, so this has to come after
+    // end_frame. The blit copies over the buffer that already exists,
+    // preserving the canvas handle — which is what allows re-baking from
+    // inside a method without returning any dyn.
+    fn bake(dyn win, dyn canvas) nil {
+        danger {
+            dyn shot = graph.capture(win)
+            image.blit(canvas, shot, 0, 0)
+            image.discard(shot)
+        }
+        if err != nil { print("[painter] bake: ", err[0]) }
+    }
+
+    // Opacity without an alpha channel: graph.draw_line only takes R, G and B,
+    // so transparency is obtained by mixing the colour with the background.
+    // It works because the path is always drawn over the stage.
+    fn mix(int c, int bg, int opa) int { return bg + (c - bg) * opa / 100 }
+
+    // One stroke by turtle `t`, in the style she is configured with right now —
+    // which, during a step, is the style that step was declared with.
+    fn stroke(dyn win, int t, float x1, float y1, float x2, float y2) nil {
+        int opa = pool.Pool.get_opa(t)
+        if opa <= 0 { return }
+
+        paint(win, x1, y1, x2, y2,
+              mix(pool.Pool.get_pr(t), stage.Stage.r(), opa),
+              mix(pool.Pool.get_pg(t), stage.Stage.g(), opa),
+              mix(pool.Pool.get_pb(t), stage.Stage.b(), opa),
+              pool.Pool.get_pw(t), pool.Pool.get_style(t),
+              pool.Pool.get_dash(t), pool.Pool.get_gap(t))
+    }
+
+    // The same stroke with the look given explicitly. This is what the two
+    // callers have in common: `stroke` resolves the look from the pool, `draw`
+    // replays the one recorded on the segment.
+    fn paint(dyn win, float x1, float y1, float x2, float y2, int r, int g, int b, int w, int style, int dash, int gap) nil {
+        if style == 0 {
+            thick(win, x1, y1, x2, y2, r, g, b, w)
+            return
+        }
+
+        float dx = x2 - x1
+        float dy = y2 - y1
+        float ln = math.hypot(dx, dy)
+        if ln < 0.001 { return }
+
+        float ux = dx / ln
+        float uy = dy / ln
+
+        int dlen = dash
+        int dgap = gap
+        if dlen < 1 { dlen = 1 }
+        if dgap < 1 { dgap = 1 }
+        float period = math.to_float(dlen + dgap)
+
+        float pos = 0.0
+        while pos < ln {
+            guard[0] = w         // anchor FIRST
+            if style == 3 {
+                int rad = w / 2
+                if rad < 1 { rad = 1 }
+                graph.draw_circle(win, math.to_int(x1 + ux * pos), math.to_int(y1 + uy * pos), rad, r, g, b)
+            }
+            if style != 3 {
+                float stop = pos + math.to_float(dlen)
+                if stop > ln { stop = ln }
+                thick(win, x1 + ux * pos, y1 + uy * pos, x1 + ux * stop, y1 + uy * stop, r, g, b, w)
+            }
+            pos = pos + period
+        }
+    }
+
+    // graph.draw_line has no thickness: a thick line is a bundle of parallel
+    // lines offset along the segment's perpendicular.
+    fn thick(dyn win, float x1, float y1, float x2, float y2, int r, int g, int b, int w) nil {
+        int ix1 = math.to_int(x1)
+        int iy1 = math.to_int(y1)
+        int ix2 = math.to_int(x2)
+        int iy2 = math.to_int(y2)
+
+        if w <= 1 {
+            graph.draw_line(win, ix1, iy1, ix2, iy2, r, g, b)
+            return
+        }
+
+        float dx = x2 - x1
+        float dy = y2 - y1
+        float ln = math.hypot(dx, dy)
+        if ln < 0.001 {
+            graph.draw_circle(win, ix1, iy1, w / 2, r, g, b)
+            return
+        }
+
+        float px = (0.0 - dy) / ln
+        float py = dx / ln
+        float half = math.to_float(w) / 2.0
+
+        int k = 0
+        while k < w {
+            guard[0] = k         // anchor FIRST
+            float off = math.to_float(k) - half + 0.5
+            graph.draw_line(win, math.to_int(x1 + px * off), math.to_int(y1 + py * off), math.to_int(x2 + px * off), math.to_int(y2 + py * off), r, g, b)
+            k = k + 1
+        }
+    }
+}

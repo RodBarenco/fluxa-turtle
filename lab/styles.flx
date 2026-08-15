@@ -1,0 +1,128 @@
+// lab/styles.flx — appearance changes belong to the step where they are written
+// (pillars §4). Run from the project root:  ./fluxa run lab/styles.flx
+//
+// Every turtle here walks the same six steps from left to right and changes one
+// thing halfway, between the declaration of step 3 and that of step 4. The left
+// half of each line must keep the look it was drawn with, and only the right
+// half must change.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+dyn win    = graph.init(800, 600, "styles")
+dyn canvas = image.new(800, 600)
+dyn bg     = image.new(1, 1)
+
+stage.Stage.background(18, 18, 26)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+// colour: blue on the left, pink on the right
+Block a typeof turtle.Turtle
+a.spawn(60.0, 80.0)
+a.path_color(90, 200, 255)
+a.path_width(6)
+a.hide()
+a.ring(1, 3, 120.0, 0.0)
+a.path_color(255, 90, 160)
+a.ring(4, 3, 120.0, 0.0)
+
+// width: thin on the left, thick on the right
+Block b typeof turtle.Turtle
+b.spawn(60.0, 180.0)
+b.path_color(0, 220, 140)
+b.path_width(2)
+b.hide()
+b.ring(1, 3, 120.0, 0.0)
+b.path_width(14)
+b.ring(4, 3, 120.0, 0.0)
+
+// style: solid on the left, dotted on the right
+Block c typeof turtle.Turtle
+c.spawn(60.0, 280.0)
+c.path_color(255, 200, 60)
+c.path_width(6)
+c.path_solid()
+c.hide()
+c.ring(1, 3, 120.0, 0.0)
+c.path_dotted()
+c.ring(4, 3, 120.0, 0.0)
+
+// opacity: solid on the left, faint on the right
+Block d typeof turtle.Turtle
+d.spawn(60.0, 380.0)
+d.path_color(150, 130, 255)
+d.path_width(8)
+d.hide()
+d.ring(1, 3, 120.0, 0.0)
+d.path_opacity(25)
+d.ring(4, 3, 120.0, 0.0)
+
+// the pen itself: a line on the left, nothing on the right
+Block e typeof turtle.Turtle
+e.spawn(60.0, 480.0)
+e.path_color(255, 120, 90)
+e.path_width(6)
+e.hide()
+e.ring(1, 3, 120.0, 0.0)
+e.path_off()
+e.ring(4, 3, 120.0, 0.0)
+
+pool.Pool.home_all()
+painter.Painter.reset()
+runner.Runner.rebuild(win, canvas, bg, timeline.Timeline.max_step())
+runner.Runner.frame(win, canvas)
+
+print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+print("appearance events=", timeline.Timeline.styles(), " last step of 'a'=", timeline.Timeline.last_step(0))
+print("expected: each line changes at x=420, and only to the right of it")
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/styles.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+// The same check before any bake. The steps performed in THIS run are not in
+// the texture yet: they are redrawn from the painter's pool on every frame, and
+// they have to keep their own look there too — that is the second place where
+// a colour could leak from one step to another.
+dyn live = image.new(800, 600)
+
+pool.Pool.home_all()
+pool.Pool.reset_styles()
+painter.Painter.reset()
+
+int s = 1
+while s <= timeline.Timeline.max_step() {
+    runner.Runner.animate(win, live, s)
+    s = s + 1
+}
+runner.Runner.frame(win, live)
+
+print("segments held by the painter=", painter.Painter.count(), " (expected 27: 30 minus e's three with the pen up)")
+
+danger {
+    dyn shot2 = graph.capture(win)
+    image.save(shot2, "lab/styles_live.png")
+    image.discard(shot2)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(live)
+image.discard(bg)
+image.discard(canvas)
+graph.close(win)

@@ -1,0 +1,102 @@
+// static/stage.flx — the stage the composition happens on
+//
+// The background exists independently of the turtles: it is the surface
+// everything is drawn onto. It can be a solid colour, or an image — stretched,
+// tiled, or centred.
+//
+// The image itself is a `dyn` and therefore lives in `main.flx`, arriving here
+// as a parameter. The Stage keeps only the mode and the scale.
+//
+// The background is drawn during the rebuild, before the path, and goes into
+// the baked texture along with it — so it costs nothing per frame.
+
+Block Stage {
+    int bg_r = 18
+    int bg_g = 18
+    int bg_b = 26
+
+    int mode = 0             // 0 no image | 1 stretched | 2 tiled | 3 centred
+    float img_scale = 1.0
+
+    int arr guard[1] = 0     // hot-loop anchor
+
+    fn background(int r, int g, int b) nil {
+        bg_r = r
+        bg_g = g
+        bg_b = b
+    }
+
+    fn r() int { return bg_r }
+    fn g() int { return bg_g }
+    fn b() int { return bg_b }
+
+    // ── background modes ──────────────────────────────────────────
+    //
+    // "Stretched" happens once, in main: image.resize takes the image to the
+    // screen size and it is then drawn whole, with no per-frame arithmetic.
+    // The other two modes draw the image at its original size, times the scale.
+
+    fn image_stretch(dyn img) nil {
+        mode = 1
+        image.resize(img, config.W(), config.H())
+    }
+
+    fn image_tile() nil   { mode = 2 }
+    fn image_center() nil { mode = 3 }
+    fn image_off() nil    { mode = 0 }
+
+    fn image_scale(float s) nil {
+        img_scale = s
+        if img_scale <= 0.0 { img_scale = 1.0 }
+    }
+
+    fn has_image() int { return mode }
+
+    // ── painting ──────────────────────────────────────────────────
+
+    // Colour only. Used in the frame loop, where the baked texture already
+    // carries the background drawn into it.
+    fn clear(dyn win) nil { graph.clear(win, bg_r, bg_g, bg_b) }
+
+    // Colour plus the background image. Used in the rebuild, whose result is
+    // baked into the texture.
+    fn paint(dyn win, dyn img) nil {
+        graph.clear(win, bg_r, bg_g, bg_b)
+        if mode == 0 { return }
+
+        int iw = image.width(img)
+        int ih = image.height(img)
+        if iw < 1 { return }
+        if ih < 1 { return }
+
+        if mode == 1 {
+            graph.draw_image(win, img, 0, 0)
+            return
+        }
+
+        if mode == 3 {
+            int sw = math.to_int(math.to_float(iw) * img_scale)
+            int sh = math.to_int(math.to_float(ih) * img_scale)
+            graph.draw_image(win, img, (config.W() - sw) / 2, (config.H() - sh) / 2, img_scale)
+            return
+        }
+
+        // tiled, covering the whole stage
+        int tw = math.to_int(math.to_float(iw) * img_scale)
+        int th = math.to_int(math.to_float(ih) * img_scale)
+        if tw < 1 { tw = 1 }
+        if th < 1 { th = 1 }
+
+        int y = 0
+        while y < config.H() {
+            guard[0] = y
+            int x = 0
+            while x < config.W() {
+                guard[0] = x
+                graph.draw_image(win, img, x, y, img_scale)
+                x = x + tw
+            }
+            y = y + th
+        }
+    }
+}

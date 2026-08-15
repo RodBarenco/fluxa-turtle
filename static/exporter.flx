@@ -1,0 +1,143 @@
+// static/exporter.flx — exporting the composition (pillars §8)
+//
+// Exporting does not record what is on screen right now: it replays the
+// artwork from the beginning and renders every frame. The document's central
+// point is that this render is CONTROLLED — time advances 1/fps per frame, not
+// by the machine's clock. A slow machine takes longer to generate, but the
+// result has the exact frame rate and the animation comes out just as smooth.
+//
+// What comes out is a sequence of numbered PNGs. Fluxa has no video encoder
+// today — no MP4, no WebM, no GIF — and there is no process spawn in the
+// stdlib. So the last step (joining the frames) is an external command, which
+// finish() prints ready to paste. Once a std.video exists it only has to
+// replace this last stage: everything else in §8 is already here.
+
+Block Exporter {
+    int on         = 0
+    int fps        = 60
+    int count      = 0
+    int from_step  = 1
+    int to_step    = 0        // 0 = through the last step
+    int hold_start = 0        // still frames before the first movement
+    int hold_end   = 0        // still frames after the last one
+    str dir        = "export"
+    str prefix     = "frame_"
+
+    // ── configuration ─────────────────────────────────────────────
+
+    fn setup(str folder, int f) nil {
+        dir = folder
+        fps = f
+        if fps < 1 { fps = 1 }
+    }
+
+    fn range(int a, int b) nil {
+        from_step = a
+        to_step   = b
+    }
+
+    fn hold(int at_start, int at_end) nil {
+        hold_start = at_start
+        hold_end   = at_end
+    }
+
+    fn name(str p) nil { prefix = p }
+
+    fn get_fps()   int { return fps }
+    fn get_from()  int { return from_step }
+    fn get_to()    int { return to_step }
+    fn get_hold_start() int { return hold_start }
+    fn get_hold_end()   int { return hold_end }
+    fn frames()    int { return count }
+
+    // Seconds per frame — the time step of the controlled render.
+    fn dt() float { return 1.0 / math.to_float(fps) }
+
+    // ── cycle ─────────────────────────────────────────────────────
+
+    fn begin() nil {
+        count = 0
+        on = 1
+        danger { fs.mkdir(dir) }
+        if err != nil { print("[export] could not create the folder: ", err[0]) }
+        print("[export] writing to ", dir, "/ at ", fps, " fps")
+    }
+
+    fn is_on() int { return on }
+
+    // Six-digit numbering: it is what ffmpeg expects in frame_%06d.png.
+    // The concatenation is built in pieces and released right after — chains of
+    // strings.concat that are not reassigned leak on every call (guide §12.5).
+    fn pad(int n) str {
+        str digits = strings.from_int(n)
+        str z = "00000"
+        if n >= 10     { z = "0000" }
+        if n >= 100    { z = "000" }
+        if n >= 1000   { z = "00" }
+        if n >= 10000  { z = "0" }
+        if n >= 100000 { z = "" }
+        str out = strings.concat(z, digits)
+        free(digits)
+        return out
+    }
+
+    fn save(dyn win) nil {
+        if on == 0 { return }
+
+        str num  = pad(count)
+        str p1   = strings.concat(dir, "/")
+        str p2   = strings.concat(p1, prefix)
+        str p3   = strings.concat(p2, num)
+        str path = strings.concat(p3, ".png")
+
+        danger {
+            dyn shot = graph.capture(win)
+            image.save(shot, path)
+            image.discard(shot)
+        }
+        if err != nil { print("[export] frame ", count, ": ", err[0]) }
+
+        free(num)
+        free(p1)
+        free(p2)
+        free(p3)
+        free(path)
+        count = count + 1
+    }
+
+    // The command is built with strings.concat, not with a print of several
+    // pieces: print separates its arguments with spaces and the result would
+    // not paste into a terminal.
+    fn finish() nil {
+        on = 0
+
+        str f  = strings.from_int(fps)
+        str a1 = strings.concat("  ffmpeg -framerate ", f)
+        str a2 = strings.concat(a1, " -i ")
+        str a3 = strings.concat(a2, dir)
+        str a4 = strings.concat(a3, "/")
+        str a5 = strings.concat(a4, prefix)
+        str base = strings.concat(a5, "%06d.png")
+
+        str mp4  = strings.concat(base, " -c:v libx264 -pix_fmt yuv420p -crf 18 saida.mp4")
+        str webm = strings.concat(base, " -c:v libvpx-vp9 -b:v 0 -crf 30 saida.webm")
+        str gif  = strings.concat(base, " -vf split[a][b];[a]palettegen[p];[b][p]paletteuse saida.gif")
+
+        print("[export] ", count, " frames written to ", dir, "/")
+        print("[export] to assemble the video, one of these:")
+        print(mp4)
+        print(webm)
+        print(gif)
+
+        free(f)
+        free(a1)
+        free(a2)
+        free(a3)
+        free(a4)
+        free(a5)
+        free(base)
+        free(mp4)
+        free(webm)
+        free(gif)
+    }
+}

@@ -1,0 +1,20 @@
+# fluxa.toml — Fluxa Turtle
+
+[project]
+name  = "fluxa-turtle"
+entry = "main.flx"
+
+[runtime]
+gc_cap         = 1024
+prst_cap       = 64
+prst_graph_cap = 256
+scope_cap      = 256
+module_cap     = 32
+
+[libs]
+std.graph = "1.0"
+std.math  = "1.0"
+std.time  = "1.0"
+std.image = "1.0"
+std.strings = "1.0"
+std.fs      = "1.0"

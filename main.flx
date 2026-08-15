@@ -1,0 +1,159 @@
+// main.flx — FLUXA TURTLE
+//
+//   ./fluxa run main.flx -dev
+//
+// Write a step, save, and watch the next action happen. What was already drawn
+// stays on screen: finished steps do not repeat, execution carries on from the
+// next step not yet performed.
+//
+// This artwork is almost entirely commented out on purpose. Uncomment ONE
+// stage, save, and see what shows up. Then the next one. That is how the tool
+// is meant to be used.
+//
+// With the window focused, R redoes the whole artwork from step 1, animated.
+//
+// Ready-made artworks to paste: docs/ARTWORKS.md
+// Loose pieces to build your own: docs/RECIPES.md
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+// The window survives the save: the initializer of a prst holding a lib cursor
+// is not re-run on reload, so it does not blink. `done` is the last finished
+// step — it is what makes the artwork carry on from where it stopped.
+prst dyn win    = graph.init(800, 600, "Fluxa Turtle")
+prst dyn canvas = image.new(800, 600)
+prst dyn bg     = image.new(1, 1)
+prst int done   = 0
+
+graph.set_fps(win, config.FPS())
+
+
+// ═══════════════════════════ the stage ═══════════════════════════
+
+stage.Stage.background(16, 17, 24)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+
+// ═══════════════════ STAGE 1 — one turtle, one stroke ═══════════════════
+//
+// She is born, gets a colour, and on step 1 walks in a straight line.
+// Save the file and watch.
+
+Block leo typeof turtle.Turtle
+leo.spawn(150.0, 321.9)
+leo.color(90, 230, 230)
+leo.path_color(90, 230, 230)
+leo.path_width(1)
+leo.speed(900.0)
+leo.hide()
+
+leo.go(1, 500.0, 0.0)
+
+
+
+// ═══════════════════ STAGE 2 — the rosette ═══════════════════
+//
+// The same stroke thirty-five more times, turning 170 degrees before each one.
+// 170 does not divide 360, so she never retraces her path — she only closes
+// the figure after seventeen laps around the centre.
+//
+// This is a loop declaring steps: `s` counts, and each turn of the loop hands
+// the turtle one more action. Uncomment it and save — only the NEW steps are
+// animated, the stroke from stage 1 is already there.
+//
+// 170 is the one number worth playing with first. Try 160, 175 or 144.
+
+// int s = 2
+// while s <= 36 {
+//     leo.go(s, 500.0, 170.0)
+//     s = s + 1
+// }
+
+
+// ═══════════════════ STAGE 3 — two at the same time ═══════════════════
+//
+// Ana draws a twelve-pointed star inside the rosette. Look at the step
+// numbers: they are the SAME as leo's. Turtles with actions on the same step
+// move together, and the step only ends when the last of them arrives.
+//
+// She is born off-screen and step 1 is a go_silent: she walks into position
+// without leaving any trail at all. From step 14 on she rests, while leo
+// carries on alone.
+//
+// `ring` is the loop from stage 2, handed to the turtle: twelve steps starting
+// at 2, each one turning 150 degrees and walking. Same result, one line.
+//
+// Since the rosette is already finished, saving shows the star appearing all
+// at once — to watch the two of them drawing side by side, press R.
+
+// Block ana typeof turtle.Turtle
+// ana.spawn(290.0, 340.2)
+// ana.color(255, 200, 60)
+// ana.path_color(255, 200, 60)
+// ana.path_width(2)
+// ana.speed(900.0)
+// ana.hide()
+
+// ana.go_silent(1, 260.0, 0.0)
+// ana.ring(2, 12, 300.0, 150.0)
+
+
+// ═══════════════════ STAGE 4 — the stroke changes where you change it ═══════
+//
+// An appearance change is not retroactive: it applies from the NEXT step that
+// turtle declares. Written here, after leo's step 36, it leaves the rosette
+// exactly as it is and only paints what comes after.
+//
+// Uncomment and save: leo carries on for another thirty-six steps, now pink and
+// dotted, over a rosette that does not change. To change what is already drawn,
+// move the line up — above the steps it should affect.
+
+// leo.path_color(255, 90, 160)
+// leo.path_dotted()
+// leo.path_opacity(70)
+// leo.ring(37, 36, 500.0, 170.0)
+
+
+// ═══════════════════ STAGE 5 — a background image ═══════════════════
+//
+// Any PNG can be the stage. image_tile repeats it across the whole surface;
+// image_center draws it once in the middle; image_stretch takes it to the
+// screen size. The background goes into the baked texture, so it costs
+// nothing per frame.
+
+// danger { image.discard(bg)  bg = image.load("my_texture.png") }
+// if err != nil { print("background: ", err[0]) }
+// stage.Stage.image_tile()
+// stage.Stage.image_scale(1.0)
+
+
+// ═══════════════════ STAGE 6 — export ═══════════════════
+//
+// Redoes the artwork from step 1 and writes one PNG per frame. Time advances
+// 1/fps per frame, so the result does not depend on the machine's speed. At
+// the end, the command to assemble the video is printed in the terminal.
+
+// exporter.Exporter.setup("export", 60)
+// exporter.Exporter.hold(30, 90)
+// runner.Runner.export(win, canvas, bg)
+
+
+// ═══════════════════════════ execution ═══════════════════════════
+
+print("[turtle] finished: ", done, " | declared: ", timeline.Timeline.max_step(), " | turtles: ", pool.Pool.count())
+
+done = runner.Runner.play(win, canvas, bg, done)

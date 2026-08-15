@@ -1,0 +1,228 @@
+// static/pool.flx — the turtles' state
+//
+// Singleton (guide §8 + v0.22): the state lives in the definition; the other
+// modules call pool.Pool.method(...) directly. Parallel arrays, one slot per
+// turtle — the same entity-pool pattern used across the project.
+//
+// home_* holds the declared position: it is where a turtle returns to when the
+// composition is rebuilt or replayed from the start.
+
+Block Pool {
+    float arr x[8]    = 0.0
+    float arr y[8]    = 0.0
+    float arr ang[8]  = 0.0
+
+    float arr hx[8]   = 0.0
+    float arr hy[8]   = 0.0
+    float arr hang[8] = 0.0
+
+    int arr cr[8] = 0            // body colour
+    int arr cg[8] = 220
+    int arr cb[8] = 140
+
+    int arr pr[8] = 0            // path colour
+    int arr pg[8] = 220
+    int arr pb[8] = 140
+    int arr pw[8] = 2            // path width
+    int arr pen[8] = 1           // 1 = leaves a trail
+
+    int arr pstyle[8] = 0        // 0 solid | 1 dotted | 2 dashed | 3 dots
+    int arr pdash[8]  = 10       // dash length
+    int arr pgap[8]   = 8        // gap between dashes
+    int arr popa[8]   = 100      // path opacity, 0..100
+    int arr pclear[8] = 0        // last step where the path was cleared
+
+    int arr vis[8] = 1
+    float arr size[8] = 9.0
+    float arr spd[8]  = 200.0    // pixels per second
+
+    int n = 0
+    int arr guard[1] = 0     // hot-loop anchor
+
+    // Called at the top of the scene, on every save: the whole declaration is
+    // written again.
+    fn reset() nil { n = 0 }
+
+    fn spawn(float px, float py) int {
+        // without the warning the extra turtle would silently become slot 0's
+        // and the artwork would come out wrong with no sign of it
+        if n >= 8 {
+            print("[turtle] turtle limit of 8 reached — this one was ignored")
+            return 0
+        }
+        int id = n
+        x[id]      = px
+        y[id]      = py
+        ang[id]    = 0.0
+        hx[id]     = px
+        hy[id]     = py
+        hang[id]   = 0.0
+        cr[id]     = 0
+        cg[id]     = 220
+        cb[id]     = 140
+        pr[id]     = 0
+        pg[id]     = 220
+        pb[id]     = 140
+        pw[id]     = 2
+        pen[id]    = 1
+        pstyle[id] = 0
+        pdash[id]  = 10
+        pgap[id]   = 8
+        popa[id]   = 100
+        pclear[id] = 0
+        vis[id]    = 1
+        size[id]   = 9.0
+        spd[id]    = 200.0
+        n = n + 1
+        return id
+    }
+
+    fn count() int { return n }
+
+    // Back to the look every turtle is born with. The rebuild calls this before
+    // replaying the steps: the appearance events in the timeline are then
+    // applied again, each at its own step, so a stroke comes back with the
+    // configuration it was drawn with instead of the last one declared.
+    fn reset_styles() nil {
+        int i = 0
+        while i < n {
+            guard[0] = i         // anchor FIRST
+            cr[i]     = 0
+            cg[i]     = 220
+            cb[i]     = 140
+            pr[i]     = 0
+            pg[i]     = 220
+            pb[i]     = 140
+            pw[i]     = 2
+            pen[i]    = 1
+            pstyle[i] = 0
+            pdash[i]  = 10
+            pgap[i]   = 8
+            popa[i]   = 100
+            vis[i]    = 1
+            size[i]   = 9.0
+            spd[i]    = 200.0
+            i = i + 1
+        }
+    }
+
+    // ── configuration ─────────────────────────────────────────────
+
+    fn set_color(int i, int r, int g, int b) nil {
+        cr[i] = r
+        cg[i] = g
+        cb[i] = b
+    }
+
+    fn set_path_color(int i, int r, int g, int b) nil {
+        pr[i] = r
+        pg[i] = g
+        pb[i] = b
+    }
+
+    fn set_path_width(int i, int w) nil { pw[i] = w }
+    fn set_pen(int i, int on) nil       { pen[i] = on }
+    fn set_vis(int i, int on) nil       { vis[i] = on }
+    fn set_size(int i, float s) nil     { size[i] = s }
+    fn set_speed(int i, float v) nil    { spd[i] = v }
+
+    fn set_path_style(int i, int s) nil { pstyle[i] = s }
+
+    fn set_path_dash(int i, int d, int g) nil {
+        pdash[i] = d
+        pgap[i]  = g
+    }
+
+    fn set_path_opacity(int i, int pct) nil {
+        int v = pct
+        if v < 0 { v = 0 }
+        if v > 100 { v = 100 }
+        popa[i] = v
+    }
+
+    // Initial heading, in degrees: 0 points right and the angle grows
+    // counter-clockwise, as on the cartesian plane.
+    fn set_face(int i, float deg) nil {
+        ang[i]  = deg
+        hang[i] = deg
+    }
+
+    // ── movement ──────────────────────────────────────────────────
+
+    fn home_all() nil {
+        int i = 0
+        while i < n {
+            x[i]   = hx[i]
+            y[i]   = hy[i]
+            ang[i] = hang[i]
+            i = i + 1
+        }
+    }
+
+    fn turn(int i, float deg) nil { ang[i] = ang[i] + deg }
+
+    fn set_pos(int i, float px, float py) nil {
+        x[i] = px
+        y[i] = py
+    }
+
+    // ── cleared path ──────────────────────────────────────────────
+    //
+    // pathClear does not erase pixels: it marks the step from which that
+    // turtle's path exists again. The texture is rebuilt from there, and the
+    // replay reproduces the clearing at the same point of the timeline.
+
+    fn set_clear(int i, int s) nil { pclear[i] = s }
+    fn get_clear(int i)      int { return pclear[i] }
+
+    fn clear_marks() nil {
+        int i = 0
+        while i < n {
+            pclear[i] = 0
+            i = i + 1
+        }
+    }
+
+    // ── reading ───────────────────────────────────────────────────
+
+    fn get_x(int i)   float { return x[i] }
+    fn get_y(int i)   float { return y[i] }
+    fn get_ang(int i) float { return ang[i] }
+    fn get_spd(int i) float { return spd[i] }
+    fn get_pen(int i)   int { return pen[i] }
+    fn get_pw(int i)    int { return pw[i] }
+    fn get_pr(int i)    int { return pr[i] }
+    fn get_pg(int i)    int { return pg[i] }
+    fn get_pb(int i)    int { return pb[i] }
+    fn get_style(int i) int { return pstyle[i] }
+    fn get_dash(int i)  int { return pdash[i] }
+    fn get_gap(int i)   int { return pgap[i] }
+    fn get_opa(int i)   int { return popa[i] }
+
+    // ── drawing ───────────────────────────────────────────────────
+
+    fn draw(dyn win) nil {
+        int i = 0
+        while i < n {
+            guard[0] = i         // anchor FIRST
+            if vis[i] == 1 {
+                float cx = x[i]
+                float cy = y[i]
+                float sz = size[i]
+
+                int rad = math.to_int(sz)
+                if rad < 2 { rad = 2 }
+                graph.draw_circle(win, math.to_int(cx), math.to_int(cy), rad, cr[i], cg[i], cb[i])
+
+                // the head shows where the turtle is pointing
+                float ra = math.deg_to_rad(ang[i])
+                float hxx = cx + sz * 1.35 * math.cos(ra)
+                float hyy = cy - sz * 1.35 * math.sin(ra)
+                int hr = math.to_int(sz * 0.55)
+                if hr < 2 { hr = 2 }
+                graph.draw_circle(win, math.to_int(hxx), math.to_int(hyy), hr, cr[i], cg[i], cb[i])
+            }
+            i = i + 1
+        }
+    }
+}

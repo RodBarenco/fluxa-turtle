@@ -1,0 +1,180 @@
+// static/timeline.flx — the action queue, organised by step
+//
+// The step is the composition's synchronisation marker: different turtles with
+// actions on the same step move at the same time, and the next step only
+// starts once the last of them has arrived.
+//
+// Action conflict (pillars §5): a turtle only performs ONE action per step.
+// The first one declared wins, the second is ignored, and execution is not
+// interrupted by it.
+//
+// The conflict check is O(1): `taken` is an occupancy grid indexed by
+// turtle × step. Scanning the queue on every declaration would make the whole
+// scene quadratic in the number of steps — with thousands of them that would
+// show up as a stutter on every save.
+
+Block Timeline {
+    int arr tid[16384]    = 0
+    int arr step[16384]   = 0
+    int arr kind[16384]   = 0      // 0 = go | 1 = go_silent | 2 = path_clear
+    float arr dist[16384] = 0.0
+    float arr turn[16384] = 0.0
+    float arr spd[16384]  = 0.0    // 0 = use the turtle's own speed
+
+    int arr taken[32768]  = 0      // 8 turtles × 4096 steps
+
+    // ── appearance changes, by step ───────────────────────────────
+    //
+    // An appearance call is not global: it applies from the NEXT step that
+    // turtle declares. `leo.path_color(...)` written after step 36 and before
+    // step 37 leaves 1 to 36 as they were and paints 37 onward in the new
+    // colour. The look of a stroke is therefore decided by WHERE the change sits
+    // in the file — which is how the code already reads.
+    //
+    // Each event carries the step it starts at; the runner applies the ones due
+    // at each step, in declaration order, while the artwork is (re)built. Since
+    // the rebuild replays the steps in order, an old stroke comes back with the
+    // configuration it was made with, and the artwork stays a function of the
+    // code (adr 0002, adr 0009).
+    int arr eowner[512] = 0
+    int arr efrom[512]  = 0        // first step the change applies to
+    int arr ekind[512]  = 0        // which setter — see apply_one
+    int arr ea[512]     = 0
+    int arr eb[512]     = 0
+    int arr ec[512]     = 0
+    float arr ef[512]   = 0.0
+
+    int arr last[8]     = 0        // highest step declared by each turtle
+
+    int n = 0
+    int en = 0                     // appearance events declared
+    int top = 0                    // highest step declared
+    int ignored = 0                // actions dropped by conflict
+    int arr guard[1] = 0           // hot-loop anchor
+
+    // Called at the top of the scene, on every save: the queue is declared
+    // again in full, so it starts empty.
+    fn reset() nil {
+        int i = 0
+        while i < n {
+            taken[tid[i] * 4096 + step[i]] = 0
+            i = i + 1
+        }
+        n = 0
+        top = 0
+        ignored = 0
+
+        en = 0
+        int t = 0
+        while t < 8 {
+            last[t] = 0
+            t = t + 1
+        }
+    }
+
+    fn add(int t, int s, int k, float d, float tu, float sp) nil {
+        if s < 1 { return }
+        if s >= 4096 { return }
+        if t < 0 { return }
+        if t >= 8 { return }
+        if n >= 16384 { return }
+
+        int key = t * 4096 + s
+        if taken[key] > 0 {
+            ignored = ignored + 1
+            return
+        }
+        taken[key] = n + 1        // stores the action index, offset by one
+
+        tid[n]   = t
+        step[n]  = s
+        kind[n]  = k
+        dist[n]  = d
+        turn[n]  = tu
+        spd[n]   = sp
+        n = n + 1
+        if s > top { top = s }
+        if s > last[t] { last[t] = s }
+    }
+
+    // ── appearance ────────────────────────────────────────────────
+
+    // Records one appearance change for turtle `t`, starting at the step after
+    // the last one she has declared so far. Declared before her first step, it
+    // is her starting look and takes effect at once, so the live stage does not
+    // show a frame of the default colours before step 1 runs.
+    fn style(int t, int k, int a, int b, int c, float f) nil {
+        if t < 0 { return }
+        if t >= 8 { return }
+        if en >= 512 { return }
+
+        eowner[en] = t
+        efrom[en]  = last[t] + 1
+        ekind[en]  = k
+        ea[en]     = a
+        eb[en]     = b
+        ec[en]     = c
+        ef[en]     = f
+        en = en + 1
+
+        if last[t] == 0 { apply_one(en - 1) }
+    }
+
+    // Applies every change due at step `s`, in the order they were declared.
+    // Called once per step by whoever executes it — the rebuild and the
+    // animation alike — so every path through the artwork sees the same look.
+    fn apply_at(int s) nil {
+        int i = 0
+        while i < en {
+            guard[0] = i         // anchor FIRST
+            if efrom[i] == s { apply_one(i) }
+            i = i + 1
+        }
+    }
+
+    fn apply_one(int i) nil {
+        int t = eowner[i]
+        int k = ekind[i]
+
+        if k == 0 { pool.Pool.set_color(t, ea[i], eb[i], ec[i]) }
+        if k == 1 { pool.Pool.set_path_color(t, ea[i], eb[i], ec[i]) }
+        if k == 2 { pool.Pool.set_path_width(t, ea[i]) }
+        if k == 3 { pool.Pool.set_pen(t, ea[i]) }
+        if k == 4 { pool.Pool.set_vis(t, ea[i]) }
+        if k == 5 { pool.Pool.set_path_style(t, ea[i]) }
+        if k == 6 { pool.Pool.set_path_dash(t, eb[i], ec[i]) }
+        if k == 7 { pool.Pool.set_path_opacity(t, ea[i]) }
+        if k == 8 { pool.Pool.set_size(t, ef[i]) }
+        if k == 9 { pool.Pool.set_speed(t, ef[i]) }
+    }
+
+    // That turtle's action on that step, or -1 if it has none. This is how
+    // execution walks a step: eight direct lookups, instead of scanning the
+    // whole queue on each of the thousands of steps.
+    fn action_of(int t, int s) int {
+        if s < 1 { return -1 }
+        if s >= 4096 { return -1 }
+        if t < 0 { return -1 }
+        if t >= 8 { return -1 }
+        int v = taken[t * 4096 + s]
+        if v == 0 { return -1 }
+        return v - 1
+    }
+
+    fn count()     int { return n }
+    fn max_step()  int { return top }
+    fn conflicts() int { return ignored }
+    fn styles()    int { return en }
+    fn last_step(int t) int {
+        if t < 0 { return 0 }
+        if t >= 8 { return 0 }
+        return last[t]
+    }
+
+    fn get_tid(int i)    int { return tid[i] }
+    fn get_step(int i)   int { return step[i] }
+    fn get_kind(int i)   int { return kind[i] }
+    fn get_dist(int i) float { return dist[i] }
+    fn get_turn(int i) float { return turn[i] }
+    fn get_speed(int i) float { return spd[i] }
+}

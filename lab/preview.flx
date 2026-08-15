@@ -1,0 +1,83 @@
+// lab/preview.flx — the main.flx artwork with everything on, to check the look.
+// Run from the project root:  ./fluxa run lab/preview.flx
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+dyn win    = graph.init(800, 600, "preview")
+dyn canvas = image.new(800, 600)
+dyn bg     = image.new(1, 1)
+
+stage.Stage.background(16, 17, 24)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+Block leo typeof turtle.Turtle
+leo.spawn(340.0, 363.0)
+leo.color(0, 224, 150)
+leo.path_color(0, 224, 150)
+leo.path_width(3)
+leo.speed(260.0)
+
+Block ana typeof turtle.Turtle
+ana.spawn(330.0, 150.0)
+ana.color(255, 122, 92)
+ana.path_color(255, 122, 92)
+ana.path_width(2)
+ana.speed(320.0)
+
+Block bia typeof turtle.Turtle
+bia.spawn(0.0 - 80.0, 562.0)
+bia.color(120, 170, 255)
+bia.path_color(120, 170, 255)
+bia.path_width(7)
+bia.path_dots()
+
+// star
+leo.go(1, 200.0, 0.0)
+leo.go(2, 200.0, 144.0)
+leo.go(3, 200.0, 144.0)
+leo.go(4, 200.0, 144.0)
+leo.go(5, 200.0, 144.0)
+
+// hexagon
+ana.go(1, 220.0, 0.0)
+ana.go(2, 220.0, 0.0 - 60.0)
+ana.go(3, 220.0, 0.0 - 60.0)
+ana.go(4, 220.0, 0.0 - 60.0)
+ana.go(5, 220.0, 0.0 - 60.0)
+ana.go(6, 220.0, 0.0 - 60.0)
+
+// dotted baseline
+bia.go_silent(1, 240.0, 0.0)
+bia.go_at(2, 480.0, 0.0, 700.0)
+
+pool.Pool.home_all()
+painter.Painter.reset()
+runner.Runner.rebuild(win, canvas, bg, timeline.Timeline.max_step())
+runner.Runner.frame(win, canvas)
+
+print("steps=", timeline.Timeline.max_step(), " actions=", timeline.Timeline.count())
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/preview.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(bg)
+image.discard(canvas)
+graph.close(win)

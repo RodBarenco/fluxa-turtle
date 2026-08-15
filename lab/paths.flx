@@ -1,0 +1,119 @@
+// lab/paths.flx — check of the path styles (pillars §4).
+// Run from the project root:  ./fluxa run lab/paths.flx
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+dyn win    = graph.init(800, 600, "paths")
+dyn canvas = image.new(800, 600)
+dyn bg     = image.new(1, 1)
+
+stage.Stage.background(18, 18, 26)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+// solid
+Block a typeof turtle.Turtle
+a.spawn(80.0, 70.0)
+a.color(0, 220, 140)
+a.path_color(0, 220, 140)
+a.path_width(4)
+a.path_solid()
+a.go(1, 620.0, 0.0)
+
+// dotted
+Block b typeof turtle.Turtle
+b.spawn(80.0, 140.0)
+b.color(255, 200, 60)
+b.path_color(255, 200, 60)
+b.path_width(4)
+b.path_dotted()
+b.go(1, 620.0, 0.0)
+
+// dashed
+Block c typeof turtle.Turtle
+c.spawn(80.0, 210.0)
+c.color(255, 120, 90)
+c.path_color(255, 120, 90)
+c.path_width(4)
+c.path_dashed()
+c.go(1, 620.0, 0.0)
+
+// dots
+Block d typeof turtle.Turtle
+d.spawn(80.0, 280.0)
+d.color(150, 130, 255)
+d.path_color(150, 130, 255)
+d.path_width(9)
+d.path_dots()
+d.go(1, 620.0, 0.0)
+
+// opacity: 100, 60, 30 and 12 per cent of the same colour
+Block e typeof turtle.Turtle
+e.spawn(80.0, 360.0)
+e.color(90, 200, 255)
+e.path_color(90, 200, 255)
+e.path_width(10)
+e.path_opacity(100)
+e.go(1, 140.0, 0.0)
+
+Block f typeof turtle.Turtle
+f.spawn(240.0, 360.0)
+f.color(90, 200, 255)
+f.path_color(90, 200, 255)
+f.path_width(10)
+f.path_opacity(60)
+f.go(1, 140.0, 0.0)
+
+Block g typeof turtle.Turtle
+g.spawn(400.0, 360.0)
+g.color(90, 200, 255)
+g.path_color(90, 200, 255)
+g.path_width(10)
+g.path_opacity(30)
+g.go(1, 140.0, 0.0)
+
+Block h typeof turtle.Turtle
+h.spawn(560.0, 360.0)
+h.color(90, 200, 255)
+h.path_color(90, 200, 255)
+h.path_width(10)
+h.path_opacity(12)
+h.go(1, 140.0, 0.0)
+
+// path_clear: turtle 'a' draws more on step 2, clears everything on step 3 and
+// draws again on step 4 — only the step 4 stroke should remain of hers.
+a.go(2, 200.0, 270.0)
+a.path_clear(3)
+a.go(4, 180.0, 90.0)
+
+pool.Pool.home_all()
+painter.Painter.reset()
+runner.Runner.rebuild(win, canvas, bg, timeline.Timeline.max_step())
+runner.Runner.frame(win, canvas)
+
+print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+print("clear of 'a' at step ", pool.Pool.get_clear(0), " (expected 3)")
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/paths.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(bg)
+image.discard(canvas)
+graph.close(win)

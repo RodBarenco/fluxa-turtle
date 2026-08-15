@@ -1,0 +1,334 @@
+// static/runner.flx — running the composition
+//
+// Four phases:
+//
+//   1. rebuild — the already-finished steps are redone instantly, drawn once
+//      and baked into the path texture. This is what makes the artwork come
+//      back whole after a save without repeating what already happened, and it
+//      is the only moment the whole artwork is redrawn.
+//   2. animation — only the new steps are animated. Every turtle with an
+//      action on the same step moves together, and the step only ends when the
+//      last of them arrives.
+//   3. live stage — the drawing stays on screen until the next save or until
+//      the window is closed.
+//   4. replay (key R) — the artwork is redone from step 1, animated, the way
+//      someone would see it watching the whole composition at once.
+//
+// During 2 and 3 each frame costs one graph.draw_image of the canvas plus the
+// few segments born in this run: the cost does not grow with the artwork.
+//
+// The a* arrays hold each turtle's in-flight action for the current step — one
+// slot per turtle, in the same pattern as the other pools.
+
+Block Runner {
+    int arr aid[8]     = 0
+    float arr asx[8]   = 0.0     // where it set off from
+    float arr asy[8]   = 0.0
+    float arr atx[8]   = 0.0     // where it is heading
+    float arr aty[8]   = 0.0
+    float arr adur[8]  = 0.0     // duration, in seconds
+    int arr adraw[8]   = 0       // 1 = leaves a trail
+    int an = 0
+
+    int arr guard[1] = 0         // hot-loop anchor
+    int exporting  = 0           // 1 = controlled render, no clock
+    float sim_dt   = 0.0         // seconds per frame while exporting
+
+    fn play(dyn win, dyn canvas, dyn bg, int done) int {
+        int cur = done
+        int again = 1
+
+        while again == 1 {
+            again = 0
+            int limit = timeline.Timeline.max_step()
+
+            rebuild(win, canvas, bg, cur)
+
+            int stop = 0
+            while cur < limit && stop == 0 {
+                if graph.should_close(win) { stop = 1 }
+                if stop == 0 {
+                    int nxt = cur + 1
+                    animate(win, canvas, nxt)
+                    cur = nxt
+                    // clearing a path rebuilds the texture from what is left
+                    if has_clear(nxt) == 1 { rebuild(win, canvas, bg, cur) }
+                }
+            }
+
+            int idle = 1
+            while idle == 1 {
+                guard[0] = cur       // anchor FIRST
+                if graph.should_close(win) { idle = 0 }
+                if idle == 1 {
+                    frame(win, canvas)
+                    if graph.key_pressed(win, "R") {
+                        print("[turtle] replay: redoing ", limit, " steps from the start")
+                        cur = 0
+                        again = 1
+                        idle = 0
+                    }
+                }
+            }
+        }
+        return cur
+    }
+
+    // Exports the composition as a sequence of frames (pillars §8).
+    //
+    // It does not record the screen: it redoes the artwork from the beginning,
+    // with time advancing 1/fps per frame, and saves each one. The settings
+    // (folder, fps, step range, still frames at each end) live in the Exporter.
+    fn export(dyn win, dyn canvas, dyn bg) nil {
+        int a = exporter.Exporter.get_from()
+        int b = exporter.Exporter.get_to()
+        if a < 1 { a = 1 }
+        if b <= 0 { b = timeline.Timeline.max_step() }
+        if b > timeline.Timeline.max_step() { b = timeline.Timeline.max_step() }
+
+        exporting = 1
+        sim_dt = exporter.Exporter.dt()
+        exporter.Exporter.begin()
+
+        // no fps cap: generation runs as fast as the machine allows
+        graph.set_fps(win, 0)
+
+        // the state at the start of the exported range
+        rebuild(win, canvas, bg, a - 1)
+
+        hold(win, canvas, exporter.Exporter.get_hold_start())
+
+        int s = a
+        while s <= b {
+            animate(win, canvas, s)
+            if has_clear(s) == 1 { rebuild(win, canvas, bg, s) }
+            s = s + 1
+        }
+
+        hold(win, canvas, exporter.Exporter.get_hold_end())
+
+        exporting = 0
+        graph.set_fps(win, config.FPS())
+        exporter.Exporter.finish()
+    }
+
+    // Still frames: the artwork sits on screen with nothing moving.
+    fn hold(dyn win, dyn canvas, int n) nil {
+        int i = 0
+        while i < n {
+            guard[0] = i         // anchor FIRST
+            frame(win, canvas)
+            exporter.Exporter.save(win)
+            i = i + 1
+        }
+    }
+
+    // Redraws the finished artwork in a single frame and pins it to the texture.
+    fn rebuild(dyn win, dyn canvas, dyn bg, int upto) nil {
+        pool.Pool.home_all()
+        pool.Pool.clear_marks()
+        pool.Pool.reset_styles()
+        scan_clears(upto)
+        painter.Painter.reset()
+
+        graph.begin_frame(win)
+        stage.Stage.paint(win, bg)
+        int s = 1
+        while s <= upto {
+            instant(win, s)
+            s = s + 1
+        }
+        graph.end_frame(win)
+        painter.Painter.bake(win, canvas)
+    }
+
+    // Finds, for each turtle, the last step where it cleared its own path.
+    // This has to come before the drawing: what was cleared simply is not
+    // redrawn.
+    fn scan_clears(int upto) nil {
+        int nt = pool.Pool.count()
+        int t = 0
+        while t < nt {
+            int s = 1
+            while s <= upto {
+                int i = timeline.Timeline.action_of(t, s)
+                if i >= 0 {
+                    if timeline.Timeline.get_kind(i) == 2 { pool.Pool.set_clear(t, s) }
+                }
+                s = s + 1
+            }
+            t = t + 1
+        }
+    }
+
+    fn has_clear(int s) int {
+        int nt = pool.Pool.count()
+        int t = 0
+        while t < nt {
+            int i = timeline.Timeline.action_of(t, s)
+            if i >= 0 {
+                if timeline.Timeline.get_kind(i) == 2 { return 1 }
+            }
+            t = t + 1
+        }
+        return 0
+    }
+
+    // one frame of the idle stage: the path texture, what was born now, and
+    // the turtles on top
+    fn frame(dyn win, dyn canvas) nil {
+        graph.begin_frame(win)
+        stage.Stage.clear(win)
+        graph.draw_image(win, canvas, 0, 0)
+        painter.Painter.draw(win)
+        pool.Pool.draw(win)
+        graph.end_frame(win)
+    }
+
+    // Runs a step without animating, drawing straight into the frame to be baked.
+    fn instant(dyn win, int s) nil {
+        timeline.Timeline.apply_at(s)
+        int nt = pool.Pool.count()
+        int t = 0
+        while t < nt {
+            int i = timeline.Timeline.action_of(t, s)
+            if i >= 0 {
+                int k = timeline.Timeline.get_kind(i)
+                if k != 2 {
+                    pool.Pool.turn(t, timeline.Timeline.get_turn(i))
+
+                    float d  = timeline.Timeline.get_dist(i)
+                    float ra = math.deg_to_rad(pool.Pool.get_ang(t))
+                    float x1 = pool.Pool.get_x(t)
+                    float y1 = pool.Pool.get_y(t)
+                    float x2 = x1 + d * math.cos(ra)
+                    float y2 = y1 - d * math.sin(ra)
+
+                    pool.Pool.set_pos(t, x2, y2)
+
+                    if k == 0 && pool.Pool.get_pen(t) == 1 && s > pool.Pool.get_clear(t) {
+                        painter.Painter.stroke(win, t, x1, y1, x2, y2)
+                    }
+                }
+            }
+            t = t + 1
+        }
+    }
+
+    // Animates a whole step. The turn is applied on departure; the displacement
+    // is interpolated over time, each turtle at its own speed.
+    fn animate(dyn win, dyn canvas, int s) nil {
+        timeline.Timeline.apply_at(s)
+        an = 0
+        int nt = pool.Pool.count()
+        int t = 0
+        while t < nt {
+            int i = timeline.Timeline.action_of(t, s)
+            if i >= 0 && an < 8 {
+                int k = timeline.Timeline.get_kind(i)
+                if k != 2 {
+                    pool.Pool.turn(t, timeline.Timeline.get_turn(i))
+
+                    float d  = timeline.Timeline.get_dist(i)
+                    float ra = math.deg_to_rad(pool.Pool.get_ang(t))
+                    float x1 = pool.Pool.get_x(t)
+                    float y1 = pool.Pool.get_y(t)
+
+                    aid[an]  = t
+                    asx[an]  = x1
+                    asy[an]  = y1
+                    atx[an]  = x1 + d * math.cos(ra)
+                    aty[an]  = y1 - d * math.sin(ra)
+
+                    // the speed declared on the action beats the turtle's own
+                    float v = timeline.Timeline.get_speed(i)
+                    if v <= 0.0 { v = pool.Pool.get_spd(t) }
+                    float dur = 0.0
+                    if v > 0.0 { dur = math.abs(d) / v }
+                    adur[an] = dur
+
+                    adraw[an] = 0
+                    if k == 0 && pool.Pool.get_pen(t) == 1 { adraw[an] = 1 }
+
+                    an = an + 1
+                }
+            }
+            t = t + 1
+        }
+
+        if an == 0 { return }
+
+        // the step lasts as long as the slowest turtle
+        float dmax = 0.0
+        int i = 0
+        while i < an {
+            if adur[i] > dmax { dmax = adur[i] }
+            i = i + 1
+        }
+
+        // While exporting, the step has a whole and exact number of frames, and
+        // each one's time is computed from the index — never accumulated.
+        // Adding 1/fps repeatedly drifts by rounding and yields one extra frame
+        // per step.
+        int nf = 0
+        if exporting == 1 {
+            nf = math.to_int(math.round(dmax * math.to_float(exporter.Exporter.get_fps())))
+            if nf < 1 { nf = 1 }
+        }
+
+        int t0 = time.now_ms()
+        float el = 0.0
+        int fk = 0
+        int running = 1
+        while running == 1 {
+            guard[0] = fk        // anchor FIRST
+            // Live, time comes from the clock. While exporting it comes from
+            // the frame index — that is what makes the video come out at the
+            // right frame rate even on a machine that is slow to generate each
+            // image (§8). The frame at instant zero is not written again: it is
+            // already the previous step's last frame (or the opening stills).
+            if exporting == 0 { el = math.to_float(time.elapsed_ms(t0)) / 1000.0 }
+            if exporting == 1 {
+                fk = fk + 1
+                el = dmax * math.to_float(fk) / math.to_float(nf)
+            }
+
+            graph.begin_frame(win)
+            stage.Stage.clear(win)
+            graph.draw_image(win, canvas, 0, 0)
+            painter.Painter.draw(win)
+
+            i = 0
+            while i < an {
+                guard[0] = i     // anchor FIRST
+                float p = 1.0
+                if adur[i] > 0.0 { p = el / adur[i] }
+                if p > 1.0 { p = 1.0 }
+
+                float cx = asx[i] + (atx[i] - asx[i]) * p
+                float cy = asy[i] + (aty[i] - asy[i]) * p
+                pool.Pool.set_pos(aid[i], cx, cy)
+
+                if adraw[i] == 1 { painter.Painter.stroke(win, aid[i], asx[i], asy[i], cx, cy) }
+                i = i + 1
+            }
+
+            pool.Pool.draw(win)
+            graph.end_frame(win)
+
+            if exporting == 1 { exporter.Exporter.save(win) }
+
+            if el >= dmax { running = 0 }
+            if graph.should_close(win) { running = 0 }
+        }
+
+        // close the step: exact final position and the path becomes permanent
+        i = 0
+        while i < an {
+            int tt = aid[i]
+            pool.Pool.set_pos(tt, atx[i], aty[i])
+            if adraw[i] == 1 { painter.Painter.add(tt, asx[i], asy[i], atx[i], aty[i]) }
+            i = i + 1
+        }
+    }
+}

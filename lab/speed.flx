@@ -1,0 +1,92 @@
+// lab/speed.flx — check of speed (pillars §2 and §5).
+// Run from the project root:  ./fluxa run lab/speed.flx
+//
+// Measures each step's real duration and compares it with the expected one.
+// The pillar rule is that a step lasts as long as the SLOWEST turtle: it only
+// ends when every action of that stage has finished.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static exporter
+import static runner
+
+dyn win    = graph.init(800, 600, "speed")
+dyn canvas = image.new(800, 600)
+dyn bg     = image.new(1, 1)
+graph.set_fps(win, 60)
+
+stage.Stage.background(18, 18, 26)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+// slow: 100 px/s
+Block lenta typeof turtle.Turtle
+lenta.spawn(100.0, 150.0)
+lenta.color(255, 120, 90)
+lenta.path_color(255, 120, 90)
+lenta.path_width(3)
+lenta.speed(100.0)
+
+// fast: 400 px/s
+Block rapida typeof turtle.Turtle
+rapida.spawn(100.0, 300.0)
+rapida.color(0, 220, 140)
+rapida.path_color(0, 220, 140)
+rapida.path_width(3)
+rapida.speed(400.0)
+
+// step 1: both walk 200 px together.
+//   slow  200/100 = 2.00 s   ← governs the step
+//   fast  200/400 = 0.50 s
+lenta.go(1, 200.0, 0.0)
+rapida.go(1, 200.0, 0.0)
+
+// step 2: only the fast one, 300 px at her speed = 0.75 s
+rapida.go(2, 300.0, 0.0)
+
+// step 3: the fast one with a speed DECLARED ON THE ACTION, 50 px/s.
+//   200/50 = 4.00 s — the action's speed beats the turtle's
+rapida.go_at(3, 200.0, 0.0, 50.0)
+
+print("--- step | expected | measured (seconds) ---")
+
+pool.Pool.home_all()
+painter.Painter.reset()
+runner.Runner.rebuild(win, canvas, bg, 0)
+
+int t1 = time.now_ms()
+runner.Runner.animate(win, canvas, 1)
+print("  1    |   2.00   | ", math.to_float(time.elapsed_ms(t1)) / 1000.0)
+
+int t2 = time.now_ms()
+runner.Runner.animate(win, canvas, 2)
+print("  2    |   0.75   | ", math.to_float(time.elapsed_ms(t2)) / 1000.0)
+
+int t3 = time.now_ms()
+runner.Runner.animate(win, canvas, 3)
+print("  3    |   4.00   | ", math.to_float(time.elapsed_ms(t3)) / 1000.0)
+
+print("final position slow  x=", pool.Pool.get_x(0), " (expected 300)")
+print("final position fast  x=", pool.Pool.get_x(1), " (expected 800)")
+
+runner.Runner.frame(win, canvas)
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/speed.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(bg)
+image.discard(canvas)
+graph.close(win)

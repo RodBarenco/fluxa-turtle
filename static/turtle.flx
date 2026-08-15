@@ -1,0 +1,141 @@
+// static/turtle.flx — the turtle
+//
+// This is the type that shows up in the code of whoever uses the tool. Every
+// `Block name typeof turtle.Turtle` declaration creates its own independent
+// instance; the `id` field is its slot in the pool.
+//
+// The instance holds only the identifier — a concrete type, as the Block field
+// rule requires. All the state that evolves lives in the pools, and it is
+// through them that the replay rebuilds the artwork.
+
+Block Turtle {
+    int id = 0
+    int arr guard[1] = 0     // hot-loop anchor
+
+    fn spawn(float x, float y) nil { id = pool.Pool.spawn(x, y) }
+
+    // ── appearance ────────────────────────────────────────────────
+    //
+    // Every call below applies from the NEXT step this turtle declares, not to
+    // the whole artwork: written before her first movement it is her starting
+    // look; written between step 36 and step 37 it changes 37 onward and leaves
+    // what is already drawn alone. They go into the timeline for that reason —
+    // the rebuild replays them at the step they belong to.
+    //
+    // `face` is the exception: it is the heading she is born with, part of the
+    // declaration and not something that happens on a step.
+
+    fn color(int r, int g, int b) nil { timeline.Timeline.style(id, 0, r, g, b, 0.0) }
+    fn size(float s) nil             { timeline.Timeline.style(id, 8, 0, 0, 0, s) }
+    // This turtle's default speed, in pixels per second. It applies to every
+    // movement of hers that does not declare a speed of its own.
+    fn speed(float px_s) nil         { timeline.Timeline.style(id, 9, 0, 0, 0, px_s) }
+    fn face(float deg) nil           { pool.Pool.set_face(id, deg) }
+    fn show() nil                    { timeline.Timeline.style(id, 4, 1, 0, 0, 0.0) }
+    fn hide() nil                    { timeline.Timeline.style(id, 4, 0, 0, 0, 0.0) }
+
+    // ── path ──────────────────────────────────────────────────────
+
+    fn path_color(int r, int g, int b) nil { timeline.Timeline.style(id, 1, r, g, b, 0.0) }
+    fn path_width(int w) nil              { timeline.Timeline.style(id, 2, w, 0, 0, 0.0) }
+    fn path_on() nil                      { timeline.Timeline.style(id, 3, 1, 0, 0, 0.0) }
+    fn path_off() nil                     { timeline.Timeline.style(id, 3, 0, 0, 0, 0.0) }
+
+    // Path transparency, from 0 (invisible) to 100 (solid).
+    fn path_opacity(int pct) nil { timeline.Timeline.style(id, 7, pct, 0, 0, 0.0) }
+
+    // Styles. Each brings its own default dash and gap; path_dash adjusts them
+    // afterwards, if you want a different rhythm. The style and the dash are two
+    // events, so `path_solid` still leaves the rhythm untouched.
+    fn path_solid() nil {
+        timeline.Timeline.style(id, 5, 0, 0, 0, 0.0)
+    }
+    fn path_dotted() nil {
+        timeline.Timeline.style(id, 5, 1, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 2, 6, 0.0)
+    }
+    fn path_dashed() nil {
+        timeline.Timeline.style(id, 5, 2, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 14, 9, 0.0)
+    }
+    fn path_dots() nil {
+        timeline.Timeline.style(id, 5, 3, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 1, 12, 0.0)
+    }
+
+    fn path_dash(int dash, int gap) nil { timeline.Timeline.style(id, 6, 0, dash, gap, 0.0) }
+
+    // Clears the path already drawn by THIS turtle, on the given step. Her
+    // position and state stay as they were. Being a timeline action, the
+    // replay redoes the clearing at the same point of the artwork.
+    fn path_clear(int step) nil {
+        timeline.Timeline.add(id, step, 2, 0.0, 0.0, 0.0)
+    }
+
+    // ── movement ──────────────────────────────────────────────────
+    //
+    // Walks `dist` pixels on the given step, turning `turn` degrees before
+    // setting off. Turtles with actions on the same step move together.
+
+    fn go(int step, float dist, float turn) nil {
+        timeline.Timeline.add(id, step, 0, dist, turn, 0.0)
+    }
+
+    // Same displacement, without drawing: repositions, enters and exits.
+    fn go_silent(int step, float dist, float turn) nil {
+        timeline.Timeline.add(id, step, 1, dist, turn, 0.0)
+    }
+
+    // ── batches ───────────────────────────────────────────────────
+    //
+    // Repeating the same movement is what draws almost every figure, so the
+    // loop lives inside the method: one call declares the whole run of steps
+    // (guide §8 — give the Block a method that does the batch, do not hammer a
+    // single-step mutator from outside).
+    //
+    // `ring` is the constant move: `count` steps of `dist` pixels, turning
+    // `turn` degrees before each one, starting at step `first`. A turn that
+    // divides 360 closes a polygon; one that does not draws a rosette.
+
+    fn ring(int first, int count, float dist, float turn) nil {
+        int i = 0
+        while i < count {
+            guard[0] = i
+            timeline.Timeline.add(id, first + i, 0, dist, turn, 0.0)
+            i = i + 1
+        }
+    }
+
+    // Same thing, with the side growing `grow` pixels per step: a spiral.
+    fn spiral(int first, int count, float dist, float grow, float turn) nil {
+        int i = 0
+        float d = dist
+        while i < count {
+            guard[0] = i
+            timeline.Timeline.add(id, first + i, 0, d, turn, 0.0)
+            d = d + grow
+            i = i + 1
+        }
+    }
+
+    // A ring that leaves no trail — useful to move through the scene.
+    fn ring_silent(int first, int count, float dist, float turn) nil {
+        int i = 0
+        while i < count {
+            guard[0] = i
+            timeline.Timeline.add(id, first + i, 1, dist, turn, 0.0)
+            i = i + 1
+        }
+    }
+
+    // The same two movements, with the speed declared on the action itself:
+    // it applies to this displacement only and beats the turtle's own speed.
+    // This is how one turtle speeds up on one leg and crawls on the next.
+    fn go_at(int step, float dist, float turn, float px_s) nil {
+        timeline.Timeline.add(id, step, 0, dist, turn, px_s)
+    }
+
+    fn go_silent_at(int step, float dist, float turn, float px_s) nil {
+        timeline.Timeline.add(id, step, 1, dist, turn, px_s)
+    }
+}
