@@ -18,12 +18,11 @@ import static pool
 import static timeline
 import static painter
 import static turtle
-import static exporter
+import static export
 import static runner
 
 dyn win    = graph.init(800, 600, "styles")
 dyn canvas = image.new(800, 600)
-dyn bg     = image.new(1, 1)
 
 stage.Stage.background(18, 18, 26)
 pool.Pool.reset()
@@ -82,7 +81,7 @@ e.ring(4, 3, 120.0, 0.0)
 
 pool.Pool.home_all()
 painter.Painter.reset()
-runner.Runner.rebuild(win, canvas, bg, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
 runner.Runner.frame(win, canvas)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
@@ -123,6 +122,5 @@ danger {
 if err != nil { print("capture: ", err[0]) }
 
 image.discard(live)
-image.discard(bg)
 image.discard(canvas)
 graph.close(win)

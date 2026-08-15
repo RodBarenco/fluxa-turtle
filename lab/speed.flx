@@ -17,12 +17,11 @@ import static pool
 import static timeline
 import static painter
 import static turtle
-import static exporter
+import static export
 import static runner
 
 dyn win    = graph.init(800, 600, "speed")
 dyn canvas = image.new(800, 600)
-dyn bg     = image.new(1, 1)
 graph.set_fps(win, 60)
 
 stage.Stage.background(18, 18, 26)
@@ -62,7 +61,7 @@ print("--- step | expected | measured (seconds) ---")
 
 pool.Pool.home_all()
 painter.Painter.reset()
-runner.Runner.rebuild(win, canvas, bg, 0)
+runner.Runner.rebuild(win, canvas, 0)
 
 int t1 = time.now_ms()
 runner.Runner.animate(win, canvas, 1)
@@ -87,6 +86,5 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-image.discard(bg)
 image.discard(canvas)
 graph.close(win)

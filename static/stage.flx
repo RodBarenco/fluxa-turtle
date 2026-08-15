@@ -1,14 +1,22 @@
 // static/stage.flx — the stage the composition happens on
 //
 // The background exists independently of the turtles: it is the surface
-// everything is drawn onto. It can be a solid colour, or an image — stretched,
-// tiled, or centred.
+// everything is drawn onto. A solid colour, or a PNG — tiled, centred, or taken
+// to the screen size. The artwork file declares which, in one line:
 //
-// The image itself is a `dyn` and therefore lives in `main.flx`, arriving here
-// as a parameter. The Stage keeps only the mode and the scale.
+//     stage.Stage.tile("texture.png", 1.0)
+//     stage.Stage.center("logo.png", 2.0)
+//     stage.Stage.stretch("photo.png")
 //
-// The background is drawn during the rebuild, before the path, and goes into
-// the baked texture along with it — so it costs nothing per frame.
+// The Stage holds the PATH, not the image. That is what keeps an image handle
+// out of main.flx: a Block cannot have a `dyn` field, so holding the image
+// meant a `prst dyn bg` in the artwork file, passed down through play, export
+// and rebuild — plumbing in the one file that should read like a drawing.
+//
+// The price is one decode per rebuild, which is once per save, and the result
+// goes into the baked texture — so it costs nothing per frame either way. A
+// file that cannot be read prints why, drops back to the plain colour, and the
+// drawing carries on: a missing texture never costs somebody their artwork.
 
 Block Stage {
     int bg_r = 18
@@ -17,6 +25,7 @@ Block Stage {
 
     int mode = 0             // 0 no image | 1 stretched | 2 tiled | 3 centred
     float img_scale = 1.0
+    str img_path = ""
 
     int arr guard[1] = 0     // hot-loop anchor
 
@@ -30,74 +39,25 @@ Block Stage {
     fn g() int { return bg_g }
     fn b() int { return bg_b }
 
-    // ── a PNG as the stage, in one line ───────────────────────────
-    //
-    // These three are what main.flx shows, and they are the whole thing:
-    //
-    //     bg = stage.Stage.tiled(bg, "texture.png", 1.0)
-    //     bg = stage.Stage.centered(bg, "logo.png", 2.0)
-    //     bg = stage.Stage.stretched(bg, "photo.png")
-    //
-    // The old image is handed in so it can be released — on a save this runs
-    // again, and without it every reload would leak one background. What comes
-    // back is the new handle, which is why the call is an assignment: `bg` is a
-    // `dyn` and only main.flx can hold one.
-    //
-    // If the file cannot be read the old background is kept, the mode goes back
-    // to "no image", and the reason is printed. The artwork keeps running: a
-    // missing texture is not a reason to lose the drawing.
-    //
-    // `sload` and not `load`: it is someone's file, and sload validates the size
-    // and the format around the decode.
-
-    fn tiled(dyn old, str path, float scale) dyn { return use(old, path, 2, scale) }
-    fn centered(dyn old, str path, float scale) dyn { return use(old, path, 3, scale) }
-    fn stretched(dyn old, str path) dyn { return use(old, path, 1, 1.0) }
-
-    fn use(dyn old, str path, int m, float scale) dyn {
-        dyn out = old
-        danger {
-            dyn img = image.sload(path)
-            image.discard(old)
-            out = img
-        }
-        if err != nil {
-            mode = 0
-            print("[stage] background ", path, ": ", err[0])
-            return out
-        }
-
-        mode = m
-        img_scale = scale
-        if img_scale <= 0.0 { img_scale = 1.0 }
-        if m == 1 { image.resize(out, config.W(), config.H()) }
-        return out
-    }
-
     // ── background modes ──────────────────────────────────────────
     //
-    // The manual route, for a background that is not a file on disk — an image
-    // composed in Fluxa, or one already loaded for something else.
-    //
-    // "Stretched" happens once, in main: image.resize takes the image to the
-    // screen size and it is then drawn whole, with no per-frame arithmetic.
-    // The other two modes draw the image at its original size, times the scale.
+    // The scale multiplies the image's own size. It means nothing for
+    // `stretch`, which takes the image to the screen size whatever it was.
 
-    fn image_stretch(dyn img) nil {
-        mode = 1
-        image.resize(img, config.W(), config.H())
-    }
+    fn tile(str path, float scale) nil   { use(path, 2, scale) }
+    fn center(str path, float scale) nil { use(path, 3, scale) }
+    fn stretch(str path) nil             { use(path, 1, 1.0) }
+    fn image_off() nil                   { mode = 0 }
 
-    fn image_tile() nil   { mode = 2 }
-    fn image_center() nil { mode = 3 }
-    fn image_off() nil    { mode = 0 }
-
-    fn image_scale(float s) nil {
-        img_scale = s
+    fn use(str path, int m, float scale) nil {
+        img_path  = path
+        mode      = m
+        img_scale = scale
         if img_scale <= 0.0 { img_scale = 1.0 }
     }
 
     fn has_image() int { return mode }
+    fn path()      str { return img_path }
 
     // ── painting ──────────────────────────────────────────────────
 
@@ -105,18 +65,53 @@ Block Stage {
     // carries the background drawn into it.
     fn clear(dyn win) nil { graph.clear(win, bg_r, bg_g, bg_b) }
 
+    // The background image for this rebuild, decoded from the path. With no
+    // background — or with a file that cannot be read — it is a 1x1 blank, so
+    // the caller always gets something valid to release.
+    //
+    // The image is handed OUT instead of being drawn and released in here,
+    // because it has to outlive graph.end_frame: graph.draw_image batches, and
+    // releasing the buffer before the frame is flushed leaves the batch pointing
+    // at a texture that is gone — the background comes out black. Measured, not
+    // guessed. So the rebuild holds it as a local `dyn` for the length of the
+    // frame, which is the one place in this project that can.
+    //
+    // A danger block abandons the rest of itself at the first failure, so a file
+    // that cannot be read never reaches the swap. `sload` and not `load`: it is
+    // somebody's file, and sload validates the size and the format around the
+    // decode.
+    fn picture() dyn {
+        dyn out = image.new(1, 1)
+        if mode == 0 { return out }
+
+        danger {
+            dyn img = image.sload(img_path)
+            image.discard(out)
+            out = img
+        }
+        if err != nil {
+            print("[stage] background ", img_path, ": ", err[0])
+            mode = 0
+        }
+        return out
+    }
+
     // Colour plus the background image. Used in the rebuild, whose result is
     // baked into the texture.
     fn paint(dyn win, dyn img) nil {
         graph.clear(win, bg_r, bg_g, bg_b)
         if mode == 0 { return }
+        place(win, img)
+    }
 
+    fn place(dyn win, dyn img) nil {
         int iw = image.width(img)
         int ih = image.height(img)
         if iw < 1 { return }
         if ih < 1 { return }
 
         if mode == 1 {
+            image.resize(img, config.W(), config.H())
             graph.draw_image(win, img, 0, 0)
             return
         }

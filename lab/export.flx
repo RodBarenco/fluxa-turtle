@@ -16,12 +16,11 @@ import static pool
 import static timeline
 import static painter
 import static turtle
-import static exporter
+import static export
 import static runner
 
 dyn win    = graph.init(800, 600, "export")
 dyn canvas = image.new(800, 600)
-dyn bg     = image.new(1, 1)
 
 stage.Stage.background(18, 18, 26)
 pool.Pool.reset()
@@ -47,18 +46,17 @@ ana.go(1, 200.0, 0.0)
 leo.go(2, 200.0, 300.0)
 ana.go(2, 200.0, 60.0)
 
-exporter.Exporter.setup("lab/frames", 30)
-exporter.Exporter.hold(5, 5)
+export.Exporter.setup("lab/frames", 30)
+export.Exporter.hold(5, 5)
 
 int t0 = time.now_ms()
-runner.Runner.export(win, canvas, bg)
+runner.Runner.export(win, canvas)
 int took = time.elapsed_ms(t0)
 
 print("")
-print("frames generated ..... ", exporter.Exporter.frames(), "  (expected 70: 5 + 30 + 30 + 5)")
+print("frames generated ..... ", export.Exporter.frames(), "  (expected 70: 5 + 30 + 30 + 5)")
 print("generation time ...... ", took, " ms")
-print("video duration ....... ", math.to_float(exporter.Exporter.frames()) / 30.0, " s at 30 fps")
+print("video duration ....... ", math.to_float(export.Exporter.frames()) / 30.0, " s at 30 fps")
 
-image.discard(bg)
 image.discard(canvas)
 graph.close(win)

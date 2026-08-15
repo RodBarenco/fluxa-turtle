@@ -10,12 +10,11 @@ import static pool
 import static timeline
 import static painter
 import static turtle
-import static exporter
+import static export
 import static runner
 
 dyn win    = graph.init(800, 600, "batch")
 dyn canvas = image.new(800, 600)
-dyn bg     = image.new(1, 1)
 pool.Pool.reset()
 timeline.Timeline.reset()
 stage.Stage.background(16, 17, 24)
@@ -32,7 +31,7 @@ leo.ring(2, 35, 470.0, 170.0)
 
 print("rosette via ring: actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 
-runner.Runner.rebuild(win, canvas, bg, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
 runner.Runner.frame(win, canvas)
 danger {
     dyn shot = graph.capture(win)
@@ -40,6 +39,5 @@ danger {
     image.discard(shot)
 }
 if err != nil { print("capture: ", err[0]) }
-image.discard(bg)
 image.discard(canvas)
 graph.close(win)

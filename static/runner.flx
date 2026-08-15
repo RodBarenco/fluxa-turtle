@@ -34,7 +34,12 @@ Block Runner {
     int exporting  = 0           // 1 = controlled render, no clock
     float sim_dt   = 0.0         // seconds per frame while exporting
 
-    fn play(dyn win, dyn canvas, dyn bg, int done) int {
+    fn play(dyn win, dyn canvas, int done) int {
+        // Whatever the artwork file declared — export.Video or export.Frames —
+        // is generated here, before the stage comes up. Outside the replay loop
+        // on purpose: pressing R redoes the drawing, not the file on disk.
+        deliver(win, canvas)
+
         int cur = done
         int again = 1
 
@@ -42,7 +47,7 @@ Block Runner {
             again = 0
             int limit = timeline.Timeline.max_step()
 
-            rebuild(win, canvas, bg, cur)
+            rebuild(win, canvas, cur)
 
             int stop = 0
             while cur < limit && stop == 0 {
@@ -52,7 +57,7 @@ Block Runner {
                     animate(win, canvas, nxt)
                     cur = nxt
                     // clearing a path rebuilds the texture from what is left
-                    if has_clear(nxt) == 1 { rebuild(win, canvas, bg, cur) }
+                    if has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
                 }
             }
 
@@ -80,37 +85,81 @@ Block Runner {
     // It does not record the screen: it redoes the artwork from the beginning,
     // with time advancing 1/fps per frame, and saves each one. The settings
     // (folder, fps, step range, still frames at each end) live in the Exporter.
-    fn export(dyn win, dyn canvas, dyn bg) nil {
-        int a = exporter.Exporter.get_from()
-        int b = exporter.Exporter.get_to()
+    fn export(dyn win, dyn canvas) nil {
+        int a = export.Exporter.get_from()
+        int b = export.Exporter.get_to()
         if a < 1 { a = 1 }
         if b <= 0 { b = timeline.Timeline.max_step() }
         if b > timeline.Timeline.max_step() { b = timeline.Timeline.max_step() }
 
         exporting = 1
-        sim_dt = exporter.Exporter.dt()
-        exporter.Exporter.begin()
+        sim_dt = export.Exporter.dt()
+        export.Exporter.begin()
 
         // no fps cap: generation runs as fast as the machine allows
         graph.set_fps(win, 0)
 
         // the state at the start of the exported range
-        rebuild(win, canvas, bg, a - 1)
+        rebuild(win, canvas, a - 1)
 
-        hold(win, canvas, exporter.Exporter.get_hold_start())
+        hold(win, canvas, export.Exporter.get_hold_start())
 
         int s = a
         while s <= b {
             animate(win, canvas, s)
-            if has_clear(s) == 1 { rebuild(win, canvas, bg, s) }
+            if has_clear(s) == 1 { rebuild(win, canvas, s) }
             s = s + 1
         }
 
-        hold(win, canvas, exporter.Exporter.get_hold_end())
+        hold(win, canvas, export.Exporter.get_hold_end())
 
         exporting = 0
         graph.set_fps(win, config.FPS())
-        exporter.Exporter.finish()
+        export.Exporter.finish()
+    }
+
+    // Generates what the artwork file asked for — export.Video or
+    // export.Frames — and says what it actually did.
+    //
+    // Asking for more steps than the artwork has is not a mistake to punish:
+    // `export.Video(1, 36, 5)` over an artwork of 25 steps generates those 25
+    // and says so. The line is written once and the drawing keeps growing under
+    // it; making the user come back and fix the number would be the tool
+    // getting in the way.
+    fn deliver(dyn win, dyn canvas) nil {
+        int what = export.Exporter.wanted()
+        if what == 0 { return }
+
+        int last = timeline.Timeline.max_step()
+        if last < 1 {
+            print("[export] nothing to generate: no steps declared yet")
+            return
+        }
+
+        int a = export.Exporter.w_from()
+        int b = export.Exporter.w_to()
+        int fps = export.Exporter.w_fps()
+        if a < 1 { a = 1 }
+        if b <= 0 { b = last }
+        if b > last {
+            print("[export] the artwork has ", last, " steps, not ", export.Exporter.w_to(), " — generating what there is")
+            b = last
+        }
+        if a > b {
+            print("[export] nothing to generate: step ", a, " is past the end of the artwork")
+            return
+        }
+
+        print("[export] steps ", a, " to ", b, " at ", fps, " fps")
+
+        if what == 1 { movie(win, canvas, a, b, fps) }
+        if what == 2 {
+            int still = fps / 2
+            export.Exporter.setup_free("export", fps)
+            export.Exporter.range(a, b)
+            export.Exporter.hold(still, still)
+            export(win, canvas)
+        }
     }
 
     // F puts the window fullscreen, and F again brings it back — the whole
@@ -143,21 +192,24 @@ Block Runner {
     // The video cursor is opened and closed right here. A `dyn` cannot be a
     // Block FIELD, but it can be a local inside a method — the same thing
     // Painter.bake does with the capture (adr 0010).
-    fn movie(dyn win, dyn canvas, dyn bg, int from, int to, int fps) nil {
-        int still = fps / 2
-        exporter.Exporter.setup("export", fps)
-        exporter.Exporter.range(from, to)
-        exporter.Exporter.hold(still, still)
+    fn movie(dyn win, dyn canvas, int from, int to, int rate) nil {
+        int still = rate / 2
+        // A free folder, because an export/ from an earlier run is somebody's
+        // frames and this one deletes what it uses.
+        export.Exporter.setup_free("export", rate)
+        export.Exporter.range(from, to)
+        export.Exporter.hold(still, still)
 
-        export(win, canvas, bg)
+        export(win, canvas)
 
+        export.Exporter.video_file("artwork")
         danger {
-            dyn v = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
-            exporter.Exporter.to_video(v, 0)
+            dyn v = video.open(export.Exporter.video_path(), config.W(), config.H(), export.Exporter.get_fps())
+            export.Exporter.to_video(v, 0)
             video.close(v)
         }
         if err != nil { print("[export] the video was not written: ", err[0]) }
-        if err == nil { print("[export] artwork.mp4 is ready") }
+        if err == nil { print("[export] ", export.Exporter.video_path(), " is ready") }
     }
 
     // Still frames: the artwork sits on screen with nothing moving.
@@ -166,21 +218,27 @@ Block Runner {
         while i < n {
             guard[0] = i         // anchor FIRST
             frame(win, canvas)
-            exporter.Exporter.save(win)
+            export.Exporter.save(win)
             i = i + 1
         }
     }
 
     // Redraws the finished artwork in a single frame and pins it to the texture.
-    fn rebuild(dyn win, dyn canvas, dyn bg, int upto) nil {
+    fn rebuild(dyn win, dyn canvas, int upto) nil {
         pool.Pool.home_all()
         pool.Pool.clear_marks()
         pool.Pool.reset_styles()
         scan_clears(upto)
         painter.Painter.reset()
 
+        // The background image lives here, as a local, for exactly one frame.
+        // It has to: graph.draw_image batches, so releasing it before end_frame
+        // leaves the batch pointing at a texture that is gone and the background
+        // comes out black.
+        dyn img = stage.Stage.picture()
+
         graph.begin_frame(win)
-        stage.Stage.paint(win, bg)
+        stage.Stage.paint(win, img)
         int s = 1
         while s <= upto {
             instant(win, s)
@@ -188,6 +246,8 @@ Block Runner {
         }
         graph.end_frame(win)
         painter.Painter.bake(win, canvas)
+
+        image.discard(img)
     }
 
     // Finds, for each turtle, the last step where it cleared its own path.
@@ -320,7 +380,7 @@ Block Runner {
         // per step.
         int nf = 0
         if exporting == 1 {
-            nf = math.to_int(math.round(dmax * math.to_float(exporter.Exporter.get_fps())))
+            nf = math.to_int(math.round(dmax * math.to_float(export.Exporter.get_fps())))
             if nf < 1 { nf = 1 }
         }
 
@@ -367,7 +427,7 @@ Block Runner {
             // No keyboard during a controlled render: the export answers to the
             // frame index and to nothing else (adr 0006).
             if exporting == 0 { hotkeys(win) }
-            if exporting == 1 { exporter.Exporter.save(win) }
+            if exporting == 1 { export.Exporter.save(win) }
 
             if el >= dmax { running = 0 }
             if graph.should_close(win) { running = 0 }

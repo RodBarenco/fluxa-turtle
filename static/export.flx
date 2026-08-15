@@ -1,4 +1,4 @@
-// static/exporter.flx — exporting the composition (pillars §8)
+// static/export.flx — exporting the composition (pillars §8)
 //
 // Exporting does not record what is on screen right now: it replays the
 // artwork from the beginning and renders every frame. The document's central
@@ -23,8 +23,39 @@ Block Exporter {
     int hold_end   = 0        // still frames after the last one
     str dir        = "export"
     str prefix     = "frame_"
+    str vid_base   = "artwork"
+    str vid_last   = ""
+
+    int want       = 0        // 0 nothing | 1 a video | 2 the frames
+    int want_from  = 1
+    int want_to    = 0
+    int want_fps   = 60
 
     int arr guard[1] = 0      // hot-loop anchor
+
+    // ── what the artwork file asked for ───────────────────────────
+
+    // The parameters are `first`, `last`, `rate` and not `from`, `to`, `fps`:
+    // a parameter that shares its name with a field of the same Block resolves
+    // to the field, silently — `want_fps = fps` was reading the Block's 60 and
+    // ignoring what the artwork file asked for. Distinct names, always.
+    fn request(int kind, int first, int last, int rate) nil {
+        want      = kind
+        want_from = first
+        want_to   = last
+        want_fps  = rate
+        if want_fps < 1 { want_fps = 1 }
+        if want_fps > 240 { want_fps = 240 }     // std.video's range
+    }
+
+    fn wanted()    int { return want }
+    fn w_from()    int { return want_from }
+    fn w_to()      int { return want_to }
+    fn w_fps()     int { return want_fps }
+
+    // The request lives for one run. A Block's fields are declared again on
+    // every save, so a line that was commented out this time simply is not
+    // there any more — nothing has to be cleared by hand.
 
     // ── configuration ─────────────────────────────────────────────
 
@@ -45,6 +76,58 @@ Block Exporter {
     }
 
     fn name(str p) nil { prefix = p }
+
+    // ── names nothing is written over ─────────────────────────────
+    //
+    // A render is work. Writing it again over the last one, because a file was
+    // saved with the line still uncommented, loses something nobody meant to
+    // lose. So both outputs take the first free name:
+    //
+    //     artwork.mp4, artwork1.mp4, artwork2.mp4 ...
+    //     export/, export1/, export2/ ...
+    //
+    // The counter stops at 1000: past that the guess is that something is
+    // looping, and overwriting the thousandth is better than never returning.
+
+    fn video_file(str base) nil {
+        vid_base = base
+        vid_last = strings.concat(vid_base, ".mp4")
+
+        int i = 1
+        while fs.exists(vid_last) && i < 1000 {
+            guard[0] = i         // anchor FIRST
+            str num = strings.from_int(i)
+            str head = strings.concat(vid_base, num)
+            // reassigning releases the name that was tried before (guide §12.5)
+            vid_last = strings.concat(head, ".mp4")
+            free(num)
+            free(head)
+            i = i + 1
+        }
+    }
+
+    // The path last chosen, owned by the Exporter — the caller reads it, and
+    // does not free it.
+    fn video_path() str { return vid_last }
+    fn frames_dir() str { return dir }
+
+    // Same rule for the folder the frames go into. The name is built in here so
+    // no string has to cross the call and be owned by two places at once.
+    fn setup_free(str base, int rate) nil {
+        fps = rate
+        if fps < 1 { fps = 1 }
+
+        dir = strings.concat(base, "")
+
+        int i = 1
+        while fs.isdir(dir) && i < 1000 {
+            guard[0] = i         // anchor FIRST
+            str num = strings.from_int(i)
+            dir = strings.concat(base, num)
+            free(num)
+            i = i + 1
+        }
+    }
 
     fn get_fps()   int { return fps }
     fn get_from()  int { return from_step }
@@ -180,8 +263,7 @@ Block Exporter {
         str gif  = strings.concat(base, " -vf split[a][b];[a]palettegen[p];[b][p]paletteuse saida.gif")
 
         print("[export] ", count, " frames written to ", dir, "/")
-        print("[export] for an MP4 without leaving Fluxa, hand the Exporter a video:")
-        print("  danger { dyn v = video.open(\"artwork.mp4\", 800, 600, ", fps, ")  exporter.Exporter.to_video(v, 0)  video.close(v) }")
+        print("[export] for an MP4, ask for one in main.flx: export.Video(from, to, ", fps, ")")
         print("[export] for the formats std.video does not write:")
         print(webm)
         print(gif)
@@ -200,3 +282,23 @@ Block Exporter {
         free(gif)
     }
 }
+
+// What main.flx says, and the whole of it:
+//
+//     export.Video(1, 36, 5)      // steps 1 to 36, at 5 frames per second
+//     export.Frames(1, 0, 60)     // the same, as numbered PNGs
+//
+// Neither one renders anything. They record what was asked for, and the Runner
+// picks it up when execution reaches the stage — the artwork file declares, the
+// runner executes, the same way a `go` is a declaration and not a movement.
+// That is what keeps the window, the canvas and the frame loop out of a line
+// somebody is meant to uncomment and read.
+//
+// `to = 0` means "through the last step". Asking for more steps than the
+// artwork has is not an error: it generates what there is and says so.
+
+// The parameters are not called `fps`: a module-level function shares the
+// module's namespace, and a name that also exists as a field of the Block in
+// this file resolves to neither. `first`, `last`, `rate` are unambiguous.
+fn Video(int first, int last, int rate) nil  { Exporter.request(1, first, last, rate) }
+fn Frames(int first, int last, int rate) nil { Exporter.request(2, first, last, rate) }

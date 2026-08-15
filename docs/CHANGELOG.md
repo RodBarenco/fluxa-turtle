@@ -3,6 +3,49 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] — 2026-08-15
+
+### Changed
+
+- **Everything in `main.flx` is a declaration now** — anything that needs a
+  window, a canvas, a frame loop or a file handle is recorded and carried out by
+  the Runner, the same way `leo.go(3, ...)` has always declared a movement
+  instead of performing one ([adr 0011](adr/0011-the-artwork-file-declares.md)):
+
+  ```fluxa
+  stage.Stage.tile("my_texture.png", 1.0)
+  export.Video(1, 36, 5)                    // from, to, frames per second
+  export.Frames(1, 36, 60)                  // the same, as numbered PNGs
+  ```
+
+  Asking for more steps than the artwork has generates what there is and says
+  so, so the line survives the drawing growing under it.
+
+- **`bg` is gone from the artwork file**, and with it the `bg` parameter of
+  `play`, `export`, `movie` and `rebuild`. The Stage holds the path and the
+  rebuild decodes it — once per save, into the baked texture, so the per-frame
+  cost is unchanged. What is left in `main.flx` is the window, the canvas,
+  `done`, and turtles.
+- `static/exporter.flx` is now `static/export.flx`, so the artwork file reads
+  `export.Video(...)`.
+
+- **A render is never written over.** The video takes the first free name —
+  `artwork.mp4`, `artwork1.mp4`, `artwork2.mp4` — and the frames folder does the
+  same: `export/`, `export1/`, `export2/`. Saving with the export line still
+  uncommented costs a render, not the previous one.
+
+### Fixed
+
+- **`Exporter.request` took its frame rate from the Block's field instead of its
+  argument.** A parameter that shares a name with a field of its own Block
+  resolves to the field, silently: `want_fps = fps` read 60 and ignored what was
+  asked for, so `export.Video(1, 36, 5)` rendered at 60 fps. The whole project
+  was scanned for the same pattern afterwards — this was the only one.
+- **The background drew black.** `graph.draw_image` batches, and the Stage was
+  releasing the decoded image before `graph.end_frame`, leaving the batch
+  pointing at a texture that was gone. The image is now a local `dyn` in
+  `Runner.rebuild`, alive for exactly the frame it is drawn in.
+
 ## [0.4.0] — 2026-08-15
 
 ### Changed

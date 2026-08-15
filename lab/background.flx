@@ -1,8 +1,9 @@
 // lab/background.flx — check of the image background (pillars §1).
 // Run from the project root:  ./fluxa run lab/background.flx
 //
-// Generates an 80x80 texture, writes it, loads it back, and draws the three
-// modes: tiled, centred and stretched.
+// Generates an 80x80 texture, writes it, and draws the three modes from the
+// path alone — tiled, centred and stretched. No image handle anywhere in here:
+// that is the point of the Stage holding the path and not the picture.
 
 import std graph
 import std image
@@ -16,7 +17,7 @@ import static pool
 import static timeline
 import static painter
 import static turtle
-import static exporter
+import static export
 import static runner
 
 dyn win = graph.init(800, 600, "fundo")
@@ -47,15 +48,7 @@ danger {
     image.discard(tex)
 }
 if err != nil { print("generating texture: ", err[0]) }
-
-// ── 2. load it back and use it as the background ─────────────────
-dyn bg = image.new(1, 1)
-danger {
-    image.discard(bg)
-    bg = image.load("lab/tile.png")
-}
-if err != nil { print("loading texture: ", err[0]) }
-print("texture ", image.width(bg), "x", image.height(bg))
+print("texture written to lab/tile.png  ", fs.exists("lab/tile.png"), "   (expected true)")
 
 dyn canvas = image.new(800, 600)
 
@@ -72,10 +65,11 @@ leo.go(1, 200.0,   0.0)
 leo.go(2, 200.0, 120.0)
 leo.go(3, 200.0, 120.0)
 
-// ── 3. the three modes ───────────────────────────────────────────
+// ── 2. the three modes ───────────────────────────────────────────
+// Each is one line, and the file is decoded inside the rebuild.
 
-stage.Stage.image_tile()
-runner.Runner.rebuild(win, canvas, bg, 3)
+stage.Stage.tile("lab/tile.png", 1.0)
+runner.Runner.rebuild(win, canvas, 3)
 runner.Runner.frame(win, canvas)
 danger {
     dyn s1 = graph.capture(win)
@@ -84,9 +78,8 @@ danger {
 }
 if err != nil { print("tile: ", err[0]) }
 
-stage.Stage.image_center()
-stage.Stage.image_scale(3.0)
-runner.Runner.rebuild(win, canvas, bg, 3)
+stage.Stage.center("lab/tile.png", 3.0)
+runner.Runner.rebuild(win, canvas, 3)
 runner.Runner.frame(win, canvas)
 danger {
     dyn s2 = graph.capture(win)
@@ -95,10 +88,9 @@ danger {
 }
 if err != nil { print("center: ", err[0]) }
 
-stage.Stage.image_stretch(bg)
-runner.Runner.rebuild(win, canvas, bg, 3)
+stage.Stage.stretch("lab/tile.png")
+runner.Runner.rebuild(win, canvas, 3)
 runner.Runner.frame(win, canvas)
-print("after stretch the texture became ", image.width(bg), "x", image.height(bg))
 danger {
     dyn s3 = graph.capture(win)
     image.save(s3, "lab/background_stretch.png")
@@ -106,32 +98,24 @@ danger {
 }
 if err != nil { print("stretch: ", err[0]) }
 
-// ── 4. the one-line route, the one main.flx shows ────────────────
-// It releases the old image, loads the new one and sets the mode, all in the
-// call. The image before this point is 800x600 (the stretch resized it), so
-// coming back at 80x80 is the proof that it really reloaded.
+print("mode after three changes  ", stage.Stage.has_image(), "   (expected 1, stretched)")
 
-bg = stage.Stage.tiled(bg, "lab/tile.png", 1.0)
-print("one-line tiled ", image.width(bg), "x", image.height(bg), " mode=", stage.Stage.has_image(), "   (expected 80x80 mode=2)")
+// ── 3. a file that is not there ──────────────────────────────────
+// The rebuild says why, drops back to the plain colour, and the drawing is
+// still on screen — a missing texture never costs somebody their artwork.
 
-runner.Runner.rebuild(win, canvas, bg, 3)
+stage.Stage.tile("lab/there_is_no_such_file.png", 1.0)
+runner.Runner.rebuild(win, canvas, 3)
 runner.Runner.frame(win, canvas)
+print("mode after a missing file ", stage.Stage.has_image(), "   (expected 0, and a reason above)")
+
 danger {
     dyn s4 = graph.capture(win)
-    image.save(s4, "lab/background_oneline.png")
+    image.save(s4, "lab/background_missing.png")
     image.discard(s4)
 }
-if err != nil { print("one-line: ", err[0]) }
+if err != nil { print("missing: ", err[0]) }
 
-// A file that is not there: the background is dropped, the drawing carries on,
-// and the image handed in is still valid — never a released one.
-bg = stage.Stage.tiled(bg, "lab/there_is_no_such_file.png", 1.0)
-print("after a missing file  mode=", stage.Stage.has_image(), " image ", image.width(bg), "x", image.height(bg), "   (expected mode=0, 80x80)")
-
-runner.Runner.rebuild(win, canvas, bg, 3)
-runner.Runner.frame(win, canvas)
-
-image.discard(bg)
 image.discard(canvas)
 graph.close(win)
 print("ok")

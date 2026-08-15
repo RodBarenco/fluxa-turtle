@@ -207,7 +207,7 @@ purpose. Uncomment **one stage**, save, and see what shows up. Then the next.
 | 3 | a second turtle drawing at the same time, entering without a trail |
 | 4 | the stroke changing from the step where you change it |
 | 5 | an image as the background |
-| 6 | exporting the artwork as frames and as an MP4 |
+| 6 | one line that writes the artwork as an MP4 |
 
 The image at the top of this page is what those stages produce — captured from
 the window, not an illustration.
@@ -299,22 +299,21 @@ turtle speeds up on one leg and crawls on the next.
 ### The stage
 
 ```fluxa
-stage.Stage.background(16, 17, 24)               // solid colour
+stage.Stage.background(16, 17, 24)          // solid colour
 
-bg = stage.Stage.tiled(bg, "texture.png", 1.0)   // repeated across the stage
-bg = stage.Stage.centered(bg, "logo.png", 2.0)   // once, in the middle
-bg = stage.Stage.stretched(bg, "photo.png")      // taken to the screen size
-stage.Stage.image_off()                          // back to the plain colour
+stage.Stage.tile("texture.png", 1.0)        // repeated across the stage
+stage.Stage.center("logo.png", 2.0)         // once, in the middle
+stage.Stage.stretch("photo.png")            // taken to the screen size
+stage.Stage.image_off()                     // back to the plain colour
 ```
 
 The last number is the scale. If the file cannot be read, the drawing carries on
 and the reason is printed — a missing texture never costs you the artwork.
 
-The call is an assignment because the background is a `dyn`, and only `main.flx`
-can hold one: it lives there as `prst dyn bg`. Handing the old one in is what
-releases it, so saving over and over does not pile up images.
-
-The background goes into the baked texture, so it costs nothing per frame.
+You give the Stage a **path**, never an image: the file is decoded during the
+rebuild, which happens once per save, and goes into the baked texture, so it
+costs nothing per frame. That is also why nothing about an image handle appears
+in `main.flx` ([adr 0011](docs/adr/0011-the-artwork-file-declares.md)).
 
 ---
 
@@ -331,38 +330,51 @@ With the window focused:
 
 ## Exporting
 
-One line — from which step, to which step, and how many frames per second:
+One line in `main.flx` — from which step, to which step, and how many frames per
+second:
 
 ```fluxa
-runner.Runner.movie(win, canvas, bg, 1, 0, 60)
+export.Video(1, 36, 5)      // artwork.mp4
+export.Frames(1, 36, 60)    // numbered PNGs, in export/
 ```
 
-`0` as the second step means "through the last one". It writes **artwork.mp4**
-next to `main.flx`: H.264 written by Fluxa itself, no ffmpeg, nothing left
-behind. Half a second of stillness is added at each end so the video does not
-start and finish mid-gesture.
+`0` as the second step means "through the last one". Asking for more steps than
+the artwork has is not a mistake: it generates what there is and says so, so the
+line can be written once and left there while the drawing grows under it.
+
+The video is **H.264 written by Fluxa itself** — no ffmpeg, no external process,
+nothing left behind. Half a second of stillness is added at each end so it does
+not start and finish mid-gesture.
+
+**Nothing is ever written over.** The first render is `artwork.mp4`, the next
+`artwork1.mp4`, then `artwork2.mp4` — and the frames go to `export/`, `export1/`,
+`export2/` the same way. A render is work, and a file saved with the line still
+uncommented should not cost you the last one.
+
+Neither call renders anything by itself. They record what was asked for, and the
+Runner delivers it when execution reaches the stage — the artwork file declares,
+the runner executes ([adr 0011](docs/adr/0011-the-artwork-file-declares.md)).
 
 It **does not record the screen.** The artwork is redone from the beginning and
 each frame is rendered with time advancing `1/fps` per frame — never by the
 clock. A slow machine takes longer to generate and the video comes out exactly
 the same; two runs produce byte-identical frames.
 
-### The long way, when you want the frames
+### The long way, for full control
 
 ```fluxa
-exporter.Exporter.setup("export", 60)   // folder and frame rate
-exporter.Exporter.hold(30, 90)          // still frames at the start and end
-exporter.Exporter.range(1, 5)           // optional: only part of the artwork
-runner.Runner.export(win, canvas, bg)   // writes the numbered PNGs
+export.Exporter.setup("frames", 60)     // folder and frame rate
+export.Exporter.hold(30, 90)            // still frames at the start and end
+export.Exporter.range(1, 5)             // only part of the artwork
+runner.Runner.export(win, canvas)       // writes the numbered PNGs
 ```
 
-That leaves a sequence of numbered PNGs — what an editor, a print or a contact
-sheet wants. To also get the video out of them, keeping the frames:
+To turn those frames into a video and keep them:
 
 ```fluxa
 danger {
-    dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
-    exporter.Exporter.to_video(mp4, 1)   // 1 keeps the PNGs, 0 deletes them
+    dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), export.Exporter.get_fps())
+    export.Exporter.to_video(mp4, 1)    // 1 keeps the PNGs, 0 deletes them
     video.close(mp4)
 }
 if err != nil { print("video: ", err[0]) }
@@ -376,7 +388,7 @@ For WebM or GIF the frames are still there, and `finish()` prints the ffmpeg
 command ready to paste:
 
 ```bash
-ffmpeg -framerate 60 -i export/frame_%06d.png -vf split[a][b];[a]palettegen[p];[b][p]paletteuse out.gif
+ffmpeg -framerate 60 -i frames/frame_%06d.png -vf split[a][b];[a]palettegen[p];[b][p]paletteuse out.gif
 ```
 
 ---
@@ -391,7 +403,7 @@ static/pool.flx       the turtles' state
 static/timeline.flx   the action queue, by step
 static/painter.flx    the path and its baked texture
 static/turtle.flx     the turtle (the type you use)
-static/exporter.flx   exporting as frames
+static/export.flx     exporting: frames and MP4
 static/runner.flx     execution
 lab/                  verification harnesses
 docs/                 artworks, recipes, changelog and design decisions

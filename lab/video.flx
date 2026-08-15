@@ -1,9 +1,10 @@
-// lab/video.flx — the export as an MP4 (pillars §8).
+// lab/video.flx — the export as the artwork file declares it (pillars §8).
 // Run from the project root:  ./fluxa run lab/video.flx
 //
-// Both routes are checked: the one line main.flx shows, and the long way that
-// keeps the PNGs. Each video is read back and measured against what was
-// declared — frame count, size and frame rate.
+// `export.Video(...)` and `export.Frames(...)` do not render: they record what
+// was asked for, and the Runner delivers it when execution reaches the stage.
+// The harness calls that delivery directly — `play` would sit on the live stage
+// waiting for the window to close.
 
 import std graph
 import std image
@@ -18,12 +19,11 @@ import static pool
 import static timeline
 import static painter
 import static turtle
-import static exporter
+import static export
 import static runner
 
 dyn win    = graph.init(800, 600, "video")
 dyn canvas = image.new(800, 600)
-dyn bg     = image.new(1, 1)
 
 stage.Stage.background(18, 18, 26)
 pool.Pool.reset()
@@ -39,17 +39,20 @@ a.path_width(6)
 a.speed(300.0)
 a.ring(1, 3, 300.0, 25.0)
 
-// ── 1. the one line ──────────────────────────────────────────────
-// 3 seconds of movement at 30 fps, plus half a second of stillness at each end:
-// 90 + 15 + 15 = 120 frames, and no leftover PNGs.
+// ── 1. the video, asking for more steps than there are ───────────
+// 99 steps were asked for and the artwork has 3: it generates the 3 and says
+// so. 3 seconds at 30 fps plus half a second of stillness at each end is
+// 15 + 90 + 15 = 120 frames, with no PNGs left behind.
 
-runner.Runner.movie(win, canvas, bg, 1, 0, 30)
+export.Video(1, 99, 30)
+runner.Runner.deliver(win, canvas)
 
-print("frames rendered ......  ", exporter.Exporter.frames(), "   (expected 120: 15 + 90 + 15)")
+print("frames rendered ......  ", export.Exporter.frames(), "   (expected 120: 15 + 90 + 15)")
 print("frames folder left ...  ", fs.isdir("export"), "   (expected false)")
+print("written to ...........  ", export.Exporter.video_path(), "   (expected artwork.mp4)")
 
 danger {
-    dyn p = video.play_open("artwork.mp4")
+    dyn p = video.play_open(export.Exporter.video_path())
     dyn n = video.info(p)
     print("read back ............  ", n[0], "x", n[1], " at ", n[2], " fps, ", n[3], " frames")
 
@@ -69,28 +72,39 @@ danger {
 }
 if err != nil { print("read: ", err[0]) }
 
+// ── 2. a second video, with the first one still there ────────────
+// Nothing is written over: the next free name is taken.
+
+export.Video(1, 1, 30)
+runner.Runner.deliver(win, canvas)
+print("second video .........  ", export.Exporter.video_path(), "   (expected artwork1.mp4)")
+print("the first one is still there  ", fs.exists("artwork.mp4"), "   (expected true)")
+
 danger { fs.delete("artwork.mp4") }
+danger { fs.delete("artwork1.mp4") }
 if err != nil { print("cleanup: ", err[0]) }
 
-// ── 2. the long way, keeping the frames ──────────────────────────
-// The same artwork, only the second step, with the frames left on disk.
+// ── 3. the frames, one step of the artwork ───────────────────────
+// The other declaration: same range rules, PNGs kept on disk.
 
-exporter.Exporter.setup("lab/frames", 30)
-exporter.Exporter.range(2, 2)
-exporter.Exporter.hold(2, 2)
-runner.Runner.export(win, canvas, bg)
+export.Frames(2, 2, 30)
+runner.Runner.deliver(win, canvas)
 
-print("frames exported ......  ", exporter.Exporter.frames(), "   (expected 34: 2 + 30 + 2)")
+print("frames exported ......  ", export.Exporter.frames(), "   (expected 60: 15 + 30 + 15)")
+print("frames folder ........  ", export.Exporter.frames_dir(), "   (expected export)")
+print("frame 0 on disk ......  ", fs.exists("export/frame_000000.png"), "   (expected true)")
+
+// ── 4. the long way, turning those frames into a video ───────────
+// The Exporter route, for whoever wants the folder, the hold, or the PNGs kept.
 
 danger {
-    dyn mp4 = video.open("lab/one_step.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
-    exporter.Exporter.to_video(mp4, 1)
+    dyn mp4 = video.open("lab/one_step.mp4", config.W(), config.H(), export.Exporter.get_fps())
+    export.Exporter.to_video(mp4, 1)
     video.close(mp4)
 }
 if err != nil { print("write: ", err[0]) }
 
-print("frames folder kept ...  ", fs.isdir("lab/frames"), "   (expected true)")
-print("first frame still on disk  ", fs.exists("lab/frames/frame_000000.png"), "   (expected true)")
+print("frames folder kept ...  ", fs.isdir("export"), "   (expected true)")
 
 danger {
     dyn p2 = video.play_open("lab/one_step.mp4")
@@ -100,6 +114,13 @@ danger {
 }
 if err != nil { print("read: ", err[0]) }
 
-image.discard(bg)
+// ── 5. the frames folder is not written into either ──────────────
+// export/ is still on disk from step 3, so this one takes the next name.
+
+export.Frames(3, 3, 30)
+runner.Runner.deliver(win, canvas)
+print("second frames run ....  ", export.Exporter.frames_dir(), "   (expected export1)")
+print("the first folder is still there  ", fs.exists("export/frame_000000.png"), "   (expected true)")
+
 image.discard(canvas)
 graph.close(win)

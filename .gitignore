@@ -31,6 +31,7 @@ docs/obras/
 # Frames and videos are generated from the source code: what is
 # worth versioning is the artwork (main.flx), not its render.
 export/
+export[0-9]*/
 lab/frames/
 *.mp4
 *.webm
