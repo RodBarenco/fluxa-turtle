@@ -1,0 +1,82 @@
+// lab/toward.flx — walking to a point (and a shape written as a loop).
+// Run from the project root:  ./fluxa run lab/toward.flx
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static runner
+
+dyn win    = graph.init(800, 600, "toward")
+dyn canvas = image.new(800, 600)
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+
+// A square by its corners: no angles, no lengths, just four points.
+Block box typeof turtle.Turtle
+box.spawn(120.0, 160.0)
+box.hide()
+box.speed(1200.0)
+box.path_color(255, 200, 60)
+box.path_width(2)
+box.toward(1, 280.0, 160.0)
+box.toward(2, 280.0, 320.0)
+box.toward(3, 120.0, 320.0)
+box.toward(4, 120.0, 160.0)
+
+// A rose curve: sixty strokes in five lines. This is the point of `toward`.
+Block rose typeof turtle.Turtle
+rose.spawn(560.0, 300.0)
+rose.hide()
+rose.speed(900.0)
+rose.path_color(120, 208, 214)
+rose.path_width(2)
+
+int i = 0
+while i <= 72 {
+    float a = math.to_float(i) * 5.0
+    float r = 150.0 * math.cos(math.deg_to_rad(a * 2.0))
+    rose.toward(5 + i, 560.0 + r * math.cos(math.deg_to_rad(a)), 300.0 - r * math.sin(math.deg_to_rad(a)))
+    i = i + 1
+}
+
+// jump is the same move with the pen up: two dots, no line between them.
+Block dots typeof turtle.Turtle
+dots.spawn(120.0, 480.0)
+dots.hide()
+dots.speed(1200.0)
+dots.path_color(255, 120, 90)
+dots.path_width(6)
+dots.toward(80, 180.0, 480.0)
+dots.jump(81, 300.0, 480.0)
+dots.toward(82, 360.0, 480.0)
+
+runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.frame(win, canvas)
+
+print("actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+print("the box turtle ends where she started: x=", pool.Pool.get_x(0), " y=", pool.Pool.get_y(0), "  (expected 120 160)")
+print("her heading after the last toward: ", pool.Pool.get_ang(0), "  (expected 90, pointing at the corner she walked to)")
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/toward.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(canvas)
+graph.close(win)

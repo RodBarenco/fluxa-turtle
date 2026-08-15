@@ -86,6 +86,58 @@ Block Turtle {
         timeline.Timeline.add(id, step, 1, dist, turn, 0.0)
     }
 
+    // ── walking to a point ────────────────────────────────────────
+    //
+    // `go` says "turn this much and walk that far". `toward` says "be here" and
+    // lets the tool work out the rest when the step runs. It is what makes a
+    // drawing writable as a loop:
+    //
+    //     int i = 0
+    //     while i <= 60 {
+    //         float a = math.to_float(i) * 6.0
+    //         float r = 80.0 + 30.0 * math.cos(math.deg_to_rad(a * 3.0))
+    //         pen.toward(10 + i, 400.0 + r * math.cos(math.deg_to_rad(a)),
+    //                            300.0 - r * math.sin(math.deg_to_rad(a)))
+    //         i = i + 1
+    //     }
+    //
+    // Sixty strokes of a rose curve in five lines. `jump` is the same move with
+    // the pen up — how one drawing ends and the next begins.
+    //
+    // She ends up facing the point she walked to, so a `go` after a `toward`
+    // carries on from that heading.
+
+    fn toward(int step, float x, float y) nil { timeline.Timeline.add(id, step, 3, x, y, 0.0) }
+    fn jump(int step, float x, float y) nil   { timeline.Timeline.add(id, step, 4, x, y, 0.0) }
+
+    // ── moving what is already drawn ──────────────────────────────
+    //
+    // Everything above draws. These two MOVE what was drawn: from this step on,
+    // this turtle's whole trail is turned `deg` degrees about the point
+    // (cx, cy), or displaced by (dx, dy). Nothing else on the stage moves.
+    //
+    // It is how something animates without being wiped and sketched again. A
+    // flipper is drawn once and then turned a few degrees per step:
+    //
+    //     fin.pivot(300, 6.0, 470, 452)
+    //     fin.pivot(301, 9.0, 470, 452)
+    //     fin.pivot(302, 12.0, 470, 452)
+    //
+    // The angle is absolute, not added to the last one, so a loop can sweep it
+    // back and forth and land exactly where it started. `pivot(s, 0.0, x, y)`
+    // puts her drawing back where she drew it.
+    //
+    // A move repaints the whole artwork for that step, like `path_clear` does,
+    // so it costs a rebuild per step it happens on (adr 0012).
+
+    fn pivot(int step, float deg, int cx, int cy) nil {
+        timeline.Timeline.style_at(id, step, 10, cx, cy, 0, deg)
+    }
+
+    fn shift(int step, int dx, int dy) nil {
+        timeline.Timeline.style_at(id, step, 11, dx, dy, 0, 0.0)
+    }
+
     // ── batches ───────────────────────────────────────────────────
     //
     // Repeating the same movement is what draws almost every figure, so the

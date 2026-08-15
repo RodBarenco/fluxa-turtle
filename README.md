@@ -303,6 +303,54 @@ leo.go_silent_at(4, 400.0, 0.0, 900.0)
 The speed declared on the action beats the turtle's own speed. That is how one
 turtle speeds up on one leg and crawls on the next.
 
+### Walking to a point
+
+```fluxa
+leo.toward(5, 400.0, 300.0)   // be at this point — the turn and the distance
+leo.jump(6, 120.0, 480.0)     // are worked out when the step runs
+```
+
+`go` says "turn this much and walk that far"; `toward` says "be here". It is
+what makes a drawing writable as a loop over its points, and what lets a shape
+sketched anywhere be printed straight out as steps:
+
+```fluxa
+int i = 0
+while i <= 60 {
+    float a = math.to_float(i) * 6.0
+    float r = 150.0 * math.cos(math.deg_to_rad(a * 2.0))
+    rose.toward(5 + i, 400.0 + r * math.cos(math.deg_to_rad(a)),
+                       300.0 - r * math.sin(math.deg_to_rad(a)))
+    i = i + 1
+}
+```
+
+`jump` is the same move with the pen up — how one line ends and the next begins.
+
+### Moving what is already drawn
+
+```fluxa
+fin.pivot(300, 12.0, 467, 470)   // from step 300, turn her whole trail 12°
+fin.shift(400, 0, -20)           // about (467, 470) — or displace it
+```
+
+These do not draw. They **move what that turtle has drawn**, all of it, from
+that step on. The angle is absolute, so a loop can sweep it and come back
+exactly where it started — which is how something animates without being wiped
+and sketched again:
+
+```fluxa
+int k = 0
+while k < 60 {
+    fin.pivot(300 + k, 16.0 * math.sin(math.deg_to_rad(math.to_float(k) * 6.0)), 467, 470)
+    k = k + 1
+}
+```
+
+A move repaints the artwork for that step, the same cost `path_clear` has
+([adr 0012](docs/adr/0012-a-turtle-can-move-what-she-has-drawn.md)). It moves
+the drawing, never the turtle: her position and heading are untouched.
+
 ### The stage
 
 ```fluxa
@@ -459,6 +507,7 @@ The harnesses in `lab/` check the behaviour and produce an image:
 ./fluxa run lab/export.flx      # frame count and determinism
 ./fluxa run lab/video.flx       # the MP4: frame count, size and frame rate
 ./fluxa run lab/background.flx  # the three background image modes
+./fluxa run lab/toward.flx      # walking to a point, and a shape as a loop
 ./fluxa run lab/preview.flx     # the main.flx artwork with everything on
 ```
 

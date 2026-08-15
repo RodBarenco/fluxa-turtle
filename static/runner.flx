@@ -34,6 +34,9 @@ Block Runner {
     int exporting  = 0           // 1 = controlled render, no clock
     float sim_dt   = 0.0         // seconds per frame while exporting
 
+    float aim_x = 0.0            // where the action being run ends up
+    float aim_y = 0.0
+
     fn play(dyn win, dyn canvas, int done) int {
         // Nothing has been presented yet, so the window is still showing
         // whatever was behind it — somebody's desktop, framed. It stays that way
@@ -67,8 +70,16 @@ Block Runner {
                     int nxt = cur + 1
                     animate(win, canvas, nxt)
                     cur = nxt
-                    // clearing a path rebuilds the texture from what is left
+                    // clearing a path, or moving one, repaints the texture
                     if has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
+                    // A step where the only thing that happens is a move has
+                    // nothing to animate — `animate` returns at once — but it
+                    // does change the picture, so it gets its frame here, after
+                    // the repaint (adr 0012).
+                    if timeline.Timeline.moves_at(nxt) == 1 {
+                        rebuild(win, canvas, cur)
+                        frame(win, canvas)
+                    }
                 }
             }
 
@@ -119,6 +130,11 @@ Block Runner {
         while s <= b {
             animate(win, canvas, s)
             if has_clear(s) == 1 { rebuild(win, canvas, s) }
+            if timeline.Timeline.moves_at(s) == 1 {
+                rebuild(win, canvas, s)
+                frame(win, canvas)
+                export.Exporter.save(win)
+            }
             s = s + 1
         }
 
@@ -247,6 +263,10 @@ Block Runner {
         pool.Pool.home_all()
         pool.Pool.clear_marks()
         pool.Pool.reset_styles()
+        // Where everything that has been drawn is standing by this step: a
+        // rotation declared at step 300 moves the strokes from step 100 too, so
+        // it is applied before any of them are redrawn (adr 0012).
+        timeline.Timeline.apply_moves(upto)
         scan_clears(upto)
         painter.Painter.reset()
 
@@ -312,6 +332,40 @@ Block Runner {
         graph.end_frame(win)
     }
 
+    // Where an action takes the turtle, and the turn it makes getting there.
+    //
+    // A `go` carries its own turn and distance, measured when it was declared.
+    // A `toward` carries a POINT, and the turn and the distance only exist once
+    // we know where she is standing — which is here, when the step runs. That
+    // is the whole difference, and it is what lets a shape be declared as a loop
+    // over its points instead of as a list of measured strokes.
+    fn aim(int t, int i) nil {
+        int k = timeline.Timeline.get_kind(i)
+        float x1 = pool.Pool.get_x(t)
+        float y1 = pool.Pool.get_y(t)
+
+        if k >= 3 {
+            aim_x = timeline.Timeline.get_dist(i)
+            aim_y = timeline.Timeline.get_turn(i)
+            float want = math.rad_to_deg(math.atan2(y1 - aim_y, aim_x - x1))
+            pool.Pool.turn(t, want - pool.Pool.get_ang(t))
+            return
+        }
+
+        pool.Pool.turn(t, timeline.Timeline.get_turn(i))
+        float d  = timeline.Timeline.get_dist(i)
+        float ra = math.deg_to_rad(pool.Pool.get_ang(t))
+        aim_x = x1 + d * math.cos(ra)
+        aim_y = y1 - d * math.sin(ra)
+    }
+
+    // 0 = go and 3 = toward leave a trail; 1, 4 and 2 do not.
+    fn draws(int k) int {
+        if k == 0 { return 1 }
+        if k == 3 { return 1 }
+        return 0
+    }
+
     // Runs a step without animating, drawing straight into the frame to be baked.
     fn instant(dyn win, int s) nil {
         timeline.Timeline.apply_at(s)
@@ -322,19 +376,14 @@ Block Runner {
             if i >= 0 {
                 int k = timeline.Timeline.get_kind(i)
                 if k != 2 {
-                    pool.Pool.turn(t, timeline.Timeline.get_turn(i))
-
-                    float d  = timeline.Timeline.get_dist(i)
-                    float ra = math.deg_to_rad(pool.Pool.get_ang(t))
                     float x1 = pool.Pool.get_x(t)
                     float y1 = pool.Pool.get_y(t)
-                    float x2 = x1 + d * math.cos(ra)
-                    float y2 = y1 - d * math.sin(ra)
 
-                    pool.Pool.set_pos(t, x2, y2)
+                    aim(t, i)
+                    pool.Pool.set_pos(t, aim_x, aim_y)
 
-                    if k == 0 && pool.Pool.get_pen(t) == 1 && s > pool.Pool.get_clear(t) {
-                        painter.Painter.stroke(win, t, x1, y1, x2, y2)
+                    if draws(k) == 1 && pool.Pool.get_pen(t) == 1 && s > pool.Pool.get_clear(t) {
+                        painter.Painter.stroke(win, t, x1, y1, aim_x, aim_y)
                     }
                 }
             }
@@ -354,28 +403,26 @@ Block Runner {
             if i >= 0 && an < config.MAX_TURTLES() {
                 int k = timeline.Timeline.get_kind(i)
                 if k != 2 {
-                    pool.Pool.turn(t, timeline.Timeline.get_turn(i))
-
-                    float d  = timeline.Timeline.get_dist(i)
-                    float ra = math.deg_to_rad(pool.Pool.get_ang(t))
                     float x1 = pool.Pool.get_x(t)
                     float y1 = pool.Pool.get_y(t)
+
+                    aim(t, i)
 
                     aid[an]  = t
                     asx[an]  = x1
                     asy[an]  = y1
-                    atx[an]  = x1 + d * math.cos(ra)
-                    aty[an]  = y1 - d * math.sin(ra)
+                    atx[an]  = aim_x
+                    aty[an]  = aim_y
 
                     // the speed declared on the action beats the turtle's own
                     float v = timeline.Timeline.get_speed(i)
                     if v <= 0.0 { v = pool.Pool.get_spd(t) }
                     float dur = 0.0
-                    if v > 0.0 { dur = math.abs(d) / v }
+                    if v > 0.0 { dur = math.hypot(aim_x - x1, aim_y - y1) / v }
                     adur[an] = dur
 
                     adraw[an] = 0
-                    if k == 0 && pool.Pool.get_pen(t) == 1 { adraw[an] = 1 }
+                    if draws(k) == 1 && pool.Pool.get_pen(t) == 1 { adraw[an] = 1 }
 
                     an = an + 1
                 }

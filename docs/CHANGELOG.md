@@ -3,6 +3,45 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0] — 2026-08-15
+
+### Added
+
+- **`toward` and `jump`** — walk to a point, or move there with the pen up. `go`
+  says "turn this much and walk that far"; `toward` says "be here", and the turn
+  and the distance are worked out when the step runs. It is what makes a drawing
+  writable as a loop over its points, and what lets a shape sketched anywhere be
+  printed straight out as steps. New action kinds in the timeline (3 and 4),
+  resolved by `Runner.aim` at execution time.
+- **`pivot` and `shift`** — move what a turtle has ALREADY drawn: turn her whole
+  trail about a point, or displace it, from a given step on. The angle is
+  absolute, so a loop can sweep it and land back where it started.
+
+  This is what an animation of a part needs. Redrawing a flipper pose by pose
+  works and looks wrong: every pose is thirty strokes, a step is never less than
+  one frame, so the video shows a drawing being sketched and wiped rather than
+  an animal swimming. With `pivot` the flipper is drawn once and only its angle
+  changes — one angle per step, one frame per angle
+  ([adr 0012](adr/0012-a-turtle-can-move-what-she-has-drawn.md)).
+
+  A move repaints the artwork for that step, the same cost `path_clear` already
+  had, and `max_step` counts it so the artwork does not end before the last one.
+
+### Changed
+
+- **`Painter.thick` closes its joints.** A thick stroke was a bundle of parallel
+  lines with nothing at the ends, so a curve made of them had a pinhole at every
+  joint — visible at width 2, ugly by width 4 — and an even width had no line
+  down its middle at all, leaving a seam of background inside diagonal strokes.
+  Now: a centre line for even widths, and a dot at each end that fills the wedge
+  and gives a lone stroke a round cap. The 3000-segment rebuild went from 132 ms
+  to ~160 ms for it.
+- **`fluxa.toml` carries measured caps**, in the style of `nave/fluxa.toml`:
+  `ast_pool_cap = 16384` (the artwork needs 5794 nodes; the default 4096
+  overflows to a malloc per node) and `scope_cap = 512` (measured: 170 scopes).
+  The string arena was measured too — the default is enough here, so it is left
+  alone.
+
 ## [0.6.0] — 2026-08-15
 
 ### Added

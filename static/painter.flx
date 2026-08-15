@@ -48,10 +48,10 @@ Block Painter {
             full = 1
             return
         }
-        ax[n] = x1
-        ay[n] = y1
-        bx[n] = x2
-        by[n] = y2
+        ax[n] = at_x(t, x1, y1)
+        ay[n] = at_y(t, x1, y1)
+        bx[n] = at_x(t, x2, y2)
+        by[n] = at_y(t, x2, y2)
 
         sr[n]     = mix(pool.Pool.get_pr(t), stage.Stage.r(), opa)
         sg[n]     = mix(pool.Pool.get_pg(t), stage.Stage.g(), opa)
@@ -95,11 +95,36 @@ Block Painter {
     // It works because the path is always drawn over the stage.
     fn mix(int c, int bg, int opa) int { return bg + (c - bg) * opa / 100 }
 
+    // Where a point of turtle `t` ends up on screen: her drawing can be turned
+    // about a point and displaced as a whole (adr 0012), and until that is
+    // applied a stroke does not know where it belongs. Two calls because a
+    // function returns one value.
+    fn at_x(int t, float x, float y) float {
+        if pool.Pool.moved(t) == 0 { return x }
+        float cx = math.to_float(pool.Pool.get_rcx(t))
+        float cy = math.to_float(pool.Pool.get_rcy(t))
+        float ra = math.deg_to_rad(pool.Pool.get_rot(t))
+        return cx + (x - cx) * math.cos(ra) + (y - cy) * math.sin(ra) + math.to_float(pool.Pool.get_offx(t))
+    }
+
+    fn at_y(int t, float x, float y) float {
+        if pool.Pool.moved(t) == 0 { return y }
+        float cx = math.to_float(pool.Pool.get_rcx(t))
+        float cy = math.to_float(pool.Pool.get_rcy(t))
+        float ra = math.deg_to_rad(pool.Pool.get_rot(t))
+        return cy - (x - cx) * math.sin(ra) + (y - cy) * math.cos(ra) + math.to_float(pool.Pool.get_offy(t))
+    }
+
     // One stroke by turtle `t`, in the style she is configured with right now —
     // which, during a step, is the style that step was declared with.
-    fn stroke(dyn win, int t, float x1, float y1, float x2, float y2) nil {
+    fn stroke(dyn win, int t, float ax1, float ay1, float ax2, float ay2) nil {
         int opa = pool.Pool.get_opa(t)
         if opa <= 0 { return }
+
+        float x1 = at_x(t, ax1, ay1)
+        float y1 = at_y(t, ax1, ay1)
+        float x2 = at_x(t, ax2, ay2)
+        float y2 = at_y(t, ax2, ay2)
 
         paint(win, x1, y1, x2, y2,
               mix(pool.Pool.get_pr(t), stage.Stage.r(), opa),
@@ -180,6 +205,26 @@ Block Painter {
             float off = math.to_float(k) - half + 0.5
             graph.draw_line(win, math.to_int(x1 + px * off), math.to_int(y1 + py * off), math.to_int(x2 + px * off), math.to_int(y2 + py * off), r, g, b)
             k = k + 1
+        }
+
+        // An even width has no line down the middle: the offsets land at -0.5
+        // and +0.5, both of which round outward, and a diagonal stroke comes out
+        // with a seam of background running through it. Odd widths get the
+        // middle for free, being centred on 0.
+        if w / 2 * 2 == w {
+            graph.draw_line(win, ix1, iy1, ix2, iy2, r, g, b)
+        }
+
+        // Round the ends. A bundle of parallel lines is a rectangle, and where
+        // two of them meet at an angle the outer corner is a wedge nobody drew:
+        // a curve made of thick strokes comes out with a pinhole at every joint,
+        // which is visible at width 2 and ugly by width 4. A dot at each end
+        // fills the wedge, and it is also what gives a lone stroke a round cap
+        // instead of a chopped one.
+        int rad = w / 2
+        if rad >= 1 {
+            graph.draw_circle(win, ix1, iy1, rad, r, g, b)
+            graph.draw_circle(win, ix2, iy2, rad, r, g, b)
         }
     }
 }

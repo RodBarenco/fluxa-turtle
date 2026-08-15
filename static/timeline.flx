@@ -16,7 +16,15 @@
 Block Timeline {
     int arr tid[65536]    = 0        // [65536] mirrors config.MAX_ACTIONS()
     int arr step[65536]   = 0
-    int arr kind[65536]   = 0        // 0 = go | 1 = go_silent | 2 = path_clear
+    // 0 = go | 1 = go_silent | 2 = path_clear | 3 = toward | 4 = jump
+    //
+    // For 3 and 4 the two float slots hold a POINT on the screen instead of a
+    // distance and a turn: where the turtle has to end up. The turn and the
+    // distance are worked out when the step runs, by the Runner, because they
+    // depend on where she is standing by then — which is exactly what lets a
+    // shape be written as a loop over its points instead of as a list of
+    // measured strokes.
+    int arr kind[65536]   = 0
     float arr dist[65536] = 0.0
     float arr turn[65536] = 0.0
     float arr spd[65536]  = 0.0      // 0 = use the turtle's own speed
@@ -149,6 +157,48 @@ Block Timeline {
         if last[t] == 0 { apply_one(en - 1) }
     }
 
+    // The same table, but the step is given instead of inferred. Moving what is
+    // already drawn is not "from the next step this turtle declares" — it
+    // happens on the step the artwork names, which is what makes an animation
+    // out of it.
+    fn style_at(int t, int step, int k, int a, int b, int c, float f) nil {
+        if t < 0 { return }
+        if t >= config.MAX_TURTLES() { return }
+        if en >= config.MAX_STYLES() {
+            if over_styles == 0 { print("[turtle] appearance limit of ", config.MAX_STYLES(), " reached — the rest was ignored") }
+            over_styles = over_styles + 1
+            return
+        }
+        eowner[en] = t
+        efrom[en]  = step
+        ekind[en]  = k
+        ea[en]     = a
+        eb[en]     = b
+        ec[en]     = c
+        ef[en]     = f
+        en = en + 1
+
+        // A move is something that HAPPENS on a step, so the artwork does not
+        // end before it: the last step counts it, the same way it counts the
+        // last movement.
+        if step > top { top = step }
+    }
+
+    // Moves are not applied step by step like a colour: a rotation declared at
+    // step 300 moves everything that turtle drew, including the strokes from
+    // step 100. So the rebuild asks for the LAST move due at or before the step
+    // it is rebuilding to, and draws her whole trail with that in force.
+    fn apply_moves(int upto) nil {
+        int i = 0
+        while i < en {
+            guard[0] = i         // anchor FIRST
+            if ekind[i] >= 10 {
+                if efrom[i] <= upto { apply_one(i) }
+            }
+            i = i + 1
+        }
+    }
+
     // Applies every change due at step `s`, in the order they were declared.
     // Called once per step by whoever executes it — the rebuild and the
     // animation alike — so every path through the artwork sees the same look.
@@ -156,9 +206,27 @@ Block Timeline {
         int i = 0
         while i < en {
             guard[0] = i         // anchor FIRST
-            if efrom[i] == s { apply_one(i) }
+            if efrom[i] == s {
+                if ekind[i] < 10 { apply_one(i) }
+            }
             i = i + 1
         }
+    }
+
+    // Did anything MOVE at this step? A move repaints what is already on the
+    // canvas, so the runner has to rebuild the texture for it, the same way it
+    // does for a cleared path.
+    fn moves_at(int s) int {
+        int i = 0
+        while i < en {
+            guard[0] = i         // anchor FIRST
+            if efrom[i] == s {
+                if ekind[i] == 10 { return 1 }
+                if ekind[i] == 11 { return 1 }
+            }
+            i = i + 1
+        }
+        return 0
     }
 
     fn apply_one(int i) nil {
@@ -175,6 +243,8 @@ Block Timeline {
         if k == 7 { pool.Pool.set_path_opacity(t, ea[i]) }
         if k == 8 { pool.Pool.set_size(t, ef[i]) }
         if k == 9 { pool.Pool.set_speed(t, ef[i]) }
+        if k == 10 { pool.Pool.set_pivot(t, ef[i], ea[i], eb[i]) }
+        if k == 11 { pool.Pool.set_shift(t, ea[i], eb[i]) }
     }
 
     // That turtle's action on that step, or -1 if it has none. This is how

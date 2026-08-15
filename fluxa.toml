@@ -8,8 +8,21 @@ entry = "main.flx"
 gc_cap         = 1024
 prst_cap       = 64
 prst_graph_cap = 256
-scope_cap      = 256
 module_cap     = 32
+
+scope_cap = 512      # resolver scope pool — one scope per top-level function,
+                     # Block, and Block method (NOT if/while). The tool measures
+                     # 170 (7 Blocks + 147 methods + 16 fns) with the largest
+                     # artwork pasted into main.flx; 512 leaves room for the
+                     # helper functions an artwork declares. Transient and lazy.
+
+ast_pool_cap = 16384 # AST node arena. The default (4096) overflows on any real
+                     # drawing — docs/artworks/one-night.md measured at 5794
+                     # nodes — and the parser then mallocs per node for the rest
+                     # of the run and says so on stderr, once per save. 16384
+                     # covers that artwork about three times over.
+                     # The string arena was measured too: the default 65536
+                     # bytes is enough here, so ast_str_pool_cap is left alone.
 
 [libs]
 std.graph = "1.0"

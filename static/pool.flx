@@ -33,6 +33,16 @@ Block Pool {
     int arr popa[32]   = 100      // path opacity, 0..100
     int arr pclear[32] = 0        // last step where the path was cleared
 
+    // What she has drawn can be moved as a whole: a rotation about a point and
+    // a displacement, both applying to every stroke of hers. This is how a
+    // flipper beats — drawn once, then turned a few degrees per step — instead
+    // of being wiped and sketched again (adr 0012).
+    float arr rot[32]  = 0.0        // degrees, counter-clockwise
+    int arr rcx[32]    = 0          // the point she turns about
+    int arr rcy[32]    = 0
+    int arr offx[32]   = 0
+    int arr offy[32]   = 0
+
     int arr vis[32] = 1
     float arr size[32] = 9.0
     float arr spd[32]  = 200.0    // pixels per second
@@ -71,6 +81,11 @@ Block Pool {
         pgap[id]   = 8
         popa[id]   = 100
         pclear[id] = 0
+        rot[id]    = 0.0
+        rcx[id]    = 0
+        rcy[id]    = 0
+        offx[id]   = 0
+        offy[id]   = 0
         vis[id]    = 1
         size[id]   = 9.0
         spd[id]    = 200.0
@@ -100,6 +115,11 @@ Block Pool {
             pdash[i]  = 10
             pgap[i]   = 8
             popa[i]   = 100
+            rot[i]    = 0.0
+            rcx[i]    = 0
+            rcy[i]    = 0
+            offx[i]   = 0
+            offy[i]   = 0
             vis[i]    = 1
             size[i]   = 9.0
             spd[i]    = 200.0
@@ -128,6 +148,29 @@ Block Pool {
     fn set_speed(int i, float v) nil    { spd[i] = v }
 
     fn set_path_style(int i, int s) nil { pstyle[i] = s }
+
+    fn set_pivot(int i, float deg, int cx, int cy) nil {
+        rot[i] = deg
+        rcx[i] = cx
+        rcy[i] = cy
+    }
+
+    fn set_shift(int i, int dx, int dy) nil {
+        offx[i] = dx
+        offy[i] = dy
+    }
+
+    fn get_rot(int i) float { return rot[i] }
+    fn get_rcx(int i)   int { return rcx[i] }
+    fn get_rcy(int i)   int { return rcy[i] }
+    fn get_offx(int i)  int { return offx[i] }
+    fn get_offy(int i)  int { return offy[i] }
+    fn moved(int i)     int {
+        if rot[i] != 0.0 { return 1 }
+        if offx[i] != 0 { return 1 }
+        if offy[i] != 0 { return 1 }
+        return 0
+    }
 
     fn set_path_dash(int i, int d, int g) nil {
         pdash[i] = d
