@@ -370,6 +370,30 @@ rebuild, which happens once per save, and goes into the baked texture, so it
 costs nothing per frame. That is also why nothing about an image handle appears
 in `main.flx` ([adr 0011](docs/adr/0011-the-artwork-file-declares.md)).
 
+### Everything she can do, in one place
+
+| Call | What it does |
+|---|---|
+| `spawn(x, y)` | where she is born |
+| `face(deg)` | the heading she is born with — the one call that is not a step |
+| `color(r, g, b)` · `size(s)` · `show()` · `hide()` | her own body |
+| `speed(px_s)` | her default speed |
+| `path_color(r, g, b)` · `path_width(w)` · `path_opacity(pct)` | the stroke |
+| `path_solid()` · `path_dotted()` · `path_dashed()` · `path_dots()` · `path_dash(d, g)` | its style and rhythm |
+| `path_on()` · `path_off()` | whether she leaves a trail at all |
+| `go(step, dist, turn)` · `go_silent(step, dist, turn)` | turn, then walk — with and without a trail |
+| `go_at(step, dist, turn, px_s)` · `go_silent_at(...)` | the same, at a speed declared on the action |
+| `ring(first, count, dist, turn)` · `ring_silent(...)` | a run of equal steps in one line |
+| `spiral(first, count, dist, grow, turn)` | the same, with the side growing |
+| `toward(step, x, y)` · `jump(step, x, y)` | be at this point — with the pen down or up |
+| `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | move what she has already drawn |
+| `path_clear(step)` | erase her own trail, on that step |
+
+Everything above the movement rows is an **appearance** call: it applies from the
+next step that turtle declares, never backwards. Everything from `go` down is a
+**step**: it happens at the number you give it, and turtles sharing a number move
+together.
+
 ---
 
 ## Keys
@@ -472,6 +496,28 @@ comes later in the list. That is why `runner` is last.
 
 ---
 
+## The caps in `fluxa.toml`
+
+A drawing is a big program. `fluxa.toml` carries two sizes that the compiled-in
+defaults do not cover, both **measured** rather than guessed — the same thing
+`nave/fluxa.toml` does in the language's example game:
+
+```toml
+[runtime]
+ast_pool_cap = 16384    # AST nodes. docs/artworks/one-night.md needs 5794;
+                        # the default 4096 falls back to a malloc per node and
+                        # says so on stderr, once per save.
+scope_cap    = 512      # one scope per top-level function, Block and Block
+                        # method — measured at 170 with that artwork pasted in.
+```
+
+Neither is an error if left too small: the parser still parses and the resolver
+still resolves. They are there so a save is quiet and does no work for nothing.
+If you paste something much larger, run it once and watch stderr — the runtime
+names the cap and tells you to raise it.
+
+---
+
 ## Known limits
 
 - **32 turtles, 6000 steps, 65536 actions, 2048 appearance changes, 8192
@@ -490,6 +536,13 @@ comes later in the list. That is why `runner` is last.
   through ffmpeg, from the frames.
 - **Saving in the middle of a movement restarts that step.** Only finished
   steps count; partial progress does not survive the reload yet.
+- **A move repaints the artwork.** `pivot`, `shift` and `path_clear` change
+  strokes that are already in the baked texture, so the step they happen on
+  costs a rebuild — about 20 ms for a 900-action drawing. Five beats of sixty
+  steps in "One Night" spend six seconds of rendering on it, once, offline.
+- **A thick stroke is a bundle of parallel lines** with a dot at each end. That
+  fills the joints of a curve and rounds the caps, and it means a very short
+  stroke at a large width reads as a dot rather than a dash.
 
 ---
 
