@@ -106,6 +106,31 @@ danger {
 }
 if err != nil { print("stretch: ", err[0]) }
 
+// ── 4. the one-line route, the one main.flx shows ────────────────
+// It releases the old image, loads the new one and sets the mode, all in the
+// call. The image before this point is 800x600 (the stretch resized it), so
+// coming back at 80x80 is the proof that it really reloaded.
+
+bg = stage.Stage.tiled(bg, "lab/tile.png", 1.0)
+print("one-line tiled ", image.width(bg), "x", image.height(bg), " mode=", stage.Stage.has_image(), "   (expected 80x80 mode=2)")
+
+runner.Runner.rebuild(win, canvas, bg, 3)
+runner.Runner.frame(win, canvas)
+danger {
+    dyn s4 = graph.capture(win)
+    image.save(s4, "lab/background_oneline.png")
+    image.discard(s4)
+}
+if err != nil { print("one-line: ", err[0]) }
+
+// A file that is not there: the background is dropped, the drawing carries on,
+// and the image handed in is still valid — never a released one.
+bg = stage.Stage.tiled(bg, "lab/there_is_no_such_file.png", 1.0)
+print("after a missing file  mode=", stage.Stage.has_image(), " image ", image.width(bg), "x", image.height(bg), "   (expected mode=0, 80x80)")
+
+runner.Runner.rebuild(win, canvas, bg, 3)
+runner.Runner.frame(win, canvas)
+
 image.discard(bg)
 image.discard(canvas)
 graph.close(win)

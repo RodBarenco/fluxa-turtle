@@ -14,14 +14,18 @@
 // show up as a stutter on every save.
 
 Block Timeline {
-    int arr tid[16384]    = 0
-    int arr step[16384]   = 0
-    int arr kind[16384]   = 0      // 0 = go | 1 = go_silent | 2 = path_clear
-    float arr dist[16384] = 0.0
-    float arr turn[16384] = 0.0
-    float arr spd[16384]  = 0.0    // 0 = use the turtle's own speed
+    int arr tid[65536]    = 0        // [65536] mirrors config.MAX_ACTIONS()
+    int arr step[65536]   = 0
+    int arr kind[65536]   = 0        // 0 = go | 1 = go_silent | 2 = path_clear
+    float arr dist[65536] = 0.0
+    float arr turn[65536] = 0.0
+    float arr spd[65536]  = 0.0      // 0 = use the turtle's own speed
 
-    int arr taken[32768]  = 0      // 8 turtles × 4096 steps
+    // The occupancy grid: one row per turtle, MAX_STEPS + 1 columns, because
+    // steps are numbered from 1 and column 0 is never used. 32 × 6001 = 192032,
+    // and `stride` below is what indexes it — reset() checks the two agree.
+    int arr taken[192032] = 0
+    int stride = 6001
 
     // ── appearance changes, by step ───────────────────────────────
     //
@@ -36,18 +40,20 @@ Block Timeline {
     // the rebuild replays the steps in order, an old stroke comes back with the
     // configuration it was made with, and the artwork stays a function of the
     // code (adr 0002, adr 0009).
-    int arr eowner[512] = 0
-    int arr efrom[512]  = 0        // first step the change applies to
-    int arr ekind[512]  = 0        // which setter — see apply_one
-    int arr ea[512]     = 0
-    int arr eb[512]     = 0
-    int arr ec[512]     = 0
-    float arr ef[512]   = 0.0
+    int arr eowner[2048] = 0       // [2048] mirrors config.MAX_STYLES()
+    int arr efrom[2048]  = 0       // first step the change applies to
+    int arr ekind[2048]  = 0       // which setter — see apply_one
+    int arr ea[2048]     = 0
+    int arr eb[2048]     = 0
+    int arr ec[2048]     = 0
+    float arr ef[2048]   = 0.0
 
-    int arr last[8]     = 0        // highest step declared by each turtle
+    int arr last[32]     = 0       // [32] mirrors config.MAX_TURTLES()
 
     int n = 0
     int en = 0                     // appearance events declared
+    int over_actions = 0           // movements dropped for lack of room
+    int over_styles  = 0           // appearance changes dropped for lack of room
     int top = 0                    // highest step declared
     int ignored = 0                // actions dropped by conflict
     int arr guard[1] = 0           // hot-loop anchor
@@ -55,31 +61,50 @@ Block Timeline {
     // Called at the top of the scene, on every save: the queue is declared
     // again in full, so it starts empty.
     fn reset() nil {
+        // The grid is only cleared where it was written: walking all 192032
+        // slots on every save would be work proportional to the cap instead of
+        // to the artwork.
         int i = 0
         while i < n {
-            taken[tid[i] * 4096 + step[i]] = 0
+            guard[0] = i         // anchor FIRST
+            taken[tid[i] * stride + step[i]] = 0
             i = i + 1
         }
         n = 0
         top = 0
         ignored = 0
+        over_actions = 0
+        over_styles = 0
 
         en = 0
         int t = 0
-        while t < 8 {
+        while t < config.MAX_TURTLES() {
             last[t] = 0
             t = t + 1
+        }
+
+        // The stride is a literal because array sizes are, and config is where
+        // the limit is written. If the two ever drift the grid silently mixes
+        // one turtle's steps with another's, so it is checked out loud.
+        if stride != config.MAX_STEPS() + 1 {
+            print("[turtle] timeline: stride ", stride, " does not match MAX_STEPS ", config.MAX_STEPS(), " + 1 — fix config.flx or timeline.flx")
         }
     }
 
     fn add(int t, int s, int k, float d, float tu, float sp) nil {
         if s < 1 { return }
-        if s >= 4096 { return }
+        if s > config.MAX_STEPS() { return }
         if t < 0 { return }
-        if t >= 8 { return }
-        if n >= 16384 { return }
+        if t >= config.MAX_TURTLES() { return }
+        if n >= config.MAX_ACTIONS() {
+            // silence here would drop movements from the artwork with no sign.
+            // The counter is its own field: n must never grow past the array.
+            if over_actions == 0 { print("[turtle] action limit of ", config.MAX_ACTIONS(), " reached — the rest was ignored") }
+            over_actions = over_actions + 1
+            return
+        }
 
-        int key = t * 4096 + s
+        int key = t * stride + s
         if taken[key] > 0 {
             ignored = ignored + 1
             return
@@ -105,8 +130,12 @@ Block Timeline {
     // show a frame of the default colours before step 1 runs.
     fn style(int t, int k, int a, int b, int c, float f) nil {
         if t < 0 { return }
-        if t >= 8 { return }
-        if en >= 512 { return }
+        if t >= config.MAX_TURTLES() { return }
+        if en >= config.MAX_STYLES() {
+            if over_styles == 0 { print("[turtle] appearance limit of ", config.MAX_STYLES(), " reached — the rest was ignored") }
+            over_styles = over_styles + 1
+            return
+        }
 
         eowner[en] = t
         efrom[en]  = last[t] + 1
@@ -149,14 +178,14 @@ Block Timeline {
     }
 
     // That turtle's action on that step, or -1 if it has none. This is how
-    // execution walks a step: eight direct lookups, instead of scanning the
-    // whole queue on each of the thousands of steps.
+    // execution walks a step: one direct lookup per turtle, instead of scanning
+    // the whole queue on each of the thousands of steps.
     fn action_of(int t, int s) int {
         if s < 1 { return -1 }
-        if s >= 4096 { return -1 }
+        if s > config.MAX_STEPS() { return -1 }
         if t < 0 { return -1 }
-        if t >= 8 { return -1 }
-        int v = taken[t * 4096 + s]
+        if t >= config.MAX_TURTLES() { return -1 }
+        int v = taken[t * stride + s]
         if v == 0 { return -1 }
         return v - 1
     }
@@ -165,9 +194,10 @@ Block Timeline {
     fn max_step()  int { return top }
     fn conflicts() int { return ignored }
     fn styles()    int { return en }
+    fn dropped()   int { return over_actions + over_styles }
     fn last_step(int t) int {
         if t < 0 { return 0 }
-        if t >= 8 { return 0 }
+        if t >= config.MAX_TURTLES() { return 0 }
         return last[t]
     }
 

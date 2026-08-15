@@ -7,34 +7,35 @@
 // home_* holds the declared position: it is where a turtle returns to when the
 // composition is rebuilt or replayed from the start.
 
+// Every array here is one slot per turtle: [32] mirrors config.MAX_TURTLES().
 Block Pool {
-    float arr x[8]    = 0.0
-    float arr y[8]    = 0.0
-    float arr ang[8]  = 0.0
+    float arr x[32]    = 0.0
+    float arr y[32]    = 0.0
+    float arr ang[32]  = 0.0
 
-    float arr hx[8]   = 0.0
-    float arr hy[8]   = 0.0
-    float arr hang[8] = 0.0
+    float arr hx[32]   = 0.0
+    float arr hy[32]   = 0.0
+    float arr hang[32] = 0.0
 
-    int arr cr[8] = 0            // body colour
-    int arr cg[8] = 220
-    int arr cb[8] = 140
+    int arr cr[32] = 0            // body colour
+    int arr cg[32] = 220
+    int arr cb[32] = 140
 
-    int arr pr[8] = 0            // path colour
-    int arr pg[8] = 220
-    int arr pb[8] = 140
-    int arr pw[8] = 2            // path width
-    int arr pen[8] = 1           // 1 = leaves a trail
+    int arr pr[32] = 0            // path colour
+    int arr pg[32] = 220
+    int arr pb[32] = 140
+    int arr pw[32] = 2            // path width
+    int arr pen[32] = 1           // 1 = leaves a trail
 
-    int arr pstyle[8] = 0        // 0 solid | 1 dotted | 2 dashed | 3 dots
-    int arr pdash[8]  = 10       // dash length
-    int arr pgap[8]   = 8        // gap between dashes
-    int arr popa[8]   = 100      // path opacity, 0..100
-    int arr pclear[8] = 0        // last step where the path was cleared
+    int arr pstyle[32] = 0        // 0 solid | 1 dotted | 2 dashed | 3 dots
+    int arr pdash[32]  = 10       // dash length
+    int arr pgap[32]   = 8        // gap between dashes
+    int arr popa[32]   = 100      // path opacity, 0..100
+    int arr pclear[32] = 0        // last step where the path was cleared
 
-    int arr vis[8] = 1
-    float arr size[8] = 9.0
-    float arr spd[8]  = 200.0    // pixels per second
+    int arr vis[32] = 1
+    float arr size[32] = 9.0
+    float arr spd[32]  = 200.0    // pixels per second
 
     int n = 0
     int arr guard[1] = 0     // hot-loop anchor
@@ -46,8 +47,8 @@ Block Pool {
     fn spawn(float px, float py) int {
         // without the warning the extra turtle would silently become slot 0's
         // and the artwork would come out wrong with no sign of it
-        if n >= 8 {
-            print("[turtle] turtle limit of 8 reached — this one was ignored")
+        if n >= config.MAX_TURTLES() {
+            print("[turtle] turtle limit of ", config.MAX_TURTLES(), " reached — this one was ignored")
             return 0
         }
         int id = n

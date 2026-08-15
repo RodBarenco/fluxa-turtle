@@ -11,10 +11,10 @@ the wiring: "`Exporter.save()` starts feeding the encoder instead of the disk,
 and nothing else changes".
 
 It is not that simple. A video cursor is a `dyn`, and a Block cannot hold a
-`dyn` as a field — the reason every `dyn` in this project lives in `main.flx`
-and arrives as a parameter. `Exporter.save` is called from inside
-`Runner.animate` and `Runner.hold`, in the middle of the frame loop, so feeding
-the encoder from there means threading the cursor through:
+`dyn` as a **field** — it can only exist as a local inside a method, the way
+`Painter.bake` holds a capture. `Exporter.save` is called from inside
+`Runner.animate` and `Runner.hold`, in the middle of the frame loop, so the
+cursor cannot be reached from there unless it is threaded through:
 
 ```fluxa
 fn animate(dyn win, dyn canvas, dyn v, int s) nil
@@ -26,22 +26,29 @@ normal execution, and every caller would have to invent a value for it.
 
 ## Decision
 
-The frames stay the primary output, and the video is **one pass over them**:
+The frames stay the primary output, and the video is **one pass over them**.
+`to_video` owns that pass, so the cursor only has to live for the length of one
+method call — which a local `dyn` does:
 
 ```fluxa
-runner.Runner.export(win, canvas, bg)          // writes the PNGs, unchanged
+fn movie(dyn win, dyn canvas, dyn bg, int from, int to, int fps) nil {
+    ...
+    export(win, canvas, bg)                    // renders the frames
 
-danger {
-    dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
-    exporter.Exporter.to_video(mp4, 0)         // reads them back into the video
-    video.close(mp4)
+    danger {
+        dyn v = video.open("artwork.mp4", config.W(), config.H(), fps)
+        exporter.Exporter.to_video(v, 0)       // reads them back into the video
+        video.close(v)
+    }
 }
 ```
 
 `to_video` reads each PNG, appends it, and — with `keep = 0` — deletes it and
-removes the folder at the end. The cursor is opened and closed in `main.flx`,
-where the window and the canvas already live, so the rule about `dyn` holds
-without an exception and the animation loop is untouched.
+removes the folder at the end. `Runner.movie` is the whole thing in one call
+(from which step, to which step, at how many frames per second), and it is what
+`main.flx` shows; the Exporter is still there for whoever wants the frames kept,
+a different folder or a longer hold, and the cursor can equally be opened in
+`main.flx` for that.
 
 ## Consequences
 
@@ -59,5 +66,5 @@ without an exception and the animation loop is untouched.
   whoever calls `video.open` calls `video.close`. `to_video` does not close a
   cursor it did not open.
 - If `std.video` ever grows a way to hand the encoder a file path per frame, or
-  the language a way to hold a `dyn` in a Block, the single-pass version becomes
-  possible and this decision is the thing to revisit.
+  the language a way to hold a `dyn` in a Block field, the single-pass version
+  becomes possible and this decision is the thing to revisit.

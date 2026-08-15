@@ -93,6 +93,51 @@ video.
 The libs this project uses are already declared in `fluxa.toml`: `std.graph`,
 `std.image`, `std.math`, `std.time`, `std.strings`, `std.fs` and `std.video`.
 
+### 4. Syntax highlighting
+
+`.flx` files come out grey in an editor that has never heard of Fluxa. The
+highlighter lives in **[github.com/RodBarenco/fluxa-tooling](https://github.com/RodBarenco/fluxa-tooling)**:
+
+```bash
+git clone https://github.com/RodBarenco/fluxa-tooling
+cd fluxa-tooling
+```
+
+**VS Code** — it is not on the Marketplace, so install the `.vsix` by hand:
+
+```bash
+code --install-extension highlighter/vs-code/fluxa-lang-0.1.0.vsix
+```
+
+**Neovim** — copy the two files:
+
+```bash
+mkdir -p ~/.config/nvim/ftdetect ~/.config/nvim/syntax
+cp highlighter/neovim/ftdetect/fluxa.vim ~/.config/nvim/ftdetect/
+cp highlighter/neovim/syntax/fluxa.vim   ~/.config/nvim/syntax/
+```
+
+Or through a plugin manager — vim-plug:
+
+```vim
+Plug 'RodBarenco/fluxa-tooling'
+```
+
+lazy.nvim:
+
+```lua
+{
+    "RodBarenco/fluxa-tooling",
+    ft = "fluxa",
+    config = function()
+        vim.opt.rtp:append(vim.fn.stdpath("data") .. "/lazy/fluxa-tooling/highlighter/neovim")
+    end
+}
+```
+
+An LSP (go-to-definition, hover, diagnostics, completion) is announced there as
+coming.
+
 ### Windows
 
 **Turtle does not work on Windows yet: the hot reload does not run there.** The
@@ -254,52 +299,70 @@ turtle speeds up on one leg and crawls on the next.
 ### The stage
 
 ```fluxa
-stage.Stage.background(16, 17, 24)     // solid colour
+stage.Stage.background(16, 17, 24)               // solid colour
 
-danger { bg = image.load("texture.png") }
-if err != nil { print(err[0]) }
-stage.Stage.image_tile()               // repeat across the whole stage
-stage.Stage.image_center()             // once, in the middle
-stage.Stage.image_stretch(bg)          // taken to the screen size
-stage.Stage.image_scale(2.0)
-stage.Stage.image_off()
+bg = stage.Stage.tiled(bg, "texture.png", 1.0)   // repeated across the stage
+bg = stage.Stage.centered(bg, "logo.png", 2.0)   // once, in the middle
+bg = stage.Stage.stretched(bg, "photo.png")      // taken to the screen size
+stage.Stage.image_off()                          // back to the plain colour
 ```
 
-The background image is a `dyn`, so it lives in `main.flx` as `prst dyn bg` and
-arrives at the Stage as a parameter.
+The last number is the scale. If the file cannot be read, the drawing carries on
+and the reason is printed — a missing texture never costs you the artwork.
+
+The call is an assignment because the background is a `dyn`, and only `main.flx`
+can hold one: it lives there as `prst dyn bg`. Handing the old one in is what
+releases it, so saving over and over does not pile up images.
+
+The background goes into the baked texture, so it costs nothing per frame.
 
 ---
 
-## Replay
+## Keys
 
-With the window focused, press **R**. The artwork is redone from step 1,
-animated, the way someone would see it watching the whole composition at once.
-It is the same code path as normal execution — it is not a recording.
+With the window focused:
+
+| Key | What it does |
+|---|---|
+| **R** | Replay. The artwork is redone from step 1, animated, the way someone would see the whole composition at once. Same code path as normal execution — it is not a recording. |
+| **F** | Fullscreen, and F again to come back. Made for two monitors: the code on one, the artwork filling the other. The stage keeps its proportions, scaled up with bars on the sides if the screen is wider. |
 
 ---
 
 ## Exporting
 
+One line — from which step, to which step, and how many frames per second:
+
+```fluxa
+runner.Runner.movie(win, canvas, bg, 1, 0, 60)
+```
+
+`0` as the second step means "through the last one". It writes **artwork.mp4**
+next to `main.flx`: H.264 written by Fluxa itself, no ffmpeg, nothing left
+behind. Half a second of stillness is added at each end so the video does not
+start and finish mid-gesture.
+
+It **does not record the screen.** The artwork is redone from the beginning and
+each frame is rendered with time advancing `1/fps` per frame — never by the
+clock. A slow machine takes longer to generate and the video comes out exactly
+the same; two runs produce byte-identical frames.
+
+### The long way, when you want the frames
+
 ```fluxa
 exporter.Exporter.setup("export", 60)   // folder and frame rate
 exporter.Exporter.hold(30, 90)          // still frames at the start and end
 exporter.Exporter.range(1, 5)           // optional: only part of the artwork
-runner.Runner.export(win, canvas, bg)
+runner.Runner.export(win, canvas, bg)   // writes the numbered PNGs
 ```
 
-Exporting **does not record the screen**. It redoes the artwork from the
-beginning and renders each frame with time advancing `1/fps` per frame — never
-by the clock. A slow machine takes longer to generate, and the video comes out
-exactly the same. Two runs produce byte-identical frames.
-
-What comes out is a sequence of numbered PNGs. To get an **MP4**, hand the
-Exporter a video — Fluxa writes H.264 itself, with no ffmpeg and no external
-process:
+That leaves a sequence of numbered PNGs — what an editor, a print or a contact
+sheet wants. To also get the video out of them, keeping the frames:
 
 ```fluxa
 danger {
     dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
-    exporter.Exporter.to_video(mp4, 0)   // 0 deletes the PNGs, 1 keeps them
+    exporter.Exporter.to_video(mp4, 1)   // 1 keeps the PNGs, 0 deletes them
     video.close(mp4)
 }
 if err != nil { print("video: ", err[0]) }
@@ -307,9 +370,7 @@ if err != nil { print("video: ", err[0]) }
 
 The video is a second pass over the frames that were just written, not a
 different render — the same exact images, in order
-([adr 0010](docs/adr/0010-the-video-is-a-second-pass-over-the-frames.md)). The
-cursor lives in `main.flx`, like the window and the canvas, because a `dyn`
-cannot be a Block field; whoever opens it closes it.
+([adr 0010](docs/adr/0010-the-video-is-a-second-pass-over-the-frames.md)).
 
 For WebM or GIF the frames are still there, and `finish()` prints the ffmpeg
 command ready to paste:
@@ -346,9 +407,15 @@ comes later in the list. That is why `runner` is last.
 
 ## Known limits
 
-- **8 turtles**, 4096 steps, 16384 actions. The limits are in
-  `static/config.flx` and in the pool declarations. Going past the turtle limit
-  prints a warning and ignores the extra ones.
+- **32 turtles, 6000 steps, 65536 actions, 2048 appearance changes, 8192
+  not-yet-baked segments.** Every one of them is in `static/config.flx`, next to
+  the stage size and the frame rate, and each is mirrored by an array
+  declaration the file points at — a Fluxa array is declared with a literal
+  size, so the two are changed together. Going past a limit prints a warning and
+  ignores the extra, never silently corrupts the artwork.
+- **A 6000-step artwork rebuilds in about a second**, once per save. It is the
+  worst case of the declared limits (32 turtles × 6000 steps); 3000 steps with
+  one turtle rebuild in 145 ms.
 - **Opacity is not an alpha channel.** `graph.draw_line` only takes R, G and B,
   so transparency is obtained by mixing with the background. Two translucent
   paths crossing do not add up.
@@ -356,8 +423,6 @@ comes later in the list. That is why `runner` is last.
   through ffmpeg, from the frames.
 - **Saving in the middle of a movement restarts that step.** Only finished
   steps count; partial progress does not survive the reload yet.
-- **512 appearance changes** across the whole artwork. Past that the extra ones
-  are ignored.
 
 ---
 
@@ -371,6 +436,7 @@ The harnesses in `lab/` check the behaviour and produce an image:
 ./fluxa run lab/styles.flx      # an appearance change only affects later steps
 ./fluxa run lab/speed.flx       # each step's duration against the expected one
 ./fluxa run lab/stress.flx      # 3000 steps: rebuild and per-frame cost
+./fluxa run lab/limits.flx      # 32 turtles, step 6000, and the occupancy grid
 ./fluxa run lab/export.flx      # frame count and determinism
 ./fluxa run lab/video.flx       # the MP4: frame count, size and frame rate
 ./fluxa run lab/background.flx  # the three background image modes

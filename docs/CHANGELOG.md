@@ -3,6 +3,51 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] — 2026-08-15
+
+### Changed
+
+- **Bigger stage: 32 turtles (was 8) and 6000 steps (was 4095)**, with 65536
+  actions, 2048 appearance changes and 8192 not-yet-baked segments. Every limit
+  now lives in `static/config.flx` and every array that mirrors one says so — a
+  Fluxa array is declared with a literal size, so a limit cannot be read from
+  config at declaration time and the two are changed together. `Timeline.reset`
+  checks its own grid stride against `MAX_STEPS` on every run and says so out
+  loud if they ever drift.
+- **`main.flx` is the stage, not a manual.** The two blocks that read like
+  library code are one line each now:
+
+  ```fluxa
+  bg = stage.Stage.tiled(bg, "texture.png", 1.0)   // also centered / stretched
+  runner.Runner.movie(win, canvas, bg, 1, 0, 60)   // from, to, fps
+  ```
+
+  `Stage.tiled/centered/stretched` load the file, release the old background and
+  set the mode in the call; a missing file keeps the drawing running and prints
+  why. `Runner.movie` renders the frames, writes `artwork.mp4` and deletes them,
+  with half a second of stillness at each end. The Exporter route is unchanged
+  for whoever wants the PNGs — it is documented in the README instead of sitting
+  in the artwork file.
+- `main.flx` takes the window size from `config.W()`/`config.H()` instead of
+  repeating 800 and 600.
+- The limits report themselves when reached: the action and appearance caps
+  print once and drop the extra, the way the turtle cap already did.
+
+### Added
+
+- **F toggles fullscreen**, F again comes back — for two monitors: the code on
+  one, the artwork filling the other. The stage keeps its logical size, scaled
+  and letterboxed by the window, so `graph.capture`, the bake and the export do
+  not notice. It answers in the live stage and during the animation, never
+  during an export (adr 0006).
+- `lab/limits.flx` — the pools at their declared size: 32 turtles with the 33rd
+  warned and ignored, step 6000 accepted and 6001 refused, and the occupancy
+  grid read back turtle by turtle at the far end of the range, which is what
+  proves the stride keeps the rows apart. A 6000-step rebuild takes ~950 ms.
+- `lab/video.flx` now covers both routes — the one-line `movie` and the long way
+  that keeps the frames — and `lab/background.flx` covers the one-line
+  background, including the missing-file path.
+
 ## [0.3.0] — 2026-08-15
 
 ### Added

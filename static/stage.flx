@@ -30,7 +30,54 @@ Block Stage {
     fn g() int { return bg_g }
     fn b() int { return bg_b }
 
+    // ── a PNG as the stage, in one line ───────────────────────────
+    //
+    // These three are what main.flx shows, and they are the whole thing:
+    //
+    //     bg = stage.Stage.tiled(bg, "texture.png", 1.0)
+    //     bg = stage.Stage.centered(bg, "logo.png", 2.0)
+    //     bg = stage.Stage.stretched(bg, "photo.png")
+    //
+    // The old image is handed in so it can be released — on a save this runs
+    // again, and without it every reload would leak one background. What comes
+    // back is the new handle, which is why the call is an assignment: `bg` is a
+    // `dyn` and only main.flx can hold one.
+    //
+    // If the file cannot be read the old background is kept, the mode goes back
+    // to "no image", and the reason is printed. The artwork keeps running: a
+    // missing texture is not a reason to lose the drawing.
+    //
+    // `sload` and not `load`: it is someone's file, and sload validates the size
+    // and the format around the decode.
+
+    fn tiled(dyn old, str path, float scale) dyn { return use(old, path, 2, scale) }
+    fn centered(dyn old, str path, float scale) dyn { return use(old, path, 3, scale) }
+    fn stretched(dyn old, str path) dyn { return use(old, path, 1, 1.0) }
+
+    fn use(dyn old, str path, int m, float scale) dyn {
+        dyn out = old
+        danger {
+            dyn img = image.sload(path)
+            image.discard(old)
+            out = img
+        }
+        if err != nil {
+            mode = 0
+            print("[stage] background ", path, ": ", err[0])
+            return out
+        }
+
+        mode = m
+        img_scale = scale
+        if img_scale <= 0.0 { img_scale = 1.0 }
+        if m == 1 { image.resize(out, config.W(), config.H()) }
+        return out
+    }
+
     // ── background modes ──────────────────────────────────────────
+    //
+    // The manual route, for a background that is not a file on disk — an image
+    // composed in Fluxa, or one already loaded for something else.
     //
     // "Stretched" happens once, in main: image.resize takes the image to the
     // screen size and it is then drawn whole, with no per-frame arithmetic.

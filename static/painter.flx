@@ -17,19 +17,20 @@
 // the earlier ones alone, and these segments are redrawn every frame until the
 // next bake.
 
+// [8192] mirrors config.MAX_SEGMENTS().
 Block Painter {
-    float arr ax[2048] = 0.0
-    float arr ay[2048] = 0.0
-    float arr bx[2048] = 0.0
-    float arr by[2048] = 0.0
+    float arr ax[8192] = 0.0
+    float arr ay[8192] = 0.0
+    float arr bx[8192] = 0.0
+    float arr by[8192] = 0.0
 
-    int arr sr[2048]    = 0      // colour already mixed with the background
-    int arr sg[2048]    = 0
-    int arr sb[2048]    = 0
-    int arr sw[2048]    = 0
-    int arr sstyle[2048] = 0
-    int arr sdash[2048] = 0
-    int arr sgap[2048]  = 0
+    int arr sr[8192]    = 0      // colour already mixed with the background
+    int arr sg[8192]    = 0
+    int arr sb[8192]    = 0
+    int arr sw[8192]    = 0
+    int arr sstyle[8192] = 0
+    int arr sdash[8192] = 0
+    int arr sgap[8192]  = 0
 
     int n = 0
     int full = 0
@@ -43,7 +44,7 @@ Block Painter {
     fn add(int t, float x1, float y1, float x2, float y2) nil {
         int opa = pool.Pool.get_opa(t)
         if opa <= 0 { return }          // invisible: there is nothing to keep
-        if n >= 2048 {
+        if n >= config.MAX_SEGMENTS() {
             full = 1
             return
         }

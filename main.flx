@@ -10,7 +10,8 @@
 // stage, save, and see what shows up. Then the next one. That is how the tool
 // is meant to be used.
 //
-// With the window focused, R redoes the whole artwork from step 1, animated.
+// With the window focused: R redoes the whole artwork from step 1, animated,
+// and F puts the window fullscreen (F again brings it back).
 //
 // Ready-made artworks to paste: docs/ARTWORKS.md
 // Loose pieces to build your own: docs/RECIPES.md
@@ -34,8 +35,12 @@ import static runner
 // The window survives the save: the initializer of a prst holding a lib cursor
 // is not re-run on reload, so it does not blink. `done` is the last finished
 // step — it is what makes the artwork carry on from where it stopped.
-prst dyn win    = graph.init(800, 600, "Fluxa Turtle")
-prst dyn canvas = image.new(800, 600)
+//
+// The stage size, the frame rate and the limits (32 turtles, 6000 steps) are in
+// static/config.flx, all in one place. Changing the size there changes it here
+// too — but only on a fresh run: this window is not created again on a save.
+prst dyn win    = graph.init(config.W(), config.H(), "Fluxa Turtle")
+prst dyn canvas = image.new(config.W(), config.H())
 prst dyn bg     = image.new(1, 1)
 prst int done   = 0
 
@@ -131,38 +136,33 @@ leo.go(1, 500.0, 0.0)
 
 // ═══════════════════ STAGE 5 — a background image ═══════════════════
 //
-// Any PNG can be the stage. image_tile repeats it across the whole surface;
-// image_center draws it once in the middle; image_stretch takes it to the
-// screen size. The background goes into the baked texture, so it costs
-// nothing per frame.
-
-// danger { image.discard(bg)  bg = image.load("my_texture.png") }
-// if err != nil { print("background: ", err[0]) }
-// stage.Stage.image_tile()
-// stage.Stage.image_scale(1.0)
-
-
-// ═══════════════════ STAGE 6 — export ═══════════════════
+// Any PNG can be the stage. One line, and the number at the end is the scale:
 //
-// Redoes the artwork from step 1 and writes one PNG per frame. Time advances
-// 1/fps per frame, so the result does not depend on the machine's speed: a slow
-// machine takes longer to generate and the video comes out exactly the same.
+//   tiled     repeats it across the whole surface
+//   centered  draws it once, in the middle
+//   stretched takes it to the screen size
+//
+// If the file is not there the drawing carries on and the reason is printed.
+// The background goes into the baked texture, so it costs nothing per frame.
 
-// exporter.Exporter.setup("export", 60)
-// exporter.Exporter.hold(30, 90)
-// runner.Runner.export(win, canvas, bg)
+// bg = stage.Stage.tiled(bg, "my_texture.png", 1.0)
+// bg = stage.Stage.centered(bg, "my_logo.png", 2.0)
+// bg = stage.Stage.stretched(bg, "my_photo.png")
 
-// The MP4 is a second pass over those frames, written by Fluxa itself — no
-// ffmpeg. The video cursor is a `dyn`, so it lives here, like the window and the
-// canvas, and the Exporter takes it as a parameter. The 0 deletes the PNGs once
-// they are in the video; pass 1 to keep both.
 
-// danger {
-//     dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
-//     exporter.Exporter.to_video(mp4, 0)
-//     video.close(mp4)
-// }
-// if err != nil { print("video: ", err[0]) }
+// ═══════════════════ STAGE 6 — the video ═══════════════════
+//
+// One line: from which step, to which step, and how many frames per second.
+// It redoes the artwork from the start and writes artwork.mp4 — no ffmpeg, no
+// leftover files. `0` as the second step means "through the last one".
+//
+// It is not a screen recording: time advances 1/fps per frame, so a slow machine
+// takes longer to generate and the video comes out exactly the same.
+
+// runner.Runner.movie(win, canvas, bg, 1, 0, 60)
+
+// To keep the PNGs instead, or to control the folder and the stillness at each
+// end, see "Exporting" in the README.
 
 
 // ═══════════════════════════ execution ═══════════════════════════

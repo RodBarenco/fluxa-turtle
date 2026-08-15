@@ -1,10 +1,9 @@
 // lab/video.flx — the export as an MP4 (pillars §8).
 // Run from the project root:  ./fluxa run lab/video.flx
 //
-// Exports a small artwork as frames, turns those frames into a video, then
-// reads the video back and checks it against what was declared: the frame
-// count, the size and the frame rate. The PNGs are deleted on the way in, so
-// the folder must be gone at the end too.
+// Both routes are checked: the one line main.flx shows, and the long way that
+// keeps the PNGs. Each video is read back and measured against what was
+// declared — frame count, size and frame rate.
 
 import std graph
 import std image
@@ -30,9 +29,8 @@ stage.Stage.background(18, 18, 26)
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-// Three steps of one second each at 30 fps, plus the stills: 5 + 90 + 5 = 100
-// frames. The speed is declared so the arithmetic is exact — 300 px at 300 px/s
-// is one second, whatever the machine does.
+// Three steps of one second each: the speed is declared so the arithmetic is
+// exact — 300 px at 300 px/s is one second, whatever the machine does.
 Block a typeof turtle.Turtle
 a.spawn(100.0, 300.0)
 a.color(90, 200, 255)
@@ -41,44 +39,66 @@ a.path_width(6)
 a.speed(300.0)
 a.ring(1, 3, 300.0, 25.0)
 
-exporter.Exporter.setup("lab/frames", 30)
-exporter.Exporter.hold(5, 5)
-runner.Runner.export(win, canvas, bg)
+// ── 1. the one line ──────────────────────────────────────────────
+// 3 seconds of movement at 30 fps, plus half a second of stillness at each end:
+// 90 + 15 + 15 = 120 frames, and no leftover PNGs.
 
-int declared = exporter.Exporter.frames()
-print("frames exported ......  ", declared, "   (expected 100: 5 + 90 + 5)")
+runner.Runner.movie(win, canvas, bg, 1, 0, 30)
 
-danger {
-    dyn mp4 = video.open("lab/artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
-    exporter.Exporter.to_video(mp4, 0)
-    video.close(mp4)
-}
-if err != nil { print("video write: ", err[0]) }
-
-print("frames folder left ...  ", fs.isdir("lab/frames"), "   (expected false)")
-print("video on disk ........  ", fs.size("lab/artwork.mp4"), " bytes")
+print("frames rendered ......  ", exporter.Exporter.frames(), "   (expected 120: 15 + 90 + 15)")
+print("frames folder left ...  ", fs.isdir("export"), "   (expected false)")
 
 danger {
-    dyn p = video.play_open("lab/artwork.mp4")
+    dyn p = video.play_open("artwork.mp4")
     dyn n = video.info(p)
     print("read back ............  ", n[0], "x", n[1], " at ", n[2], " fps, ", n[3], " frames")
 
-    // Decoding to the middle of the artwork and saving that frame: the check
-    // that what came out is the drawing, not a hundred empty frames. Every
-    // frame has to be released — the collector runs at a safe point and this
-    // loop never reaches one, so an undiscarded frame stays resident.
+    // Decoding to the middle and saving that frame: the check that what came
+    // out is the drawing, not a hundred empty frames. Every frame has to be
+    // released — the collector runs at a safe point and this loop never reaches
+    // one, so an undiscarded frame stays resident.
     int i = 0
-    while i < 60 {
+    while i < 70 {
         dyn fr = video.play_frame(p)
-        if i == 59 { image.save(fr, "lab/video_frame.png") }
+        if i == 69 { image.save(fr, "lab/video_frame.png") }
         image.discard(fr)
         i = i + 1
     }
-    print("frame 60 saved to ....  lab/video_frame.png")
-
+    print("frame 70 saved to ....  lab/video_frame.png")
     video.play_close(p)
 }
-if err != nil { print("video read: ", err[0]) }
+if err != nil { print("read: ", err[0]) }
+
+danger { fs.delete("artwork.mp4") }
+if err != nil { print("cleanup: ", err[0]) }
+
+// ── 2. the long way, keeping the frames ──────────────────────────
+// The same artwork, only the second step, with the frames left on disk.
+
+exporter.Exporter.setup("lab/frames", 30)
+exporter.Exporter.range(2, 2)
+exporter.Exporter.hold(2, 2)
+runner.Runner.export(win, canvas, bg)
+
+print("frames exported ......  ", exporter.Exporter.frames(), "   (expected 34: 2 + 30 + 2)")
+
+danger {
+    dyn mp4 = video.open("lab/one_step.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
+    exporter.Exporter.to_video(mp4, 1)
+    video.close(mp4)
+}
+if err != nil { print("write: ", err[0]) }
+
+print("frames folder kept ...  ", fs.isdir("lab/frames"), "   (expected true)")
+print("first frame still on disk  ", fs.exists("lab/frames/frame_000000.png"), "   (expected true)")
+
+danger {
+    dyn p2 = video.play_open("lab/one_step.mp4")
+    dyn n2 = video.info(p2)
+    print("read back ............  ", n2[0], "x", n2[1], " at ", n2[2], " fps, ", n2[3], " frames")
+    video.play_close(p2)
+}
+if err != nil { print("read: ", err[0]) }
 
 image.discard(bg)
 image.discard(canvas)

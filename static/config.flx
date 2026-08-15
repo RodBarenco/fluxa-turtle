@@ -1,13 +1,36 @@
 // static/config.flx — the numbers the whole project shares.
 // Every Block that owns a subject keeps its own knobs in its fields.
+//
+// THE LIMITS ARE HERE, AND THEY ARE MIRRORED BY ARRAY DECLARATIONS.
+// A Fluxa array is declared with a literal size — `int arr x[32]`, never
+// `int arr x[config.MAX_TURTLES()]` — so a limit cannot be read from here at
+// declaration time. What is here is the number every check uses; each array
+// that mirrors it says so in a comment, and the two must be changed together:
+//
+//   MAX_TURTLES  → pool.flx (every pool), runner.flx (the a* arrays),
+//                  timeline.flx (last[])
+//   MAX_STEPS    → timeline.flx: taken[] is (MAX_STEPS + 1) slots per turtle,
+//                  because steps are numbered from 1
+//   MAX_ACTIONS  → timeline.flx (the queue)
+//   MAX_STYLES   → timeline.flx (the appearance events)
+//   MAX_SEGMENTS → painter.flx (segments not yet baked)
+//
+// Timeline.reset checks its own stride against MAX_STEPS on every run and says
+// so out loud if they ever drift apart.
+//
+// The window size is used by main.flx in graph.init and image.new, so changing
+// W and H here changes the stage. It only takes effect on a fresh run: the
+// window is a `prst dyn` and its initializer is not re-run on a save.
 
 fn W()   int { return 800 }
 fn H()   int { return 600 }
 fn FPS() int { return 60 }
 
-fn MAX_TURTLES()  int { return 8 }       // pool size in pool.flx
-fn MAX_ACTIONS()  int { return 8192 }    // queue size in timeline.flx
-fn MAX_SEGMENTS() int { return 2048 }    // not-yet-baked segments, per save
+fn MAX_TURTLES()  int { return 32 }      // turtles on the stage
+fn MAX_STEPS()    int { return 6000 }    // highest step number a turtle can use
+fn MAX_ACTIONS()  int { return 65536 }   // movements declared, all turtles together
+fn MAX_STYLES()   int { return 2048 }    // appearance changes declared
+fn MAX_SEGMENTS() int { return 8192 }    // not-yet-baked segments, per save
 
 fn SPEED()      float { return 200.0 }   // pixels per second, default
 fn SIZE()       float { return 9.0 }     // turtle body radius

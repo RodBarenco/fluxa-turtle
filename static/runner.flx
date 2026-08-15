@@ -21,13 +21,13 @@
 // slot per turtle, in the same pattern as the other pools.
 
 Block Runner {
-    int arr aid[8]     = 0
-    float arr asx[8]   = 0.0     // where it set off from
-    float arr asy[8]   = 0.0
-    float arr atx[8]   = 0.0     // where it is heading
-    float arr aty[8]   = 0.0
-    float arr adur[8]  = 0.0     // duration, in seconds
-    int arr adraw[8]   = 0       // 1 = leaves a trail
+    int arr aid[32]     = 0      // [32] mirrors config.MAX_TURTLES()
+    float arr asx[32]   = 0.0    // where it set off from
+    float arr asy[32]   = 0.0
+    float arr atx[32]   = 0.0    // where it is heading
+    float arr aty[32]   = 0.0
+    float arr adur[32]  = 0.0    // duration, in seconds
+    int arr adraw[32]   = 0      // 1 = leaves a trail
     int an = 0
 
     int arr guard[1] = 0         // hot-loop anchor
@@ -62,6 +62,7 @@ Block Runner {
                 if graph.should_close(win) { idle = 0 }
                 if idle == 1 {
                     frame(win, canvas)
+                    hotkeys(win)
                     if graph.key_pressed(win, "R") {
                         print("[turtle] replay: redoing ", limit, " steps from the start")
                         cur = 0
@@ -110,6 +111,53 @@ Block Runner {
         exporting = 0
         graph.set_fps(win, config.FPS())
         exporter.Exporter.finish()
+    }
+
+    // F puts the window fullscreen, and F again brings it back — the whole
+    // point being two monitors: the code on one, the artwork filling the other.
+    //
+    // The stage keeps its logical size. The window scales it up and letterboxes
+    // what is left over (an 800×600 stage on a 16:9 screen gets bars at the
+    // sides), so graph.capture still returns 800×600 and the bake, the replay
+    // and the export do not notice the window changed at all.
+    //
+    // The state is not tracked in a field: a field is re-initialised on every
+    // save while the window stays as it is, so it would start lying after the
+    // first reload. The toggle's own return value is the only truth here.
+    fn hotkeys(dyn win) nil {
+        if graph.key_pressed(win, "F") {
+            bool now = graph.fullscreen(win)
+            if now { print("[turtle] fullscreen — F to come back") }
+        }
+    }
+
+    // The whole video in one call: from which step, to which step, and how many
+    // frames per second. `to = 0` means "through the last step".
+    //
+    // It renders the frames (the export above), turns them into artwork.mp4 and
+    // deletes them. Half a second of stillness is added at each end so the video
+    // does not start and finish mid-gesture. Anyone who wants the PNGs kept, a
+    // different folder, or a longer hold uses the Exporter directly — this is
+    // the one-line version, and it is what main.flx shows.
+    //
+    // The video cursor is opened and closed right here. A `dyn` cannot be a
+    // Block FIELD, but it can be a local inside a method — the same thing
+    // Painter.bake does with the capture (adr 0010).
+    fn movie(dyn win, dyn canvas, dyn bg, int from, int to, int fps) nil {
+        int still = fps / 2
+        exporter.Exporter.setup("export", fps)
+        exporter.Exporter.range(from, to)
+        exporter.Exporter.hold(still, still)
+
+        export(win, canvas, bg)
+
+        danger {
+            dyn v = video.open("artwork.mp4", config.W(), config.H(), exporter.Exporter.get_fps())
+            exporter.Exporter.to_video(v, 0)
+            video.close(v)
+        }
+        if err != nil { print("[export] the video was not written: ", err[0]) }
+        if err == nil { print("[export] artwork.mp4 is ready") }
     }
 
     // Still frames: the artwork sits on screen with nothing moving.
@@ -224,7 +272,7 @@ Block Runner {
         int t = 0
         while t < nt {
             int i = timeline.Timeline.action_of(t, s)
-            if i >= 0 && an < 8 {
+            if i >= 0 && an < config.MAX_TURTLES() {
                 int k = timeline.Timeline.get_kind(i)
                 if k != 2 {
                     pool.Pool.turn(t, timeline.Timeline.get_turn(i))
@@ -316,6 +364,9 @@ Block Runner {
             pool.Pool.draw(win)
             graph.end_frame(win)
 
+            // No keyboard during a controlled render: the export answers to the
+            // frame index and to nothing else (adr 0006).
+            if exporting == 0 { hotkeys(win) }
             if exporting == 1 { exporter.Exporter.save(win) }
 
             if el >= dmax { running = 0 }
