@@ -213,8 +213,8 @@ The image at the top of this page is what those stages produce — captured from
 the window, not an illustration.
 
 **[docs/artworks/one-night.md](docs/artworks/one-night.md)** is the piece to
-read first: a nest opening after dark, eight hatchlings running for the
-moonlight, and one that turns the wrong way. It comes with the video, the story
+read first: a sea turtle under a full moon, drawn as line art by four turtles at
+once, and the broken light she steers by. It comes with the video, the story
 behind it, and the whole thing ready to paste.
 
 [![One Night](docs/artworks/one-night.png)](docs/artworks/one-night.md)

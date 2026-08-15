@@ -1,43 +1,43 @@
 # One Night
 
-*A nest opens after dark. Eight hatchlings, one wrong turn, and the oldest
-compass there is.*
+*The oldest map there is, and the animal that reads it.*
 
 ![One Night](one-night.png)
 
-**[Watch it draw itself](one-night.mp4)** — ten seconds, 800×600, written by the
-program itself with `export.Video`.
+**[Watch it draw itself](one-night.mp4)** — eleven seconds, 800×600, written by
+the program itself with one line: `export.Video(1, 0, 30)`.
 
 ---
 
 ## The night
 
-A sea turtle lays her eggs above the tide line and leaves. Two months later,
-underground, the hatchlings dig upward together and wait just under the surface
-for the sand to go cold — which is how they know the sun is down and the birds
-are gone.
+She is a few hundred metres out, in water she can stand still in, waiting.
 
-Then they run. It is the first thing they ever do and one of the hardest: a few
-dozen metres of open beach, on flippers built for water, in the dark.
+Above her the moon is doing the only thing that matters tonight: it is making
+the sea the brightest thing in the world. Not the beach, not the dunes behind
+it — the water. Light comes down, breaks on the surface, and scatters into the
+shards you can see in the drawing. From below, that is not decoration. That is a
+direction.
 
-They are not lost in that dark. They steer by it. A hatchling turns toward the
-brightest, most open horizon it can see, and on an undeveloped beach that is
-always the sea — the sky is wider over water, and the moon lays a road of light
-straight across it. That is the whole compass: **go where it is bright and low
-and open**.
+Sea turtles have been reading that direction since the age of dinosaurs. A
+hatchling digs out of the sand at night, sees a low bright open horizon, and
+runs at it; that is the whole instinct, and for a hundred million years it was
+enough, because nothing on the land side of a beach was ever brighter than the
+sea. A female who survives the run comes back decades later to nest on the beach
+where she hatched, crossing an ocean to get there, steering by the planet's
+magnetic field — she reads the Earth like a page and arrives at the right
+kilometre of the right coast.
 
-It works because for a hundred million years nothing on the land side was
-brighter than the sea. A single lamp behind the beach breaks it. The hatchlings
-turn inland, toward a road, a porch, a hotel — and crawl until something eats
-them or the sun comes up. The estimates people quote for how many make it to
-adulthood vary wildly, one in a hundred, one in a thousand. All of them are
-small, and every one of those numbers assumes the hatchling at least got the
-direction right.
+Then somebody builds a road behind the dune and turns a light on, and the map
+stops working. Hatchlings crawl inland toward the lamp and die of it. Females
+turn around at the surf line and go back out without nesting.
 
-In this drawing seven of them make it. The dotted lines are tracks in the sand;
-they turn to solid water-colour at the foam line, where a track stops being a
-track and becomes a swim. One of them turned the wrong way. Her line goes
-orange, and it ends at the lamp.
+The fix is almost insultingly small: point the lamps at the ground, use amber
+instead of white, close the curtain in nesting season. Nobody has to care more
+than they already do. The light just has to stay off the water's job.
+
+So: one turtle, one night, and the light she is steering by — drawn by a program
+whose only verb is *walk a bit, turn a bit*.
 
 ---
 
@@ -48,20 +48,36 @@ orange, and it ends at the lamp.
 | **The moon and its haze** | three circles — a circle here is a 36-sided polygon, one turtle, one `ring` |
 | **The stars** | one turtle, twenty times: a jump with the pen up, one dot with it down |
 | **The sea** | four long shallow arcs, dashed far away and solid near the shore |
-| **The moonlight on the water** | one turtle walking down, the stroke widening three times on the way |
-| **The tracks** | eight turtles leaving the nest at the same step, each bending toward the light |
-| **The wrong turn** | the same, aimed at the lamp — the only warm colour in the frame |
+| **The light on the water** | twenty-five short strokes scattered in a cone, getting brighter as they come down |
+| **The turtle** | four turtles drawing at once: the shell, the head, the flippers, the plates |
 
-Two things the tool does are doing most of the work here.
+### The line art
 
-**Appearance belongs to the step where it is written.** Each hatchling declares
-sand colour, walks her way across the beach, and only then declares the water
-colour — so the track behind her stays sand while the part ahead comes out
-teal. One turtle, one continuous line, two materials.
+The turtle is not a picture the tool knows how to draw. It is a list of points —
+the outline of a carapace, a head, four paddles, the seams between the plates —
+and every stroke in the drawing is the same two numbers the rest of this project
+uses: **how far to turn from where the pen is already pointing, and how far to
+walk**. Four hundred and fifty-three of them.
 
-**A step is a moment, not a turn in a queue.** All eight leave on step 50 and
-move together, every one at her own curve, and the step ends when the last one
-arrives. That is why it reads as a run and not as a list.
+That is the whole trick, and it is worth knowing because it means anything you
+can describe as points, this tool can draw. The shape here was sketched as
+control points, smoothed with a spline, rotated into place, and printed as
+`go` and `go_silent` lines. `go_silent` is what lifts the pen between one line
+and the next.
+
+Two details that are easy to get wrong, both of which bit while this was made:
+
+- **A jump turns from where the turtle is pointing**, not from the screen. Feed
+  `go_silent` an absolute angle and your stars end up in the sea.
+- **A jump still costs a step.** Twenty slow jumps quietly became four seconds
+  of an eleven-second video until the star turtle's speed went up.
+
+### The gradient in the water
+
+The light gets brighter the closer it comes to shore, and that is one turtle
+with one colour. The opacity is declared *between* the strokes it belongs to —
+appearance in this tool belongs to the step where it is written, so a single
+line can change material halfway down without touching what is already drawn.
 
 ---
 
@@ -69,7 +85,10 @@ arrives. That is why it reads as a run and not as a list.
 
 Open `main.flx`, delete whatever sits between `timeline.Timeline.reset()` and
 the execution line, and paste this in its place. Save. The window is already
-open, so the drawing simply happens.
+open, so it simply happens.
+
+It is 657 lines and 453 of them are strokes. You are not meant to read those —
+paste them and change the four numbers at the top of each block.
 
 ```fluxa
 stage.Stage.background(8, 14, 26)
@@ -249,240 +268,506 @@ foam.ring(1, 22, 40.0, -0.55)
 
 // ═══ the moon on the water ══════════════════════════════════════
 //
-// The road the hatchlings steer by. The stroke widens as it comes down: three
-// widths declared between the steps they belong to, so the column opens
-// toward the shore.
+// Light on water is broken, never a line drawn from the moon down. Short
+// strokes scattered inside a cone that opens toward the shore, brighter the
+// closer they come — the opacity is declared between the steps it belongs to,
+// so one turtle paints the whole gradient.
 
-Block glint typeof turtle.Turtle
-glint.spawn(172.0, 190.0)
-glint.face(-90.0)
-glint.hide()
-glint.speed(200.0)
-glint.path_color(212, 228, 234)
-glint.path_dots()
-glint.path_dash(1, 11)
-glint.path_opacity(40)
-glint.path_width(5)
-glint.ring(37, 5, 12.0, 0.0)
-glint.path_width(9)
-glint.path_opacity(52)
-glint.ring(42, 5, 12.0, 0.0)
-glint.path_width(15)
-glint.path_opacity(66)
-glint.ring(47, 5, 12.0, 0.0)
+Block shine typeof turtle.Turtle
+shine.spawn(200.0, 212.0)
+shine.face(0.0)
+shine.hide()
+shine.speed(1400.0)
+shine.path_color(208, 226, 238)
+shine.path_width(2)
+shine.path_opacity(18)
+shine.go_silent(37, 0.7, 0.0)
+shine.go(38, 6.3, 0.0)
+shine.path_opacity(21)
+shine.go_silent(39, 15.6, -140.9)
+shine.go(40, 6.7, 140.9)
+shine.path_opacity(25)
+shine.go_silent(41, 18.3, -137.0)
+shine.go(42, 6.8, 137.0)
+shine.path_opacity(28)
+shine.go_silent(43, 9.3, -114.9)
+shine.go(44, 7.9, 114.9)
+shine.path_opacity(31)
+shine.go_silent(45, 10.5, -54.1)
+shine.go(46, 18.0, 54.1)
+shine.path_opacity(33)
+shine.go_silent(47, 45.6, -171.0)
+shine.go(48, 9.6, 171.0)
+shine.go_silent(49, 9.3, 0.0)
+shine.go(50, 9.6, 0.0)
+shine.go_silent(51, 3.7, -180.0)
+shine.go(52, 13.2, -180.0)
+shine.path_opacity(37)
+shine.go_silent(53, 19.5, -144.1)
+shine.go(54, 7.3, 144.1)
+shine.go_silent(55, 1.3, 0.0)
+shine.go(56, 16.8, 0.0)
+shine.path_opacity(41)
+shine.go_silent(57, 38.2, -165.7)
+shine.go(58, 23.2, 165.7)
+shine.go_silent(59, 10.2, -180.0)
+shine.go(60, 12.2, -180.0)
+shine.path_opacity(44)
+shine.go_silent(61, 52.7, -169.9)
+shine.go(62, 26.5, 169.9)
+shine.go_silent(63, 15.6, -180.0)
+shine.go(64, 15.3, -180.0)
+shine.go_silent(65, 4.9, 0.0)
+shine.go(66, 13.1, 0.0)
+shine.path_opacity(47)
+shine.go_silent(67, 47.8, -167.9)
+shine.go(68, 26.6, 167.9)
+shine.go_silent(69, 5.4, 0.0)
+shine.go(70, 10.5, 0.0)
+shine.path_opacity(50)
+shine.go_silent(71, 44.4, -167.5)
+shine.go(72, 32.1, 167.5)
+shine.go_silent(73, 29.2, -180.0)
+shine.go(74, 11.5, -180.0)
+shine.go_silent(75, 6.0, 0.0)
+shine.go(76, 30.2, 0.0)
+shine.path_opacity(54)
+shine.go_silent(77, 54.9, -170.0)
+shine.go(78, 23.7, 170.0)
+shine.go_silent(79, 30.4, 0.0)
+shine.go(80, 17.4, 0.0)
+shine.path_opacity(57)
+shine.go_silent(81, 72.5, -173.2)
+shine.go(82, 27.1, 173.2)
+shine.go_silent(83, 17.3, -180.0)
+shine.go(84, 33.8, -180.0)
+shine.path_opacity(61)
+shine.go_silent(85, 14.1, -52.7)
+shine.go(86, 25.8, 52.7)
 
-// ═══ the nest ═══════════════════════════════════════════════════
-Block nest typeof turtle.Turtle
-nest.spawn(663.0, 562.0)
-nest.face(90.0)
-nest.hide()
-nest.speed(220.0)
-nest.path_color(152, 134, 108)
-nest.path_width(1)
-nest.path_opacity(60)
-nest.ring(37, 14, 6.68, 25.7)
-
-// ═══ the run ════════════════════════════════════════════════════
+// ═══ the turtle ═════════════════════════════════════════════════
 //
-// Eight hatchlings leave at once, every one of them bending toward the light
-// on the water. Dotted while they are crossing the sand — that is what a track
-// looks like — and solid once they are swimming. The colour is declared
-// between the steps it belongs to, so the sand stays sand behind them.
-Block h1 typeof turtle.Turtle
-h1.spawn(650.0, 560.0)
-h1.face(169.4)
-h1.hide()
-h1.speed(150.0)
-h1.path_color(212, 190, 150)
-h1.path_width(2)
-h1.path_opacity(65)
-h1.path_dots()
-h1.path_dash(1, 7)
-h1.ring(50, 26, 18.0, -1.26)
-h1.path_solid()
-h1.path_color(124, 210, 216)
-h1.path_opacity(85)
-h1.ring(76, 3, 18.0, -1.26)
-Block h2 typeof turtle.Turtle
-h2.spawn(672.0, 550.0)
-h2.face(141.6)
-h2.hide()
-h2.speed(150.0)
-h2.path_color(212, 190, 150)
-h2.path_width(2)
-h2.path_opacity(65)
-h2.path_dots()
-h2.path_dash(1, 7)
-h2.ring(50, 29, 18.0, 1.03)
-h2.path_solid()
-h2.path_color(124, 210, 216)
-h2.path_opacity(85)
-h2.ring(79, 2, 18.0, 1.03)
-Block h3 typeof turtle.Turtle
-h3.spawn(656.0, 548.0)
-h3.face(167.0)
-h3.hide()
-h3.speed(150.0)
-h3.path_color(212, 190, 150)
-h3.path_width(2)
-h3.path_opacity(65)
-h3.path_dots()
-h3.path_dash(1, 7)
-h3.ring(50, 28, 18.0, -0.73)
-h3.path_solid()
-h3.path_color(124, 210, 216)
-h3.path_opacity(85)
-h3.ring(78, 4, 18.0, -0.73)
-Block h4 typeof turtle.Turtle
-h4.spawn(676.0, 562.0)
-h4.face(145.3)
-h4.hide()
-h4.speed(150.0)
-h4.path_color(212, 190, 150)
-h4.path_width(2)
-h4.path_opacity(65)
-h4.path_dots()
-h4.path_dash(1, 7)
-h4.ring(50, 31, 18.0, 0.75)
-h4.path_solid()
-h4.path_color(124, 210, 216)
-h4.path_opacity(85)
-h4.ring(81, 3, 18.0, 0.75)
-Block h5 typeof turtle.Turtle
-h5.spawn(648.0, 554.0)
-h5.face(163.2)
-h5.hide()
-h5.speed(150.0)
-h5.path_color(212, 190, 150)
-h5.path_width(2)
-h5.path_opacity(65)
-h5.path_dots()
-h5.path_dash(1, 7)
-h5.ring(50, 29, 18.0, -0.45)
-h5.path_solid()
-h5.path_color(124, 210, 216)
-h5.path_opacity(85)
-h5.ring(79, 4, 18.0, -0.45)
-Block h6 typeof turtle.Turtle
-h6.spawn(666.0, 564.0)
-h6.face(145.7)
-h6.hide()
-h6.speed(150.0)
-h6.path_color(212, 190, 150)
-h6.path_width(2)
-h6.path_opacity(65)
-h6.path_dots()
-h6.path_dash(1, 7)
-h6.ring(50, 29, 18.0, 0.64)
-h6.path_solid()
-h6.path_color(124, 210, 216)
-h6.path_opacity(85)
-h6.ring(79, 1, 18.0, 0.64)
-Block h7 typeof turtle.Turtle
-h7.spawn(660.0, 546.0)
-h7.face(160.2)
-h7.hide()
-h7.speed(150.0)
-h7.path_color(212, 190, 150)
-h7.path_width(2)
-h7.path_opacity(65)
-h7.path_dots()
-h7.path_dash(1, 7)
-h7.ring(50, 28, 18.0, -0.28)
-h7.path_solid()
-h7.path_color(124, 210, 216)
-h7.path_opacity(85)
-h7.ring(78, 3, 18.0, -0.28)
-Block h8 typeof turtle.Turtle
-h8.spawn(670.0, 558.0)
-h8.face(152.4)
-h8.hide()
-h8.speed(150.0)
-h8.path_color(212, 190, 150)
-h8.path_width(2)
-h8.path_opacity(65)
-h8.path_dots()
-h8.path_dash(1, 7)
-h8.ring(50, 31, 18.0, 0.32)
-h8.path_solid()
-h8.path_color(124, 210, 216)
-h8.path_opacity(85)
-h8.ring(81, 2, 18.0, 0.32)
-
-// ═══ the one that turned the wrong way ══════════════════════════
+// Line art, drawn the way a turtle draws: one stroke after another, no lifting
+// except to start a new line. Four of them share the work so the drawing comes
+// up as a whole instead of a part at a time — the shell and the head first, the
+// flippers with them, the plates last.
 //
-// She leaves with the others and finds a brighter light behind the beach.
+// The shape is a list of points; each stroke is the turn from where the pen is
+// already pointing to the next one, and the length between them. Nothing in the
+// language knows what a turtle looks like. This is all arithmetic.
+Block shell typeof turtle.Turtle
+shell.spawn(432.4, 382.4)
+shell.face(0.0)
+shell.hide()
+shell.speed(900.0)
+shell.path_color(152, 222, 230)
+shell.path_width(2)
+shell.path_opacity(90)
+shell.go(45, 4.2, -26.9)
+shell.go(46, 6.0, 1.0)
+shell.go(47, 7.0, -1.2)
+shell.go(48, 7.1, -3.0)
+shell.go(49, 6.4, -5.8)
+shell.go(50, 5.8, -6.8)
+shell.go(51, 5.8, -4.5)
+shell.go(52, 5.8, -5.0)
+shell.go(53, 5.7, -5.7)
+shell.go(54, 5.7, -6.4)
+shell.go(55, 5.8, -6.9)
+shell.go(56, 6.0, -6.0)
+shell.go(57, 6.2, -5.1)
+shell.go(58, 6.2, -4.5)
+shell.go(59, 6.2, -4.2)
+shell.go(60, 6.3, -4.6)
+shell.go(61, 6.5, -4.5)
+shell.go(62, 6.6, -3.9)
+shell.go(63, 6.6, -3.5)
+shell.go(64, 6.5, -3.3)
+shell.go(65, 6.5, -3.5)
+shell.go(66, 6.5, -3.5)
+shell.go(67, 6.6, -3.3)
+shell.go(68, 6.6, -3.2)
+shell.go(69, 6.6, -3.1)
+shell.go(70, 6.7, -2.9)
+shell.go(71, 6.8, -2.9)
+shell.go(72, 6.9, -3.0)
+shell.go(73, 6.8, -3.4)
+shell.go(74, 6.7, -3.9)
+shell.go(75, 6.7, -5.1)
+shell.go(76, 6.9, -4.5)
+shell.go(77, 6.9, -3.2)
+shell.go(78, 6.5, -2.2)
+shell.go(79, 5.8, -1.4)
+shell.go(80, 5.1, -2.6)
+shell.go(81, 4.6, -4.1)
+shell.go(82, 4.2, -3.4)
+shell.go(83, 3.8, -2.3)
+shell.go(84, 3.3, -0.8)
+shell.go(85, 2.9, -2.6)
+shell.go(86, 2.5, -5.4)
+shell.go(87, 2.1, -4.2)
+shell.go(88, 1.7, -2.2)
+shell.go(89, 1.2, 1.8)
+shell.go(90, 0.7, 3.7)
+shell.go(91, 0.1, 0.0)
+shell.go(92, 0.2, 180.0)
+shell.go(93, 0.3, 0.0)
+shell.go(94, 0.2, -0.0)
+shell.go(95, 0.2, -36.2)
+shell.go(96, 0.3, 0.0)
+shell.go(97, 0.2, -0.0)
+shell.go(98, 0.1, 180.0)
+shell.go(99, 0.7, 0.0)
+shell.go(100, 1.2, 3.7)
+shell.go(101, 1.7, 1.8)
+shell.go(102, 2.1, -2.2)
+shell.go(103, 2.5, -4.2)
+shell.go(104, 2.9, -5.4)
+shell.go(105, 3.3, -2.6)
+shell.go(106, 3.8, -0.8)
+shell.go(107, 4.2, -2.3)
+shell.go(108, 4.6, -3.4)
+shell.go(109, 5.1, -4.1)
+shell.go(110, 5.8, -2.6)
+shell.go(111, 6.5, -1.4)
+shell.go(112, 6.9, -2.2)
+shell.go(113, 6.9, -3.2)
+shell.go(114, 6.7, -4.5)
+shell.go(115, 6.7, -5.1)
+shell.go(116, 6.8, -3.9)
+shell.go(117, 6.9, -3.4)
+shell.go(118, 6.8, -3.0)
+shell.go(119, 6.7, -2.9)
+shell.go(120, 6.6, -2.9)
+shell.go(121, 6.6, -3.1)
+shell.go(122, 6.6, -3.2)
+shell.go(123, 6.5, -3.3)
+shell.go(124, 6.5, -3.5)
+shell.go(125, 6.5, -3.5)
+shell.go(126, 6.6, -3.3)
+shell.go(127, 6.6, -3.5)
+shell.go(128, 6.5, -3.9)
+shell.go(129, 6.3, -4.5)
+shell.go(130, 6.2, -4.6)
+shell.go(131, 6.2, -4.2)
+shell.go(132, 6.2, -4.5)
+shell.go(133, 6.0, -5.1)
+shell.go(134, 5.8, -6.0)
+shell.go(135, 5.7, -6.9)
+shell.go(136, 5.7, -6.4)
+shell.go(137, 5.8, -5.7)
+shell.go(138, 5.8, -5.0)
+shell.go(139, 5.8, -4.5)
+shell.go(140, 6.4, -6.8)
+shell.go(141, 7.1, -5.8)
+shell.go(142, 7.0, -3.0)
+shell.go(143, 6.0, -1.2)
+shell.go(144, 4.2, 1.0)
 
-Block lost typeof turtle.Turtle
-lost.spawn(664.0, 552.0)
-lost.face(60.4)
-lost.hide()
-lost.speed(150.0)
-lost.path_color(212, 190, 150)
-lost.path_width(2)
-lost.path_opacity(65)
-lost.path_dots()
-lost.path_dash(1, 7)
-lost.ring(50, 4, 18.0, -4.67)
-lost.path_solid()
-lost.path_color(230, 154, 80)
-lost.path_opacity(85)
-lost.ring(54, 2, 18.0, -4.67)
+Block neck typeof turtle.Turtle
+neck.spawn(416.7, 385.1)
+neck.face(0.0)
+neck.hide()
+neck.speed(620.0)
+neck.path_color(152, 222, 230)
+neck.path_width(2)
+neck.path_opacity(90)
+neck.go(45, 1.9, 91.5)
+neck.go(46, 2.8, 0.6)
+neck.go(47, 3.1, -3.8)
+neck.go(48, 2.9, -8.7)
+neck.go(49, 2.9, -11.3)
+neck.go(50, 3.1, -6.6)
+neck.go(51, 3.1, -6.1)
+neck.go(52, 2.8, -7.0)
+neck.go(53, 2.7, -9.5)
+neck.go(54, 2.7, -8.6)
+neck.go(55, 2.6, -7.2)
+neck.go(56, 2.4, -7.0)
+neck.go(57, 2.1, -10.0)
+neck.go(58, 2.0, -11.1)
+neck.go(59, 2.0, -8.4)
+neck.go(60, 2.0, -5.3)
+neck.go(61, 2.0, -3.3)
+neck.go(62, 2.0, -5.3)
+neck.go(63, 2.0, -8.4)
+neck.go(64, 2.1, -11.1)
+neck.go(65, 2.4, -10.0)
+neck.go(66, 2.6, -7.0)
+neck.go(67, 2.7, -7.2)
+neck.go(68, 2.7, -8.6)
+neck.go(69, 2.8, -9.5)
+neck.go(70, 3.1, -7.0)
+neck.go(71, 3.1, -6.1)
+neck.go(72, 2.9, -6.6)
+neck.go(73, 2.9, -11.3)
+neck.go(74, 3.1, -8.7)
+neck.go(75, 2.8, -3.8)
+neck.go(76, 1.9, 0.6)
+neck.go(77, 0.7, 4.0)
+neck.go(78, 0.1, -180.0)
+neck.go(79, 0.4, -0.0)
+neck.go(80, 0.2, 0.0)
+neck.go_silent(81, 30.8, 67.7)
+neck.go(82, 3.0, -140.2)
+neck.go_silent(83, 13.5, -0.0)
+neck.go(84, 3.0, 0.0)
 
-// ═══ the lamp on the road ═══════════════════════════════════════
-//
-// Eight rays: each one walks out and comes straight back to the middle.
-Block lamp typeof turtle.Turtle
-lamp.spawn(751.0, 470.0)
-lamp.face(90.0)
-lamp.hide()
-lamp.speed(300.0)
-lamp.path_color(234, 166, 88)
-lamp.path_width(1)
-lamp.path_opacity(60)
-lamp.ring(37, 12, 4.66, 30.0)
+Block fins typeof turtle.Turtle
+fins.spawn(470.4, 434.1)
+fins.face(0.0)
+fins.hide()
+fins.speed(1150.0)
+fins.path_color(128, 206, 216)
+fins.path_width(2)
+fins.path_opacity(82)
+fins.go(45, 7.1, -24.2)
+fins.go(46, 10.2, 0.6)
+fins.go(47, 11.4, -3.4)
+fins.go(48, 10.9, -7.7)
+fins.go(49, 10.6, -9.2)
+fins.go(50, 11.2, -5.6)
+fins.go(51, 11.4, -5.7)
+fins.go(52, 11.5, -6.3)
+fins.go(53, 12.2, -7.7)
+fins.go(54, 13.0, -5.9)
+fins.go(55, 12.8, -3.6)
+fins.go(56, 11.6, -2.3)
+fins.go(57, 10.7, -4.3)
+fins.go(58, 10.3, -4.9)
+fins.go(59, 8.8, -2.5)
+fins.go(60, 6.2, 0.4)
+fins.go(61, 2.5, 2.5)
+fins.go(62, 0.3, -180.0)
+fins.go(63, 1.4, -0.0)
+fins.go(64, 0.8, 0.0)
+fins.go(65, 5.9, 48.5)
+fins.go(66, 8.4, 0.1)
+fins.go(67, 9.7, -0.5)
+fins.go(68, 9.6, -1.2)
+fins.go(69, 9.6, -1.4)
+fins.go(70, 10.2, -0.8)
+fins.go(71, 10.1, -0.8)
+fins.go(72, 9.5, -0.9)
+fins.go(73, 8.9, -1.9)
+fins.go(74, 8.5, -1.7)
+fins.go(75, 8.0, -0.1)
+fins.go(76, 7.3, 1.9)
+fins.go(77, 7.0, 3.5)
+fins.go(78, 6.6, 2.5)
+fins.go(79, 5.6, 1.3)
+fins.go(80, 3.9, -0.2)
+fins.go(81, 1.6, -1.3)
+fins.go(82, 0.2, -180.0)
+fins.go(83, 0.9, -0.0)
+fins.go(84, 0.5, 0.0)
+fins.go_silent(85, 117.9, 177.6)
+fins.go(86, 7.1, 29.2)
+fins.go(87, 10.2, -0.6)
+fins.go(88, 11.4, 3.4)
+fins.go(89, 10.9, 7.7)
+fins.go(90, 10.6, 9.2)
+fins.go(91, 11.2, 5.6)
+fins.go(92, 11.4, 5.7)
+fins.go(93, 11.5, 6.3)
+fins.go(94, 12.2, 7.7)
+fins.go(95, 13.0, 5.9)
+fins.go(96, 12.8, 3.6)
+fins.go(97, 11.6, 2.3)
+fins.go(98, 10.7, 4.3)
+fins.go(99, 10.3, 4.9)
+fins.go(100, 8.8, 2.5)
+fins.go(101, 6.2, -0.4)
+fins.go(102, 2.5, -2.5)
+fins.go(103, 0.3, -180.0)
+fins.go(104, 1.4, 0.0)
+fins.go(105, 0.8, -0.0)
+fins.go(106, 5.9, -48.5)
+fins.go(107, 8.4, -0.1)
+fins.go(108, 9.7, 0.5)
+fins.go(109, 9.6, 1.2)
+fins.go(110, 9.6, 1.4)
+fins.go(111, 10.2, 0.8)
+fins.go(112, 10.1, 0.8)
+fins.go(113, 9.5, 0.9)
+fins.go(114, 8.9, 1.9)
+fins.go(115, 8.5, 1.7)
+fins.go(116, 8.0, 0.1)
+fins.go(117, 7.3, -1.9)
+fins.go(118, 7.0, -3.5)
+fins.go(119, 6.6, -2.5)
+fins.go(120, 5.6, -1.3)
+fins.go(121, 3.9, 0.2)
+fins.go(122, 1.6, 1.3)
+fins.go(123, 0.2, 180.0)
+fins.go(124, 0.9, -0.0)
+fins.go(125, 0.5, 0.0)
+fins.go_silent(126, 113.8, 124.2)
+fins.go(127, 4.8, -0.2)
+fins.go(128, 6.9, 0.3)
+fins.go(129, 7.6, -1.9)
+fins.go(130, 6.9, -4.5)
+fins.go(131, 6.2, -6.9)
+fins.go(132, 6.2, -4.7)
+fins.go(133, 5.9, -4.2)
+fins.go(134, 5.2, -4.4)
+fins.go(135, 4.7, -8.9)
+fins.go(136, 4.4, -9.2)
+fins.go(137, 3.8, -4.7)
+fins.go(138, 2.7, 0.8)
+fins.go(139, 1.1, 4.8)
+fins.go(140, 0.1, 180.0)
+fins.go(141, 0.6, 0.0)
+fins.go(142, 0.4, -0.0)
+fins.go(143, 3.6, 45.3)
+fins.go(144, 5.1, 0.1)
+fins.go(145, 5.8, -0.8)
+fins.go(146, 5.6, -1.8)
+fins.go(147, 5.3, -2.6)
+fins.go(148, 5.5, -1.6)
+fins.go(149, 5.5, -1.0)
+fins.go(150, 5.2, -0.5)
+fins.go(151, 5.4, -0.8)
+fins.go(152, 5.4, -0.9)
+fins.go(153, 4.8, -0.4)
+fins.go(154, 3.3, 0.1)
+fins.go(155, 1.3, 0.4)
+fins.go(156, 0.1, 180.0)
+fins.go(157, 0.7, 0.0)
+fins.go(158, 0.4, -0.0)
+fins.go_silent(159, 75.8, -148.3)
+fins.go(160, 4.8, 42.8)
+fins.go(161, 6.9, -0.3)
+fins.go(162, 7.6, 1.9)
+fins.go(163, 6.9, 4.5)
+fins.go(164, 6.2, 6.9)
+fins.go(165, 6.2, 4.7)
+fins.go(166, 5.9, 4.2)
+fins.go(167, 5.2, 4.4)
+fins.go(168, 4.7, 8.9)
+fins.go(169, 4.4, 9.2)
+fins.go(170, 3.8, 4.7)
+fins.go(171, 2.7, -0.8)
+fins.go(172, 1.1, -4.8)
+fins.go(173, 0.1, 180.0)
+fins.go(174, 0.6, -0.0)
+fins.go(175, 0.4, 0.0)
+fins.go(176, 3.6, -45.3)
+fins.go(177, 5.1, -0.1)
+fins.go(178, 5.8, 0.8)
+fins.go(179, 5.6, 1.8)
+fins.go(180, 5.3, 2.6)
+fins.go(181, 5.5, 1.6)
+fins.go(182, 5.5, 1.0)
+fins.go(183, 5.2, 0.5)
+fins.go(184, 5.4, 0.8)
+fins.go(185, 5.4, 0.9)
+fins.go(186, 4.8, 0.4)
+fins.go(187, 3.3, -0.1)
+fins.go(188, 1.3, -0.4)
+fins.go(189, 0.1, -180.0)
+fins.go(190, 0.7, -0.0)
+fins.go(191, 0.4, 0.0)
 
-Block rays typeof turtle.Turtle
-rays.spawn(742.0, 470.0)
-rays.face(0.0)
-rays.hide()
-rays.speed(400.0)
-rays.path_color(234, 166, 88)
-rays.path_width(1)
-rays.path_opacity(30)
-rays.go(37, 30.0, 22.5)
-rays.go_silent(38, -30.0, 0.0)
-rays.go(39, 30.0, 45.0)
-rays.go_silent(40, -30.0, 0.0)
-rays.go(41, 30.0, 45.0)
-rays.go_silent(42, -30.0, 0.0)
-rays.go(43, 30.0, 45.0)
-rays.go_silent(44, -30.0, 0.0)
-rays.go(45, 30.0, 45.0)
-rays.go_silent(46, -30.0, 0.0)
-rays.go(47, 30.0, 45.0)
-rays.go_silent(48, -30.0, 0.0)
-rays.go(49, 30.0, 45.0)
-rays.go_silent(50, -30.0, 0.0)
-rays.go(51, 30.0, 45.0)
-rays.go_silent(52, -30.0, 0.0)
+Block plates typeof turtle.Turtle
+plates.spawn(413.5, 386.8)
+plates.face(0.0)
+plates.hide()
+plates.speed(700.0)
+plates.path_color(76, 152, 168)
+plates.path_width(1)
+plates.path_opacity(70)
+plates.go(85, 4.7, -132.9)
+plates.go(86, 6.7, -0.4)
+plates.go(87, 7.7, 2.3)
+plates.go(88, 7.6, 4.9)
+plates.go(89, 7.6, 6.2)
+plates.go(90, 8.1, 3.6)
+plates.go(91, 8.3, 2.4)
+plates.go(92, 8.2, 1.5)
+plates.go(93, 8.0, 1.5)
+plates.go(94, 8.0, 1.9)
+plates.go(95, 8.0, 1.7)
+plates.go(96, 8.0, 1.6)
+plates.go(97, 8.1, 1.2)
+plates.go(98, 8.2, 1.4)
+plates.go(99, 8.1, 2.1)
+plates.go(100, 7.9, 3.0)
+plates.go(101, 8.4, 4.8)
+plates.go(102, 8.7, 3.5)
+plates.go(103, 7.8, 1.5)
+plates.go(104, 5.4, -0.3)
+plates.go(105, 2.1, -1.6)
+plates.go(106, 0.2, 180.0)
+plates.go(107, 1.2, 0.0)
+plates.go(108, 0.7, 0.0)
+plates.go_silent(109, 152.3, -30.9)
+plates.go(110, 4.7, -146.1)
+plates.go(111, 6.7, 0.4)
+plates.go(112, 7.7, -2.3)
+plates.go(113, 7.6, -4.9)
+plates.go(114, 7.6, -6.2)
+plates.go(115, 8.1, -3.6)
+plates.go(116, 8.3, -2.4)
+plates.go(117, 8.2, -1.5)
+plates.go(118, 8.0, -1.5)
+plates.go(119, 8.0, -1.9)
+plates.go(120, 8.0, -1.7)
+plates.go(121, 8.0, -1.6)
+plates.go(122, 8.1, -1.2)
+plates.go(123, 8.2, -1.4)
+plates.go(124, 8.1, -2.1)
+plates.go(125, 7.9, -3.0)
+plates.go(126, 8.4, -4.8)
+plates.go(127, 8.7, -3.5)
+plates.go(128, 7.8, -1.5)
+plates.go(129, 5.4, 0.3)
+plates.go(130, 2.1, 1.6)
+plates.go(131, 0.2, 180.0)
+plates.go(132, 1.2, 0.0)
+plates.go(133, 0.7, -0.0)
+plates.go_silent(134, 130.4, 37.0)
+plates.go(135, 51.3, -107.1)
+plates.go_silent(136, 63.1, -149.5)
+plates.go(137, 57.5, 149.5)
+plates.go_silent(138, 65.0, -150.5)
+plates.go(139, 55.6, 150.5)
+plates.go_silent(140, 60.1, -147.8)
+plates.go(141, 46.2, 147.8)
+plates.go_silent(142, 116.4, 113.4)
+plates.go(143, 34.8, 66.6)
+plates.go_silent(144, 41.3, 136.4)
+plates.go(145, 42.0, -136.4)
+plates.go_silent(146, 52.4, 142.3)
+plates.go(147, 43.0, -142.3)
+plates.go_silent(148, 57.3, 143.8)
+plates.go(149, 38.1, -143.8)
+plates.go_silent(150, 128.1, -132.6)
+plates.go(151, 34.8, -47.4)
+plates.go_silent(152, 41.3, -136.4)
+plates.go(153, 42.0, 136.4)
+plates.go_silent(154, 52.4, -142.3)
+plates.go(155, 43.0, 142.3)
+plates.go_silent(156, 57.3, -143.8)
+plates.go(157, 38.1, 143.8)
+
 ```
 
 ---
 
 ## Make the video
 
-Add one line to the same file, save again, and `one-night.mp4` writes itself —
-no ffmpeg, nothing left on disk:
+Add one line to the same file and save again:
 
 ```fluxa
 export.Video(1, 0, 30)      // from step 1, through the last one, at 30 fps
 ```
 
-It is not a screen recording. The artwork is redone from the beginning with time
-advancing 1/30 of a second per frame, so the result is the same on any machine,
-and two runs come out byte for byte identical. Nothing is written over either:
-the second render is `artwork1.mp4`.
+`artwork.mp4` writes itself — H.264, no ffmpeg, nothing left on disk. It is not
+a screen recording: the artwork is redone from the beginning with time advancing
+1/30 of a second per frame, so the file is the same on any machine and two runs
+come out byte for byte identical. Nothing is written over, either: the second
+render is `artwork1.mp4`.
 
 For the frames instead — one PNG each, for an editor or a print:
 
@@ -494,27 +779,22 @@ export.Frames(1, 0, 30)
 
 ## Things worth changing
 
-- **Move the lamp.** `lamp.spawn(742.0, 470.0)`, and the turtle that follows it.
-  Put it out at sea and watch who the artwork is about change completely.
-- **Turn the lamp off.** Delete the `lost`, `lamp` and `rays` blocks. Eight
-  tracks, no orange. That is what a dark beach looks like.
-- **Change the moon's height.** `moon.spawn(246.0, 112.0)` — the second number.
-  The tracks aim at the reflection, not at the moon, so move the `glint` with it.
-- **Slow the run down.** Every hatchling has `speed(150.0)`. At `40.0` you can
-  watch a single track cross the sand.
-- **Add more of them.** A hatchling is fifteen lines. The stage holds
-  thirty-two turtles and this uses twenty-one.
+- **Turn the moon into a sun.** `moon.path_color(228, 234, 242)` → `(255, 214, 140)`,
+  the haze with it, and the water strokes to match. Same drawing, different hour.
+- **Move the turtle.** Every one of her strokes is relative, so the four blocks
+  (`shell`, `neck`, `fins`, `plates`) move together if you change where each one
+  spawns — by the same amount. Easier: change `stage.Stage.background` to
+  something lighter and let her sit where she is.
+- **Take the plates out.** Delete the `plates` block. A bare outline reads as a
+  silhouette, and it is closer to how a woodcut would do it.
+- **Slow her down.** `shell.speed(900.0)` and the three others. At `200.0` you
+  can watch the outline being felt out stroke by stroke.
+- **Make the water busier.** The `shine` block is twenty-five strokes; more of
+  them, shorter, is a rougher sea.
 
 ---
 
-## The light matters
-
-This is a drawing, not a campaign, but the mechanism in it is real and the fix
-for it is unusually simple. Lighting near a nesting beach is the one thing that
-turns a hatchling's compass into a trap, and it is fixed by shielding lamps so
-they point down, by using long-wavelength amber light instead of white, and by
-closing a curtain in nesting season. Not by anybody caring more. Just by aiming
-the light at the ground.
-
-The turtles have been reading that horizon since before there were primates to
-watch them do it. It costs nothing to leave it readable.
+*Sea turtle facts in this page are the ordinary ones: night emergence,
+orientation toward the brightest open horizon, natal homing by geomagnetic cues,
+and disorientation caused by coastal lighting. Any conservation group working on
+a nesting beach will tell you the same three fixes.*

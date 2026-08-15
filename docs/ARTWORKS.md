@@ -17,10 +17,10 @@ The colours are only a suggestion: change them freely.
 
 [![One Night](artworks/one-night.png)](artworks/one-night.md)
 
-A nest opens after dark, eight hatchlings run for the moonlight on the water,
-and one of them turns the wrong way. The largest piece here — twenty-one
-turtles, eighty-three steps — and the only one that comes with a video and a
-story: **[docs/artworks/one-night.md](artworks/one-night.md)**.
+A sea turtle under a full moon, and the broken light she steers by. The largest
+piece here — thirteen turtles, 191 steps, 453 strokes of line art — and the only
+one that comes with a video and a story:
+**[docs/artworks/one-night.md](artworks/one-night.md)**.
 
 ---
 

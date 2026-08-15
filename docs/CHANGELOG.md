@@ -8,10 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **"One Night"** — the first artwork with a story, a video and its own
-  document: [docs/artworks/one-night.md](artworks/one-night.md). A nest opens
-  after dark, eight hatchlings run for the moonlight on the water, and one turns
-  the wrong way toward a lamp on the road. Twenty-one turtles, 83 steps, 621
-  actions.
+  document: [docs/artworks/one-night.md](artworks/one-night.md). A sea turtle
+  under a full moon, drawn as line art, and the broken light on the water she
+  steers by. Thirteen turtles, 191 steps, 453 strokes.
+
+  The line art is the piece's own lesson: the tool does not know what a turtle
+  looks like. A shape is a list of points, and every stroke is the same two
+  numbers as everything else — how far to turn from where the pen is pointing,
+  and how far to walk.
 
   It is also the piece that shows what the tool grew this week: the tracks are
   dotted on the sand and solid in the water because appearance belongs to the
