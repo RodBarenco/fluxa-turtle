@@ -41,6 +41,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   resolves to the field, silently: `want_fps = fps` read 60 and ignored what was
   asked for, so `export.Video(1, 36, 5)` rendered at 60 fps. The whole project
   was scanned for the same pattern afterwards — this was the only one.
+- **The window showed the desktop until the first frame.** Nothing is presented
+  between `graph.init` and the first `graph.end_frame`, so the window keeps
+  whatever was behind it. `Runner.open(win)` paints one cleared frame, and every
+  harness calls it right after choosing the stage colour — `lab/limits.flx`
+  rebuilds 6000 steps before presenting anything, and for that second the window
+  was an editor, measured at 686 colours. `play` calls it too, but only when
+  nothing has been drawn yet: on a save with an artwork on screen, clearing would
+  throw it away for as long as the rebuild takes. Measured in `main.flx`, the
+  window is the stage colour at 0.20 s with or without the fix — the first run
+  rebuilds from `done = 0`, which is instant, so the artwork file never had a
+  visible gap.
 - **The background drew black.** `graph.draw_image` batches, and the Stage was
   releasing the decoded image before `graph.end_frame`, leaving the batch
   pointing at a texture that was gone. The image is now a local `dyn` in

@@ -20,6 +20,7 @@ dyn win    = graph.init(800, 600, "preview")
 dyn canvas = image.new(800, 600)
 
 stage.Stage.background(16, 17, 24)
+runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
 pool.Pool.reset()
 timeline.Timeline.reset()
 

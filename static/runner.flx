@@ -35,6 +35,17 @@ Block Runner {
     float sim_dt   = 0.0         // seconds per frame while exporting
 
     fn play(dyn win, dyn canvas, int done) int {
+        // Nothing has been presented yet, so the window is still showing
+        // whatever was behind it — somebody's desktop, framed. It stays that way
+        // until the first frame lands, which on a big artwork is a whole second
+        // away (the rebuild) and can be much longer (a video). One cleared frame
+        // closes the gap.
+        //
+        // Only when nothing has been drawn yet. On a save with an artwork on
+        // screen, clearing would throw it away for as long as the rebuild takes
+        // — and not throwing it away is the whole point of this tool.
+        if done == 0 { open(win) }
+
         // Whatever the artwork file declared — export.Video or export.Frames —
         // is generated here, before the stage comes up. Outside the replay loop
         // on purpose: pressing R redoes the drawing, not the file on disk.
@@ -210,6 +221,14 @@ Block Runner {
         }
         if err != nil { print("[export] the video was not written: ", err[0]) }
         if err == nil { print("[export] ", export.Exporter.video_path(), " is ready") }
+    }
+
+    // One frame of the empty stage. Also what a harness calls right after
+    // graph.init, for the same reason play does.
+    fn open(dyn win) nil {
+        graph.begin_frame(win)
+        stage.Stage.clear(win)
+        graph.end_frame(win)
     }
 
     // Still frames: the artwork sits on screen with nothing moving.

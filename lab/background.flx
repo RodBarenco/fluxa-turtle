@@ -55,6 +55,7 @@ dyn canvas = image.new(800, 600)
 pool.Pool.reset()
 timeline.Timeline.reset()
 stage.Stage.background(16, 17, 24)
+runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
 
 Block leo typeof turtle.Turtle
 leo.spawn(300.0, 300.0)
