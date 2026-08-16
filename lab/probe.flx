@@ -11,6 +11,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "batch")
@@ -35,7 +36,7 @@ leo.ring(2, 35, 470.0, 170.0)
 print("rosette via ring: actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/batch.png")

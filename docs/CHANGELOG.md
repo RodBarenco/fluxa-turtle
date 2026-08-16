@@ -3,6 +3,47 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.0] — 2026-08-16
+
+### Added
+
+- **The panel, on P** (`static/panel.flx`). Over the stage: the step and the
+  last one declared, how many actions the timeline holds and how many it
+  ignored, and one line per turtle — pen colour, position, accumulated heading,
+  pen up or down. Up to eight lines, then `+ n more`. Off by default, and muted
+  for the length of an export: a controlled render is the artwork, not the
+  workshop.
+
+  The strings are cached and rebuilt only when the step or the number of turtles
+  changes — once per step, not sixty times a second — with every `strings.concat`
+  intermediate released by hand (guide §12.5). The heading is deliberately not
+  wrapped to 360: `1800 deg` says she has turned five whole times.
+
+- **Pause and walk a step at a time.** `SPACE` stops the artwork where it is,
+  mid-movement included; `→` animates exactly one step; `←` goes back one. Back
+  is a **rebuild** to the previous step, not an undo of the last stroke, so
+  erased ranges, `pivot`, `shift` and appearance changes resolve as they did at
+  that moment. Pause is a state of the window: saving while paused carries on.
+
+### Changed
+
+- **The live stage is one loop instead of three.** Replay, animation and idle
+  now share a single loop with the state in Block fields (`paused`, `forward`,
+  `back`, `replay`), read in one place. `Runner.frame()` no longer presents the
+  frame — callers draw the panel over it and call `end_frame`; `Runner.shown()`
+  is the pair, which is what the harnesses use
+  ([adr 0015](adr/0015-one-live-loop-and-a-panel-to-learn-with.md)).
+
+### Fixed
+
+- **SPACE did not pause.** The keyboard was read twice per presented frame — by
+  the outer loop and again inside `animate`, which presents frames of its own —
+  so every press was counted twice and pause toggled back in the same frame. The
+  keyboard is now read only where a frame is presented.
+- **Arrow presses were lost.** The key flags were cleared unconditionally at the
+  end of each turn, which threw away arrows pressed while an animation was
+  running. A flag is now cleared only by the branch that acts on it.
+
 ## [0.10.0] — 2026-08-15
 
 ### Added

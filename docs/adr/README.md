@@ -20,3 +20,4 @@ because it came out of a runtime constraint measured in practice.
 | [0012](0012-a-turtle-can-move-what-she-has-drawn.md) | A turtle can move what she has already drawn |
 | [0013](0013-one-sheet-for-every-sprite.md) | One sheet for every sprite |
 | [0014](0014-a-movement-survives-the-save.md) | A movement survives the save |
+| [0015](0015-one-live-loop-and-a-panel-to-learn-with.md) | One live loop, and a panel to learn with |

@@ -18,6 +18,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "speed")
@@ -82,7 +83,7 @@ print("  3    |   4.00   | ", math.to_float(time.elapsed_ms(t3)) / 1000.0)
 print("final position slow  x=", pool.Pool.get_x(0), " (expected 300)")
 print("final position fast  x=", pool.Pool.get_x(1), " (expected 800)")
 
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/speed.png")

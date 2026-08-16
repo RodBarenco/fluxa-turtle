@@ -14,6 +14,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "preview")
@@ -69,7 +70,7 @@ bia.go_at(2, 480.0, 0.0, 700.0)
 pool.Pool.home_all()
 painter.Painter.reset()
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 
 print("steps=", timeline.Timeline.max_step(), " actions=", timeline.Timeline.count())
 

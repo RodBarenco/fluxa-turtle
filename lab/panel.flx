@@ -1,0 +1,101 @@
+// lab/panel.flx — the teaching panel, driven without a keyboard.
+// Run from the project root:  ./fluxa run lab/panel.flx
+//
+// The live loop reads P, SPACE and the arrows; a harness cannot press them, so
+// this drives what they drive: the panel's own state and the rebuild that
+// walking backwards is. What it checks is that the panel draws over the artwork
+// without disturbing it, that its text follows the step, and that stepping back
+// really does undo a step.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "panel")
+dyn canvas = image.new(800, 600)
+
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+dyn sheet = pool.Pool.atlas()
+dyn part  = [0.0, 0.0]
+
+Block leo typeof turtle.Turtle
+leo.spawn(200.0, 420.0)
+leo.color(90, 230, 230)
+leo.path_color(90, 230, 230)
+leo.path_width(3)
+leo.speed(2000.0)
+leo.ring(1, 8, 90.0, 45.0)
+
+Block ana typeof turtle.Turtle
+ana.spawn(520.0, 420.0)
+ana.color(255, 200, 60)
+ana.path_color(255, 200, 60)
+ana.path_width(3)
+ana.speed(2000.0)
+ana.ring(1, 8, 70.0, -60.0)
+
+print("panel off by default ...  ", panel.Panel.visible(), "   (expected 0)")
+panel.Panel.toggle()
+print("after P ...............  ", panel.Panel.visible(), "   (expected 1)")
+
+// walk to step 8, then draw the stage with the panel over it
+runner.Runner.rebuild(win, canvas, 8)
+panel.Panel.at(8, timeline.Timeline.max_step(), 1)
+runner.Runner.frame(win, canvas, sheet)
+panel.Panel.draw(win)
+graph.end_frame(win)
+print("panel says step .......  ", panel.Panel.step(), " of ", timeline.Timeline.max_step())
+
+danger {
+    dyn s1 = graph.capture(win)
+    image.save(s1, "lab/panel_at8.png")
+    image.discard(s1)
+}
+if err != nil { print("capture: ", err[0]) }
+
+// step back: the rebuild is the whole implementation of going backwards
+runner.Runner.rebuild(win, canvas, 5)
+panel.Panel.at(5, timeline.Timeline.max_step(), 1)
+runner.Runner.frame(win, canvas, sheet)
+panel.Panel.draw(win)
+graph.end_frame(win)
+print("after three steps back   ", panel.Panel.step(), "   (expected 5)")
+
+danger {
+    dyn s2 = graph.capture(win)
+    image.save(s2, "lab/panel_at5.png")
+    image.discard(s2)
+}
+if err != nil { print("capture: ", err[0]) }
+
+// and with the panel off, the artwork has to be untouched
+panel.Panel.toggle()
+runner.Runner.rebuild(win, canvas, 8)
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn s3 = graph.capture(win)
+    image.save(s3, "lab/panel_off.png")
+    image.discard(s3)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)

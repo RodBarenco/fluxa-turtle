@@ -10,7 +10,9 @@
 // stage, save, and see what shows up. Then the next one. That is how the tool
 // is meant to be used.
 //
-// With the window focused: R redoes the whole artwork from step 1, animated,
+// With the window focused: P opens the panel (which step, which turtles, where
+// each one is), SPACE pauses, and paused the arrows walk one step at a time —
+// RIGHT forward, LEFT back. R redoes the whole artwork from step 1, animated,
 // and F puts the window fullscreen (F again brings it back).
 //
 // Ready-made artworks to paste: docs/ARTWORKS.md
@@ -30,6 +32,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 // The window survives the save: the initializer of a prst holding a lib cursor

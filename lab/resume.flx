@@ -25,6 +25,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "resume")
@@ -78,7 +79,7 @@ runner.Runner.animate(win, canvas, sheet, part, 1)
 int again = time.elapsed_ms(t2)
 print("stale progress .......  ", again, " ms   (expected ~2000: it belongs to another step)")
 
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 
 danger {
     dyn shot = graph.capture(win)

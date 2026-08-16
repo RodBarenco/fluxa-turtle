@@ -21,6 +21,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "sprite")
@@ -127,7 +128,7 @@ dyn sheet = pool.Pool.atlas()
 print("sprite files .........  ", pool.Pool.sprites(), "   (expected 3: one at 1.0, the same at 0.5, and the sheet)")
 
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count())
 print("expected: five arrows, each pointing the way its turtle walked, and one circle")

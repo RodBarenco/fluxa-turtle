@@ -1,0 +1,167 @@
+// static/panel.flx — the panel you learn with
+//
+// Press P and the drawing tells you what it is doing: which step it is on, how
+// many were declared, what each turtle is worth right now, and which keys walk
+// the artwork one step at a time. It is drawn over the stage and it is never in
+// an export — a controlled render is the artwork, not the workshop.
+//
+// The strings are CACHED. Building text with strings.concat inside the frame
+// loop is the one thing this project has a rule about (guide §12.5): a loop
+// that never ends holds every reference it takes. So the lines are rebuilt only
+// when the numbers behind them change — once per step, not sixty times a
+// second — and each rebuild reassigns the same field, which releases the
+// previous string.
+
+Block Panel {
+    int on    = 0            // P toggles it; off by default, the artwork comes first
+    int muted = 0            // 1 while exporting: the panel is not part of the work
+
+    int cur   = 0            // the step the artwork is standing on
+    int limit = 0            // the last step declared
+    int paused = 0
+
+    str head = ""            // "step 12 / 36   ·   3 turtles"
+    str body = ""            // "48 actions   ·   0 conflicts   ·   paused"
+    str arr rows[8] = ""     // one per turtle, up to eight
+    str more = ""            // "+ 5 more" when there are more than eight
+    int rown = 0
+    int built_for = 0 - 1    // the step the cache was built for
+    int built_n   = 0 - 1    // and how many turtles it had
+
+    int arr guard[1] = 0     // hot-loop anchor
+
+    fn toggle() nil {
+        on = 1 - on
+        built_for = 0 - 1    // rebuild the text next time it is drawn
+    }
+
+    fn visible() int { return on }
+    fn step()    int { return cur }
+    fn mute(int m) nil { muted = m }
+
+    // Where the artwork is. Called by the runner whenever it moves; the cache
+    // notices by itself that the numbers changed.
+    fn at(int step, int last, int is_paused) nil {
+        cur = step
+        limit = last
+        paused = is_paused
+    }
+
+    // ── the text ──────────────────────────────────────────────────
+    //
+    // Every concat is released by hand right after it is folded into the line,
+    // because this runs inside a program that does not end. What survives is
+    // the field, and reassigning a field releases what it held.
+
+    fn num(int v) str { return strings.from_int(v) }
+
+    fn build() nil {
+        int nt = pool.Pool.count()
+
+        str a1 = strings.concat("step ", num(cur))
+        str a2 = strings.concat(a1, " / ")
+        str a3 = strings.concat(a2, num(limit))
+        str a4 = strings.concat(a3, "   .   ")
+        str a5 = strings.concat(a4, num(nt))
+        head = strings.concat(a5, " turtles")
+        free(a1)
+        free(a2)
+        free(a3)
+        free(a4)
+        free(a5)
+
+        str b1 = strings.concat(num(timeline.Timeline.count()), " actions   .   ")
+        str b2 = strings.concat(b1, num(timeline.Timeline.conflicts()))
+        str b3 = strings.concat(b2, " ignored")
+        body = b3
+        if paused == 1 {
+            body = strings.concat(b3, "   .   PAUSED")
+            free(b3)
+        }
+        free(b1)
+        free(b2)
+
+        rown = nt
+        if rown > 8 { rown = 8 }
+
+        int i = 0
+        while i < rown {
+            guard[0] = i         // anchor FIRST
+            str r1 = strings.concat("#", num(i))
+            str r2 = strings.concat(r1, "  ")
+            str r3 = strings.concat(r2, num(math.to_int(pool.Pool.get_x(i))))
+            str r4 = strings.concat(r3, ",")
+            str r5 = strings.concat(r4, num(math.to_int(pool.Pool.get_y(i))))
+            str r6 = strings.concat(r5, "   ")
+            str r7 = strings.concat(r6, num(math.to_int(pool.Pool.get_ang(i))))
+            str r8 = strings.concat(r7, " deg   ")
+            str r9 = strings.concat(r8, pen_word(i))
+            rows[i] = r9
+            free(r1)
+            free(r2)
+            free(r3)
+            free(r4)
+            free(r5)
+            free(r6)
+            free(r7)
+            free(r8)
+            i = i + 1
+        }
+
+        more = ""
+        if nt > 8 {
+            str m1 = strings.concat("+ ", num(nt - 8))
+            more = strings.concat(m1, " more")
+            free(m1)
+        }
+
+        built_for = cur
+        built_n = nt
+    }
+
+    fn pen_word(int i) str {
+        if pool.Pool.get_pen(i) == 0 { return "pen up" }
+        return "drawing"
+    }
+
+    // ── drawing ───────────────────────────────────────────────────
+
+    fn draw(dyn win) nil {
+        if on == 0 { return }
+        if muted == 1 { return }
+
+        // The cache is rebuilt when the step moves or a turtle appears — once
+        // per step, never per frame.
+        if built_for != cur { build() }
+        if built_n != pool.Pool.count() { build() }
+
+        int h = 58 + rown * 15
+        if more != "" { h = h + 15 }
+
+        graph.draw_rect(win, 12, 12, 320, h, 16, 18, 26)
+        graph.draw_rect_lines(win, 12, 12, 320, h, 64, 78, 104)
+
+        graph.draw_text(win, head, 24, 24, 18, 206, 216, 230)
+        graph.draw_text(win, body, 24, 46, 10, 120, 150, 180)
+
+        int i = 0
+        while i < rown {
+            guard[0] = i         // anchor FIRST
+            graph.draw_rect(win, 24, 66 + i * 15, 8, 8,
+                            pool.Pool.get_pr(i), pool.Pool.get_pg(i), pool.Pool.get_pb(i))
+            graph.draw_text(win, rows[i], 40, 64 + i * 15, 10, 150, 170, 190)
+            i = i + 1
+        }
+        if more != "" { graph.draw_text(win, more, 40, 64 + rown * 15, 10, 90, 110, 140) }
+
+        keys_line(win)
+    }
+
+    // The keys, along the bottom. A fixed string: nothing to cache and nothing
+    // to build.
+    fn keys_line(dyn win) nil {
+        graph.draw_rect(win, 0, config.H() - 26, config.W(), 26, 16, 18, 26)
+        graph.draw_text(win, "SPACE pause    RIGHT one step    LEFT back one    R replay    F fullscreen    P panel",
+                        14, config.H() - 18, 10, 120, 145, 175)
+    }
+}

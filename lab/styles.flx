@@ -19,6 +19,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "styles")
@@ -86,7 +87,7 @@ e.ring(4, 3, 120.0, 0.0)
 pool.Pool.home_all()
 painter.Painter.reset()
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 print("appearance events=", timeline.Timeline.styles(), " last step of 'a'=", timeline.Timeline.last_step(0))
@@ -114,7 +115,7 @@ while s <= timeline.Timeline.max_step() {
     runner.Runner.animate(win, live, sheet, part, s)
     s = s + 1
 }
-runner.Runner.frame(win, live, sheet)
+runner.Runner.shown(win, live, sheet)
 
 print("segments held by the painter=", painter.Painter.count(), " (expected 27: 30 minus e's three with the pen up)")
 

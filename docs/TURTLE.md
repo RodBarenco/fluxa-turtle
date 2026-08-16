@@ -487,6 +487,63 @@ or GIF the frames are still there and `finish()` prints the ffmpeg command.
 
 ---
 
+# Watching it, key by key
+
+None of this is written in the artwork: it is the window, and it works on any
+composition. With the window focused:
+
+| Key | What it does |
+|---|---|
+| **P** | The panel, over the stage. Off by default. |
+| **SPACE** | Pause / carry on. |
+| **→** | One step forward, animated. Only while paused. |
+| **←** | One step back. Only while paused. |
+| **R** | Replay from step 1. |
+| **F** | Fullscreen, and back. |
+
+### The panel
+
+```
+step 12 / 36   .   3 turtles
+48 actions   .   0 ignored   .   PAUSED
+■ #0   400,300   1800 deg   drawing
+■ #1   112,205      90 deg   pen up
+```
+
+- **step 12 / 36** — where the artwork is, and the last step declared. If the
+  second number grew after a save, the steps you just wrote were read.
+- **48 actions · 0 ignored** — how many actions the timeline holds, and how many
+  it refused. *Ignored* is almost always the same turtle given two actions on
+  one step: the first one wins and the second is dropped, which is the usual
+  reason a stroke you wrote never shows up.
+- **one line per turtle** — her pen colour as a swatch, then position, heading
+  and whether the pen is down. The heading is not wrapped to 360 on purpose: an
+  accumulated `1800 deg` tells you she has turned five whole times, which a `0`
+  would hide. Up to eight lines, then `+ n more`.
+
+The panel is never in an export. `export.Video` and `export.Frames` mute it for
+the duration of the render and give it back afterwards — a controlled render is
+the artwork, not the workshop.
+
+### Pausing, and walking a step at a time
+
+`SPACE` stops the artwork where it is, mid-movement included: the turtle holds
+the position the last frame gave her. From there, `→` animates exactly one step
+and `←` goes back one.
+
+Back is a **rebuild**, not an undo: the artwork is drawn again from step 1 up to
+the step before, so what you see is the drawing as it was then — erased ranges,
+`pivot`, `shift` and appearance changes all resolved the way they were at that
+moment. It costs one rebuild (~160 ms for a large artwork), which is why it is a
+key you press, not something that happens per frame.
+
+Pausing is a state of the window, not of the artwork: it touches neither the
+file, nor the progress that crosses a save, nor the export. **Saving while
+paused carries on** — the new steps are read and animated, which is what you
+saved for. Press SPACE again if you wanted to stay stopped.
+
+---
+
 # Limits
 
 | | |

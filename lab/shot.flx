@@ -17,6 +17,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win = graph.init(800, 600, "shot")
@@ -82,7 +83,7 @@ while s <= timeline.Timeline.max_step() {
 }
 graph.end_frame(win)
 painter.Painter.bake(win, canvas)
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 print("conflicts_ignored=", timeline.Timeline.conflicts())

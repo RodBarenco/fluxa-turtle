@@ -15,6 +15,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "toward")
@@ -67,7 +68,7 @@ dots.jump(81, 300.0, 480.0)
 dots.toward(82, 360.0, 480.0)
 
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 
 print("actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 print("the box turtle ends where she started: x=", pool.Pool.get_x(0), " y=", pool.Pool.get_y(0), "  (expected 120 160)")

@@ -43,6 +43,12 @@ Block Runner {
     // same thing, and only one of them may advance the artwork (adr 0014).
     int arrived = 0
 
+    // The live stage's own state: set by the keyboard, read by the loop.
+    int paused  = 0
+    int forward = 0
+    int back    = 0
+    int replay  = 0
+
     // `part` is the one thing that has to cross a save besides `done`: the step
     // that was in flight and how far into it we got. A one-element-per-value
     // `prst dyn` from main.flx, because a Block field is re-declared on every
@@ -81,45 +87,88 @@ Block Runner {
 
             rebuild(win, canvas, cur)
 
+            // One loop for the whole live stage. It used to be two — animate
+            // every step, then sit idle — which left no room for a pause: the
+            // keyboard was only read after the artwork had finished drawing
+            // itself. Now every frame passes through here, so P, SPACE and the
+            // arrows work while it is still being drawn (adr 0015).
             int stop = 0
-            while cur < limit && stop == 0 {
+            while stop == 0 {
+                guard[0] = cur       // anchor FIRST
                 if graph.should_close(win) { stop = 1 }
                 if stop == 0 {
-                    int nxt = cur + 1
-                    animate(win, canvas, sheet, part, nxt)
-                    // Interrupted by a save: the step is not finished, so it is
-                    // not counted. `part` keeps how far it got and the next run
-                    // picks it up there.
-                    if arrived == 0 { stop = 1 }
-                    if arrived == 1 { cur = nxt }
-                    // clearing a path, or moving one, repaints the texture
-                    if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
-                    // A step where the only thing that happens is a move has
-                    // nothing to animate — `animate` returns at once — but it
-                    // does change the picture, so it gets its frame here, after
-                    // the repaint (adr 0012).
-                    if arrived == 1 && timeline.Timeline.moves_at(nxt) == 1 {
-                        rebuild(win, canvas, cur)
-                        frame(win, canvas, sheet)
-                    }
-                }
-            }
+                    // The keyboard is read ONCE per presented frame, and only
+                    // where a frame is presented. Reading it here as well would
+                    // count a press twice: raylib holds `pressed` true for the
+                    // whole frame, so two reads inside one frame toggle a switch
+                    // straight back off — which is exactly what SPACE did.
+                    panel.Panel.at(cur, limit, paused)
 
-            int idle = 1
-            while idle == 1 {
-                guard[0] = cur       // anchor FIRST
-                if graph.should_close(win) { idle = 0 }
-                if idle == 1 {
-                    frame(win, canvas, sheet)
-                    hotkeys(win)
-                    if graph.key_pressed(win, "R") {
+                    if replay == 1 {
                         print("[turtle] replay: redoing ", limit, " steps from the start")
-                        // a replay starts clean: nothing is half-done any more
+                        replay = 0
                         part[0] = 0.0
                         part[1] = 0.0
                         cur = 0
                         again = 1
-                        idle = 0
+                        stop = 1
+                    }
+
+                    // paused: nothing moves until an arrow says so
+                    if stop == 0 && paused == 1 {
+                        frame(win, canvas, sheet)
+                        panel.Panel.draw(win)
+                        graph.end_frame(win)
+                        hotkeys(win)
+
+                        // A key is cleared when it is ACTED ON, never in
+                        // passing: animating one step takes a second or so, and
+                        // an arrow pressed during it would be thrown away by a
+                        // blanket reset — which is how the second press of a
+                        // pair kept going missing.
+                        if forward == 1 {
+                            forward = 0
+                            if cur < limit {
+                                int f = cur + 1
+                                animate(win, canvas, sheet, part, f)
+                                if arrived == 1 { cur = f }
+                                if arrived == 1 && has_clear(f) == 1 { rebuild(win, canvas, cur) }
+                                if arrived == 1 && timeline.Timeline.moves_at(f) == 1 { rebuild(win, canvas, cur) }
+                            }
+                        }
+
+                        // Back a step is a rebuild to one less: the artwork is
+                        // recomputed from the code every time anyway (adr 0002),
+                        // so walking backwards costs nothing to implement.
+                        if back == 1 {
+                            back = 0
+                            if cur > 0 {
+                                cur = cur - 1
+                                rebuild(win, canvas, cur)
+                            }
+                        }
+                    }
+
+                    // running: animate the next step, or hold the finished stage
+                    if stop == 0 && paused == 0 && cur < limit {
+                        int nxt = cur + 1
+                        animate(win, canvas, sheet, part, nxt)
+                        if arrived == 0 { stop = 1 }
+                        if arrived == 1 { cur = nxt }
+                        if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
+                        if arrived == 1 && timeline.Timeline.moves_at(nxt) == 1 {
+                            rebuild(win, canvas, cur)
+                            frame(win, canvas, sheet)
+                            panel.Panel.draw(win)
+                            graph.end_frame(win)
+                        }
+                    }
+
+                    if stop == 0 && paused == 0 && cur >= limit {
+                        frame(win, canvas, sheet)
+                        panel.Panel.draw(win)
+                        graph.end_frame(win)
+                        hotkeys(win)
                     }
                 }
             }
@@ -143,6 +192,7 @@ Block Runner {
         if b > timeline.Timeline.max_step() { b = timeline.Timeline.max_step() }
 
         exporting = 1
+        panel.Panel.mute(1)
         sim_dt = export.Exporter.dt()
         export.Exporter.begin()
 
@@ -160,7 +210,7 @@ Block Runner {
             if has_clear(s) == 1 { rebuild(win, canvas, s) }
             if timeline.Timeline.moves_at(s) == 1 {
                 rebuild(win, canvas, s)
-                frame(win, canvas, sheet)
+                shown(win, canvas, sheet)
                 export.Exporter.save(win)
             }
             s = s + 1
@@ -169,6 +219,7 @@ Block Runner {
         hold(win, canvas, sheet, export.Exporter.get_hold_end())
 
         exporting = 0
+        panel.Panel.mute(0)
         graph.set_fps(win, config.FPS())
         export.Exporter.finish()
     }
@@ -233,6 +284,14 @@ Block Runner {
             bool now = graph.fullscreen(win)
             if now { print("[turtle] fullscreen — F to come back") }
         }
+        if graph.key_pressed(win, "P") { panel.Panel.toggle() }
+        if graph.key_pressed(win, "R") { replay = 1 }
+        if graph.key_pressed(win, "SPACE") {
+            paused = 1 - paused
+            if paused == 1 { print("[turtle] paused at step ", panel.Panel.step(), " — RIGHT for one step, LEFT to go back, SPACE to carry on") }
+        }
+        if graph.key_pressed(win, "RIGHT") { forward = 1 }
+        if graph.key_pressed(win, "LEFT")  { back = 1 }
     }
 
     // The whole video in one call: from which step, to which step, and how many
@@ -280,7 +339,7 @@ Block Runner {
         int i = 0
         while i < n {
             guard[0] = i         // anchor FIRST
-            frame(win, canvas, sheet)
+            shown(win, canvas, sheet)
             export.Exporter.save(win)
             i = i + 1
         }
@@ -351,12 +410,21 @@ Block Runner {
 
     // one frame of the idle stage: the path texture, what was born now, and
     // the turtles on top
+    // One frame of the stage: the baked texture, what was born now, and the
+    // turtles on top. It does NOT close the frame — the caller does, after it
+    // has had its chance to draw over the top (the panel). Every caller ends
+    // with graph.end_frame, and `shown` is the version that does it for the
+    // ones with nothing to add.
     fn frame(dyn win, dyn canvas, dyn sheet) nil {
         graph.begin_frame(win)
         stage.Stage.clear(win)
         graph.draw_image(win, canvas, 0, 0)
         painter.Painter.draw(win)
         pool.Pool.draw(win, sheet)
+    }
+
+    fn shown(dyn win, dyn canvas, dyn sheet) nil {
+        frame(win, canvas, sheet)
         graph.end_frame(win)
     }
 
@@ -537,6 +605,7 @@ Block Runner {
             }
 
             pool.Pool.draw(win, sheet)
+            if exporting == 0 { panel.Panel.draw(win) }
             graph.end_frame(win)
 
             // No keyboard during a controlled render: the export answers to the

@@ -19,6 +19,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "erase")
@@ -74,7 +75,7 @@ d.ring(1, 12, 55.0, 0.0)
 d.erase(1, 12)
 
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas, sheet)
+runner.Runner.shown(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 print("expected: row 1 whole, row 2 with a gap in the middle, row 3 with two gaps, row 4 empty")
