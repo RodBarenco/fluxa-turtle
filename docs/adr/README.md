@@ -21,3 +21,4 @@ because it came out of a runtime constraint measured in practice.
 | [0013](0013-one-sheet-for-every-sprite.md) | One sheet for every sprite |
 | [0014](0014-a-movement-survives-the-save.md) | A movement survives the save |
 | [0015](0015-one-live-loop-and-a-panel-to-learn-with.md) | One live loop, and a panel to learn with |
+| [0016](0016-a-shape-is-a-batch-of-steps-that-returns-the-next-one.md) | A shape is a batch of steps that returns the next one |

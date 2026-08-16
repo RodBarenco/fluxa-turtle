@@ -78,8 +78,16 @@ tracks.path_dash(1, 16)
 
 > goes in the **steps**
 
-Every regular polygon is the same movement repeated: walk one side, turn
-`360 / number of sides`.
+There is a call for each of these now — `leo.triangle(1, cx, cy, r)`,
+`square`, `polygon`, `circle`, `ellipse`, `star`, `rect`, `arc` — placed by the
+centre and returning the next free step. They are in
+[TURTLE.md](TURTLE.md#ready-made-shapes), and they are what to reach for when
+you want the figure rather than the walk.
+
+What follows is the walk, because it is worth seeing once: every regular polygon
+is the same movement repeated — walk one side, turn `360 / number of sides`.
+Written this way the figure starts wherever she is standing and in whatever
+direction she is facing, which the ready-made ones do not do.
 
 **Triangle**
 

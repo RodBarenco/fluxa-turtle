@@ -292,6 +292,134 @@ leo.spiral(1, 60, 12.0, 14.0, 90.0)   // a square spiral
 
 ---
 
+# Ready-made shapes
+
+A figure is a batch of steps like any other — these declare it for you. You give
+the **centre** and the size, and where it means something, how many sides or
+points.
+
+```fluxa
+leo.circle(1, 400.0, 300.0, 120.0)
+```
+
+Every shape here behaves the same way:
+
+- it is placed by its **centre**, in stage coordinates — the same ones `toward`
+  and `jump` use;
+- it starts with a **pen-up move** to the first vertex, so it does not drag a
+  line in from wherever she was standing. That move costs one step;
+- it **closes**: the last stroke lands back on the first vertex, and she ends
+  standing there. `arc` is the exception — it is a piece of a circle and it
+  leaves her at the far end;
+- it draws with the colour, width and style she has at that step, one side per
+  step, at her speed;
+- it **returns the next free step**.
+
+That return is the whole ergonomic point. Nothing forces you to use it —
+`leo.circle(1, ...)` on its own is fine, and the panel (key `P`) tells you how
+far the artwork goes now — but with it you never count sides:
+
+```fluxa
+int s = leo.circle(1, 400.0, 300.0, 120.0)
+s = leo.star(s, 400.0, 300.0, 90.0, 36.0, 5)
+s = leo.square(s, 400.0, 300.0, 60.0)
+```
+
+Angles are the ones the whole tool uses: **0 points right and they grow
+anticlockwise**, so 90 is the top of the screen.
+
+### `polygon(step, cx, cy, r, sides)` — steps
+
+| | |
+|---|---|
+| `step` | `int` — the step the figure starts on |
+| `cx`, `cy` | `float` — the centre |
+| `r` | `float` — from the centre to a **corner**, not to a side |
+| `sides` | `int` — 3 or more; fewer is treated as 3 |
+
+Costs `1 + sides` steps.
+
+```fluxa
+leo.polygon(1, 400.0, 300.0, 90.0, 12)    // a dodecagon
+```
+
+It sits flat, which is not the same as "starts at angle zero": an **odd** number
+of sides gets a corner pointing up and a horizontal side at the bottom, an
+**even** number gets a horizontal side top and bottom. That is the difference
+between a square and a diamond, and nobody should have to work out the rotation
+for it.
+
+### `triangle(step, cx, cy, r)` — steps
+
+`polygon` with three sides: point up, flat bottom. Four steps.
+
+### `square(step, cx, cy, side)` · `rect(step, cx, cy, w, h)` — steps
+
+Sides parallel to the screen, corners clockwise from the top left. `side` and
+`w`/`h` are the **full** width and height, not half. Five steps each.
+
+```fluxa
+leo.rect(1, 400.0, 300.0, 240.0, 120.0)
+```
+
+`polygon(step, cx, cy, r, 4)` is the other square — the one whose `r` reaches
+the corners, useful when it has to fit a circle.
+
+### `circle(step, cx, cy, r)` — steps
+
+The polygon that picks its own number of sides: one per about 12 px of
+circumference, never fewer than 12, never more than 90. A radius of 70 comes out
+as 35 sides, so the call costs 36 steps.
+
+```fluxa
+leo.circle(1, 400.0, 300.0, 70.0)
+```
+
+If you want to choose the smoothness, that is what `polygon` is for — a 100-gon
+is a rounder circle, and a 7-gon is a deliberate one.
+
+### `ellipse(step, cx, cy, rx, ry)` — steps
+
+An oval: one radius across, another down. `rx` equal to `ry` is a circle. The
+smoothness comes from the larger of the two.
+
+```fluxa
+leo.ellipse(1, 400.0, 300.0, 140.0, 80.0)
+```
+
+### `star(step, cx, cy, r, inner, points)` — steps
+
+| | |
+|---|---|
+| `r` | `float` — out to the tips |
+| `inner` | `float` — out to the valleys between them |
+| `points` | `int` — how many arms, one pointing up |
+
+Costs `1 + 2 * points` steps.
+
+```fluxa
+leo.star(1, 400.0, 300.0, 80.0, 32.0, 5)
+```
+
+`inner` around 0.4 of `r` is the classic five-pointed star. Closer to `r` and it
+becomes a flower; much smaller and it becomes a spike.
+
+### `arc(step, cx, cy, r, from_deg, to_deg)` — steps
+
+A piece of a circle. The only shape here that does not close: it leaves her at
+the far end, facing along the curve, which is what makes it join onto whatever
+comes next.
+
+```fluxa
+leo.arc(1, 400.0, 300.0, 120.0, 0.0, 180.0)     // the top half
+leo.arc(1, 400.0, 300.0, 120.0, 180.0, 0.0)     // the same half, drawn the other way
+```
+
+A `to_deg` smaller than `from_deg` sweeps the other way round. The number of
+sides is the circle's, in proportion to the sweep — never fewer than two.
+
+---
+
 # Walking to a point
 
 ### `toward(step, x, y)` — step
@@ -421,6 +549,10 @@ are untouched.
 | `path_on()` · `path_off()` | appearance |
 | `go(step, dist, turn)` · `go_silent(...)` · `go_at(..., px_s)` · `go_silent_at(...)` | step |
 | `ring(first, count, dist, turn)` · `ring_silent(...)` · `spiral(..., grow, turn)` | steps |
+| `polygon(step, cx, cy, r, sides)` · `triangle(step, cx, cy, r)` | steps, returns the next |
+| `square(step, cx, cy, side)` · `rect(step, cx, cy, w, h)` | steps, returns the next |
+| `circle(step, cx, cy, r)` · `ellipse(step, cx, cy, rx, ry)` | steps, returns the next |
+| `star(step, cx, cy, r, inner, points)` · `arc(step, cx, cy, r, from, to)` | steps, returns the next |
 | `toward(step, x, y)` · `jump(step, x, y)` | step |
 | `path_clear(step)` · `erase(from, to)` | step |
 | `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | step |

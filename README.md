@@ -290,6 +290,30 @@ leo.pivot(300, 12.0, 467, 470)   // turn what she has drawn, without redrawing i
 leo.image("turtle.png", 0.6)     // and she can be a picture, pointing where she walks
 ```
 
+### Shapes you do not have to work out
+
+A figure is a batch of steps, and these declare it for you — placed by its
+**centre**, drawn in her colour, one side per step:
+
+```fluxa
+leo.circle(1, 400.0, 300.0, 120.0)
+leo.polygon(1, 400.0, 300.0, 90.0, 12)          // any number of sides
+leo.star(1, 400.0, 300.0, 80.0, 32.0, 5)
+leo.square(1, 400.0, 300.0, 60.0)               // and rect, triangle, ellipse, arc
+```
+
+Each one **returns the next free step**, so figures chain without you counting
+sides:
+
+```fluxa
+int s = leo.circle(1, 400.0, 300.0, 120.0)
+s = leo.star(s, 400.0, 300.0, 90.0, 36.0, 5)
+s = leo.square(s, 400.0, 300.0, 60.0)
+```
+
+They sit flat, too: a square is a square and not a diamond, a triangle points
+up. The full family and what each argument means is in the guide.
+
 **[docs/TURTLE.md](docs/TURTLE.md) is the full guide** — every call, what it
 does, when it happens, and the limits. Start there when this page runs out.
 

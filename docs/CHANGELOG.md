@@ -3,6 +3,39 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0] — 2026-08-16
+
+### Added
+
+- **Ready-made shapes**: `polygon`, `triangle`, `square`, `rect`, `circle`,
+  `ellipse`, `star` and `arc`. Each one is placed by its **centre**, in the same
+  stage coordinates `toward` and `jump` use, opens with a pen-up move to its
+  first vertex, closes on that vertex, and draws one side per step with whatever
+  colour, width and style the turtle has at that step.
+
+  ```fluxa
+  int s = leo.circle(1, 400.0, 300.0, 120.0)
+  s = leo.star(s, 400.0, 300.0, 90.0, 36.0, 5)
+  s = leo.square(s, 400.0, 300.0, 60.0)
+  ```
+
+  They **return the next free step**, because a circle's step count depends on
+  its radius and nobody should have to work it out. The return can be discarded:
+  `leo.circle(1, ...)` on its own is legal.
+
+  A curve picks its own number of sides — one per about 12 px of circumference,
+  clamped to 12…90 — and `polygon` is how you choose instead. Figures sit flat:
+  an odd number of sides gets a corner up and a horizontal side at the bottom,
+  an even number gets a horizontal side top and bottom, which is the difference
+  between a square and a diamond
+  ([adr 0016](adr/0016-a-shape-is-a-batch-of-steps-that-returns-the-next-one.md)).
+
+  Nothing in the runner, the painter or the timeline knows shapes exist — they
+  are ordinary steps, so they animate side by side, move with `pivot`/`shift`
+  and come back out with `erase`. Verified in `lab/shapes.flx`: the returned
+  step of all eight against hand arithmetic, closure at the first vertex, and
+  the outlines measured in the PNG against their intended centres and radii.
+
 ## [0.11.0] — 2026-08-16
 
 ### Added

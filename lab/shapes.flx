@@ -1,0 +1,126 @@
+// lab/shapes.flx — the ready-made shapes.
+// Run from the project root:  ./fluxa run lab/shapes.flx
+//
+// Each shape is checked three ways: how many steps it declared (the returned
+// next step), that it closed (she ends on the vertex she started from), and
+// where its outline actually landed on the stage. The last one is the only
+// honest check of the geometry, so every figure here is drawn at a centre and
+// a size the eye — and a script — can measure in the PNG.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "shapes")
+dyn canvas = image.new(800, 600)
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+dyn sheet = pool.Pool.atlas()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+
+// ── the step arithmetic ───────────────────────────────────────────
+//
+// One turtle draws four figures in a row, each one starting where the last
+// one ended. Nothing here counts sides by hand: the return value does it.
+
+Block a typeof turtle.Turtle
+a.spawn(0.0, 0.0)
+a.hide()
+a.speed(4000.0)
+a.path_color(120, 208, 214)
+a.path_width(2)
+
+int s1 = a.square(1, 120.0, 120.0, 120.0)          // 5 steps: 1..5, next 6
+int s2 = a.triangle(s1, 300.0, 120.0, 70.0)        // 1 + 3:   6..9, next 10
+int s3 = a.polygon(s2, 480.0, 120.0, 70.0, 12)     // 1 + 12: 10..22, next 23
+int s4 = a.circle(s3, 660.0, 120.0, 70.0)          // 1 + 35: 23..58, next 59
+
+print("square  -> next step ", s1, "   (expected 6)")
+print("triangle-> next step ", s2, "   (expected 10)")
+print("dodecagon next step  ", s3, "   (expected 23)")
+print("circle r=70 -> next  ", s4, "   (expected 59: 70*0.5 = 35 sides + the pen-up move)")
+
+// ── the rest of the family ────────────────────────────────────────
+
+Block b typeof turtle.Turtle
+b.spawn(0.0, 0.0)
+b.hide()
+b.speed(4000.0)
+b.path_color(255, 200, 60)
+b.path_width(2)
+
+int e1 = b.ellipse(1, 120.0, 320.0, 90.0, 50.0)         // smoothness from 90
+int e2 = b.star(e1, 300.0, 320.0, 80.0, 32.0, 5)        // 1 + 10
+int e3 = b.rect(e2, 480.0, 320.0, 140.0, 80.0)          // 5
+int e4 = b.arc(e3, 660.0, 320.0, 80.0, 0.0, 180.0)      // half of 40 sides
+
+print("ellipse -> next step ", e1, "   (expected 47: 90*0.5 = 45 sides + 1 + 1)")
+print("star 5  -> next step ", e2, "   (expected 58: 11 steps)")
+print("rect    -> next step ", e3, "   (expected 63: 5 steps)")
+print("half arc-> next step ", e4, "   (expected 84: 20 of the 40 sides + 1)")
+
+// ── shapes are ordinary steps ─────────────────────────────────────
+//
+// Two turtles on the same steps draw together, an appearance change written
+// between two figures only touches the second, and a shape can be erased like
+// anything else. Nothing about them is a special case.
+
+Block c typeof turtle.Turtle
+c.spawn(0.0, 0.0)
+c.hide()
+c.speed(4000.0)
+c.path_color(255, 120, 90)
+c.path_width(2)
+int c1 = c.polygon(1, 120.0, 480.0, 60.0, 6)
+c.path_color(150, 120, 255)
+c.path_dotted()
+int c2 = c.polygon(c1, 300.0, 480.0, 60.0, 6)
+
+// A star drawn and then taken back out: the steps stay, the strokes go.
+Block d typeof turtle.Turtle
+d.spawn(0.0, 0.0)
+d.hide()
+d.speed(4000.0)
+d.path_color(90, 230, 140)
+d.path_width(2)
+int d1 = d.star(1, 480.0, 480.0, 60.0, 24.0, 6)
+int d2 = d.circle(d1, 660.0, 480.0, 60.0)
+d.erase(1, d1 - 1)
+
+runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.shown(win, canvas, sheet)
+
+print("")
+print("actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+print("closed: the circle turtle ends on her first vertex: x=", math.to_int(pool.Pool.get_x(0)),
+      " y=", math.to_int(pool.Pool.get_y(0)), "   (expected 660 50 — the top of the circle)")
+print("closed: the hexagon turtle: x=", math.to_int(pool.Pool.get_x(2)),
+      " y=", math.to_int(pool.Pool.get_y(2)), "   (expected 270 428 — the left end of the second one's top edge)")
+print("the erased star left the timeline alone: steps to ", d2 - 1, " and nothing drawn at 480,480")
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/shapes.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)

@@ -235,4 +235,181 @@ Block Turtle {
     fn go_silent_at(int step, float dist, float turn, float px_s) nil {
         timeline.Timeline.add(id, step, 1, dist, turn, px_s)
     }
+
+    // ── ready-made shapes ─────────────────────────────────────────
+    //
+    // A figure is a batch of steps like any other, and these declare it for
+    // you. Every one of them:
+    //
+    //   * is placed by its CENTRE, in stage coordinates — the same ones
+    //     `toward` and `jump` use;
+    //   * begins with a pen-up move to the first vertex, so it does not drag a
+    //     line in from wherever she happened to be standing;
+    //   * closes — the last stroke lands back on the first vertex;
+    //   * draws with the colour, width and style she has at that step, and at
+    //     her speed, one side per step;
+    //   * RETURNS the next free step, which is what makes them chain.
+    //
+    //     int s = leo.circle(1, 400.0, 300.0, 120.0)
+    //     s = leo.star(s, 400.0, 300.0, 90.0, 45.0, 5)
+    //     s = leo.square(s, 400.0, 300.0, 60.0)
+    //
+    // Nothing forces you to use the return value — `leo.circle(1, ...)` on its
+    // own is fine, and the panel (key P) tells you how far the artwork goes
+    // now. It is there so you never have to count the sides of a figure to
+    // know where the next one starts.
+    //
+    // Angles are the ones the whole tool uses: 0 points right and they grow
+    // anticlockwise, so 90 is the top of the screen.
+
+    // How many straight pieces a curve is worth: one per ~12 px of
+    // circumference, never fewer than 12, never more than 90. Below twelve a
+    // circle has visible corners; above ninety the extra steps cost more than
+    // the smoothness is worth. `polygon` is there for when you want to choose.
+    fn seg_count(float r) int {
+        int n = math.to_int(r * 0.5)
+        if n < 12 { n = 12 }
+        if n > 90 { n = 90 }
+        return n
+    }
+
+    // A point on a circle of radius `r` about the centre, at `deg` degrees.
+    // The y is subtracted because the stage's y grows downwards while the
+    // angle grows anticlockwise.
+    fn vx(float cx, float r, float deg) float { return cx + r * math.cos(math.deg_to_rad(deg)) }
+    fn vy(float cy, float r, float deg) float { return cy - r * math.sin(math.deg_to_rad(deg)) }
+
+    // The core every closed figure is made of: `sides` vertices evenly spaced
+    // on a circle, starting at `start` degrees. Uses 1 + sides steps.
+    fn ngon(int first, float cx, float cy, float r, int sides, float start) int {
+        int n = sides
+        if n < 3 { n = 3 }
+        float da = 360.0 / math.to_float(n)
+
+        timeline.Timeline.add(id, first, 4, vx(cx, r, start), vy(cy, r, start), 0.0)
+
+        int i = 1
+        while i <= n {
+            guard[0] = i
+            float a = start + da * math.to_float(i)
+            timeline.Timeline.add(id, first + i, 3, vx(cx, r, a), vy(cy, r, a), 0.0)
+            i = i + 1
+        }
+        return first + n + 1
+    }
+
+    // A regular polygon, `r` measured from the centre to a corner. Three sides
+    // is a triangle, four a square, five a pentagon, twelve a dodecagon.
+    //
+    // It sits flat: an odd number of sides gets a corner pointing up and a
+    // horizontal side at the bottom, an even number gets a horizontal side top
+    // and bottom. That is the difference between a square and a diamond, and
+    // nobody should have to work out the rotation for it.
+    fn polygon(int first, float cx, float cy, float r, int sides) int {
+        int n = sides
+        if n < 3 { n = 3 }
+        float start = 90.0
+        if n % 2 == 0 { start = 90.0 + 180.0 / math.to_float(n) }
+        return ngon(first, cx, cy, r, n, start)
+    }
+
+    fn triangle(int first, float cx, float cy, float r) int {
+        return polygon(first, cx, cy, r, 3)
+    }
+
+    // A circle: the polygon that picks its own number of sides.
+    fn circle(int first, float cx, float cy, float r) int {
+        return ngon(first, cx, cy, r, seg_count(r), 90.0)
+    }
+
+    // An oval: a circle with one radius across and another down. `rx` equal to
+    // `ry` is a circle; the smoothness comes from the larger of the two.
+    fn ellipse(int first, float cx, float cy, float rx, float ry) int {
+        float big = rx
+        if ry > big { big = ry }
+        int n = seg_count(big)
+        float da = 360.0 / math.to_float(n)
+
+        timeline.Timeline.add(id, first, 4, vx(cx, rx, 90.0), vy(cy, ry, 90.0), 0.0)
+
+        int i = 1
+        while i <= n {
+            guard[0] = i
+            float a = 90.0 + da * math.to_float(i)
+            timeline.Timeline.add(id, first + i, 3, vx(cx, rx, a), vy(cy, ry, a), 0.0)
+            i = i + 1
+        }
+        return first + n + 1
+    }
+
+    // A rectangle by width and height, sides parallel to the screen. Corners
+    // clockwise from the top left. Uses five steps.
+    fn rect(int first, float cx, float cy, float w, float h) int {
+        float x0 = cx - w * 0.5
+        float x1 = cx + w * 0.5
+        float y0 = cy - h * 0.5
+        float y1 = cy + h * 0.5
+
+        timeline.Timeline.add(id, first,     4, x0, y0, 0.0)
+        timeline.Timeline.add(id, first + 1, 3, x1, y0, 0.0)
+        timeline.Timeline.add(id, first + 2, 3, x1, y1, 0.0)
+        timeline.Timeline.add(id, first + 3, 3, x0, y1, 0.0)
+        timeline.Timeline.add(id, first + 4, 3, x0, y0, 0.0)
+        return first + 5
+    }
+
+    fn square(int first, float cx, float cy, float side) int {
+        return rect(first, cx, cy, side, side)
+    }
+
+    // A star with `points` arms: `r` out to the tips, `inner` out to the
+    // valleys between them, one arm pointing up. Around 0.4 of `r` is the
+    // classic five-pointed star; closer to `r` gives a flower, much smaller
+    // gives a spike. Uses 1 + 2 * points steps.
+    fn star(int first, float cx, float cy, float r, float inner, int points) int {
+        int p = points
+        if p < 2 { p = 2 }
+        float da = 360.0 / math.to_float(p)
+
+        timeline.Timeline.add(id, first, 4, vx(cx, r, 90.0), vy(cy, r, 90.0), 0.0)
+
+        int i = 0
+        int s = first
+        while i < p {
+            guard[0] = i
+            float a = 90.0 + da * math.to_float(i)
+            s = s + 1
+            timeline.Timeline.add(id, s, 3, vx(cx, inner, a + da * 0.5), vy(cy, inner, a + da * 0.5), 0.0)
+            s = s + 1
+            timeline.Timeline.add(id, s, 3, vx(cx, r, a + da), vy(cy, r, a + da), 0.0)
+            i = i + 1
+        }
+        return s + 1
+    }
+
+    // A piece of a circle, from one angle to another. It does not close — it
+    // is the one shape here that leaves the turtle somewhere else, facing
+    // along the curve, which is what makes it join onto the next stroke.
+    //
+    //     leo.arc(10, 400.0, 300.0, 120.0, 0.0, 180.0)     // the top half
+    //     leo.arc(10, 400.0, 300.0, 120.0, 180.0, 0.0)     // the same half, drawn back
+    //
+    // A `to` smaller than `from` sweeps the other way round.
+    fn arc(int first, float cx, float cy, float r, float from_deg, float to_deg) int {
+        float sweep = to_deg - from_deg
+        int n = math.to_int(math.to_float(seg_count(r)) * math.abs(sweep) / 360.0)
+        if n < 2 { n = 2 }
+        float da = sweep / math.to_float(n)
+
+        timeline.Timeline.add(id, first, 4, vx(cx, r, from_deg), vy(cy, r, from_deg), 0.0)
+
+        int i = 1
+        while i <= n {
+            guard[0] = i
+            float a = from_deg + da * math.to_float(i)
+            timeline.Timeline.add(id, first + i, 3, vx(cx, r, a), vy(cy, r, a), 0.0)
+            i = i + 1
+        }
+        return first + n + 1
+    }
 }
