@@ -18,9 +18,11 @@ repository. Build it once from the language repo:
 
 **[github.com/RodBarenco/fluxa-lang](https://github.com/RodBarenco/fluxa-lang)**
 
-You need **Linux with a working OpenGL driver** — the window, the baked texture
-and the capture all go through the GPU. Three steps: the system libraries,
-Raylib, then the runtime itself.
+You need **Linux and an OpenGL 3.3 context**. A GPU driver is the usual way to
+have one, but it is not required: Mesa's software renderer draws this the same,
+just slower — measured here, `LIBGL_ALWAYS_SOFTWARE=1` produces a
+**pixel-identical** image and takes a 3000-segment rebuild from 173 ms to
+213 ms. Three steps: the system libraries, Raylib, then the runtime itself.
 
 ### 1. System libraries
 
@@ -80,15 +82,37 @@ anywhere on your `PATH`:
 cp fluxa /path/to/fluxa-turtle/
 ```
 
-To check it came out with the graphics in it:
+### Is it actually drawing?
 
-```bash
-ldd ./fluxa | grep raylib      # libraylib.so.600 => /usr/local/lib/...
+`std.graph` has two backends, and the one you get is decided at build time. If
+Raylib was not found, the build **falls back to a stub** — an API-complete
+backend that draws nothing. Nothing crashes: the window "opens", every call
+succeeds, `graph.capture` returns a blank buffer, and an export comes out empty.
+That is the one failure worth being able to name, so ask the binary directly:
+
+```fluxa
+import std graph
+print(graph.version())
 ```
 
-If that prints nothing, the build did not pick up Raylib and the window will
-never open. `ffmpeg` is worth having too, but only to turn an export into a
-video.
+| What it prints | What you have |
+|---|---|
+| `raylib/6.0` | the real backend — it draws |
+| `fluxa-graph/1.0 (stub — no display)` | the stub — rebuild the runtime with `FLUXA_GRAPH_RAYLIB=1` |
+
+Three messages tell you the same thing earlier, and they are worth recognising:
+
+- at build time — `std.graph: FLUXA_GRAPH_RAYLIB=1 requested but raylib not
+  found — using stub`. The flag was passed and Raylib was not there.
+- at run time, on stderr — `[fluxa] std.graph: stub backend — window ... created`.
+  You are running the stub.
+- at run time, from `graph.init` — `no usable OpenGL driver`. Raylib is in, but
+  there is no GL context. Try `LIBGL_ALWAYS_SOFTWARE=1 ./fluxa run main.flx -dev`,
+  which is Mesa drawing on the CPU.
+
+`ldd ./fluxa | grep raylib` answers the same question from outside, and `ffmpeg`
+is worth having, but only to turn an export into a format `std.video` does not
+write.
 
 The libs this project uses are already declared in `fluxa.toml`: `std.graph`,
 `std.image`, `std.math`, `std.time`, `std.strings`, `std.fs` and `std.video`.
@@ -534,6 +558,10 @@ names the cap and tells you to raise it.
   paths crossing do not add up.
 - **MP4 only, for video.** `std.video` writes H.264; WebM and GIF still go
   through ffmpeg, from the frames.
+- **A runtime built without Raylib runs and draws nothing.** `std.graph` falls
+  back to a stub backend rather than failing, so the window opens, the steps
+  run, and every capture comes out blank. `graph.version()` says which one you
+  have.
 - **Saving in the middle of a movement restarts that step.** Only finished
   steps count; partial progress does not survive the reload yet.
 - **A move repaints the artwork.** `pivot`, `shift` and `path_clear` change
