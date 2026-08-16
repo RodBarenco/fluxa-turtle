@@ -32,13 +32,27 @@ Block Painter {
     int arr sdash[8192] = 0
     int arr sgap[8192]  = 0
 
+    // How far along her own path each segment starts. A dash, a dot or a shape
+    // belongs to the PATH, not to the segment it happens to fall in: without
+    // this the rhythm restarts at every corner, and a shape bigger than the
+    // segments lands twice at every joint, pointing two ways at once.
+    float arr sphase[8192] = 0.0
+    float arr plen[32]     = 0.0     // [32] mirrors config.MAX_TURTLES()
+
     int n = 0
     int full = 0
+    int layer = 0            // 0 = the whole stroke, 1 = only haloes, 2 = only cores
     int arr guard[1] = 0     // hot-loop anchor
 
     fn reset() nil {
         n = 0
         full = 0
+        int t = 0
+        while t < config.MAX_TURTLES() {
+            guard[0] = t     // anchor FIRST
+            plen[t] = 0.0
+            t = t + 1
+        }
     }
 
     fn add(int t, float x1, float y1, float x2, float y2) nil {
@@ -60,20 +74,54 @@ Block Painter {
         sstyle[n] = pool.Pool.get_style(t)
         sdash[n]  = pool.Pool.get_dash(t)
         sgap[n]   = pool.Pool.get_gap(t)
+        sphase[n] = plen[t]
 
+        plen[t] = plen[t] + math.hypot(bx[n] - ax[n], by[n] - ay[n])
         n = n + 1
     }
 
     fn count() int { return n }
+
+    // Which layer of a marker or a glow is being drawn: 0 the whole stroke,
+    // 1 only the haloes, 2 only the cores. The rebuild sets it around its two
+    // passes over the artwork; everything else leaves it at 0.
+    fn set_layer(int v) nil { layer = v }
     fn is_full() int { return full }
 
+    // A marker and a glow are a halo with a core inside it, and the core of one
+    // segment would be covered by the halo of the next — which is what turned
+    // a marker stroke into a dashed one. So when the path has any of those, the
+    // haloes are all drawn first and the cores after them, over the top.
     fn draw(dyn win) nil {
+        if layered() == 1 {
+            layer = 1
+            pass(win)
+            layer = 2
+            pass(win)
+            layer = 0
+            return
+        }
+        pass(win)
+    }
+
+    fn pass(dyn win) nil {
         int i = 0
         while i < n {
             guard[0] = i         // anchor FIRST
-            paint(win, ax[i], ay[i], bx[i], by[i], sr[i], sg[i], sb[i], sw[i], sstyle[i], sdash[i], sgap[i])
+            paint(win, ax[i], ay[i], bx[i], by[i], sr[i], sg[i], sb[i], sw[i],
+                  sstyle[i], sdash[i], sgap[i], sphase[i])
             i = i + 1
         }
+    }
+
+    fn layered() int {
+        int i = 0
+        while i < n {
+            guard[0] = i         // anchor FIRST
+            if sstyle[i] == 5 || sstyle[i] == 6 { return 1 }
+            i = i + 1
+        }
+        return 0
     }
 
     // Pins the just-presented frame into the path texture.
@@ -131,13 +179,23 @@ Block Painter {
               mix(pool.Pool.get_pg(t), stage.Stage.g(), opa),
               mix(pool.Pool.get_pb(t), stage.Stage.b(), opa),
               pool.Pool.get_pw(t), pool.Pool.get_style(t),
-              pool.Pool.get_dash(t), pool.Pool.get_gap(t))
+              pool.Pool.get_dash(t), pool.Pool.get_gap(t), plen[t])
+    }
+
+    // The rebuild's version of `stroke`: the same drawing, and then the phase
+    // moves on by the length of what was drawn. Without it a rebuilt path
+    // restarts its dash, its dots or its shapes at every corner — `add` does
+    // the same bookkeeping for a stroke made in this run.
+    fn replay(dyn win, int t, float x1, float y1, float x2, float y2) nil {
+        stroke(win, t, x1, y1, x2, y2)
+        plen[t] = plen[t] + math.hypot(at_x(t, x2, y2) - at_x(t, x1, y1),
+                                       at_y(t, x2, y2) - at_y(t, x1, y1))
     }
 
     // The same stroke with the look given explicitly. This is what the two
     // callers have in common: `stroke` resolves the look from the pool, `draw`
     // replays the one recorded on the segment.
-    fn paint(dyn win, float x1, float y1, float x2, float y2, int r, int g, int b, int w, int style, int dash, int gap) nil {
+    fn paint(dyn win, float x1, float y1, float x2, float y2, int r, int g, int b, int w, int style, int dash, int gap, float phase) nil {
         if style == 0 {
             thick(win, x1, y1, x2, y2, r, g, b, w)
             return
@@ -151,26 +209,185 @@ Block Painter {
         float ux = dx / ln
         float uy = dy / ln
 
+        // The strokes that are one continuous line, only not a plain one.
+        if style == 4 {
+            brush(win, x1, y1, x2, y2, r, g, b, w, ln)
+            return
+        }
+        if style == 5 {
+            if layer != 2 {
+                thick(win, x1, y1, x2, y2, mix(r, stage.Stage.r(), 45), mix(g, stage.Stage.g(), 45),
+                      mix(b, stage.Stage.b(), 45), w + 5)
+            }
+            if layer != 1 { thick(win, x1, y1, x2, y2, r, g, b, w) }
+            return
+        }
+        if style == 6 {
+            if layer != 2 {
+                thick(win, x1, y1, x2, y2, mix(r, stage.Stage.r(), 12), mix(g, stage.Stage.g(), 12),
+                      mix(b, stage.Stage.b(), 12), w + 10)
+                thick(win, x1, y1, x2, y2, mix(r, stage.Stage.r(), 30), mix(g, stage.Stage.g(), 30),
+                      mix(b, stage.Stage.b(), 30), w + 5)
+            }
+            if layer != 1 { thick(win, x1, y1, x2, y2, r, g, b, w) }
+            return
+        }
+
         int dlen = dash
         int dgap = gap
         if dlen < 1 { dlen = 1 }
         if dgap < 1 { dgap = 1 }
         float period = math.to_float(dlen + dgap)
 
-        float pos = 0.0
+        if style == 7 {
+            spray(win, x1, y1, ux, uy, r, g, b, w, ln, dgap, phase)
+            return
+        }
+
+        // Where the rhythm's current period began, measured from this segment's
+        // start — negative when it began before it, which is the usual case for
+        // every segment but the first.
+        float pos = 0.0 - math.fmod(phase, period)
         while pos < ln {
             guard[0] = w         // anchor FIRST
-            if style == 3 {
-                int rad = w / 2
-                if rad < 1 { rad = 1 }
-                graph.draw_circle(win, math.to_int(x1 + ux * pos), math.to_int(y1 + uy * pos), rad, r, g, b)
+
+            if pos >= 0.0 {
+                float px = x1 + ux * pos
+                float py = y1 + uy * pos
+                if style == 3 {
+                    int rad = w / 2
+                    if rad < 1 { rad = 1 }
+                    graph.draw_circle(win, math.to_int(px), math.to_int(py), rad, r, g, b)
+                }
+                if style >= 8 { shape(win, px, py, ux, uy, r, g, b, dlen, style) }
             }
-            if style != 3 {
-                float stop = pos + math.to_float(dlen)
-                if stop > ln { stop = ln }
-                thick(win, x1 + ux * pos, y1 + uy * pos, x1 + ux * stop, y1 + uy * stop, r, g, b, w)
+
+            // A dash can start before this segment and finish inside it, so
+            // both ends are clipped to what is actually here.
+            if style == 1 || style == 2 {
+                float a = pos
+                float z = pos + math.to_float(dlen)
+                if a < 0.0 { a = 0.0 }
+                if z > ln { z = ln }
+                if z > a {
+                    thick(win, x1 + ux * a, y1 + uy * a, x1 + ux * z, y1 + uy * z, r, g, b, w)
+                }
             }
             pos = pos + period
+        }
+    }
+
+    // ── the richer strokes ────────────────────────────────────────
+    //
+    // All of them are built out of `thick` and `draw_line`, which is the point:
+    // they cost the rebuild, never the frame, because what they draw is baked
+    // into the texture like any other stroke (adr 0003).
+
+    // A halo is `mix` used a second time: a colour already mixed for opacity,
+    // thinned again toward the stage.
+
+    // The brush's width at a point. It has to depend on the POINT and not on
+    // the stroke, so that two strokes meeting at a corner agree there and the
+    // path swells continuously instead of breaking into leaves.
+    fn swell(float x, float y) float {
+        return 0.35 + 0.65 * (0.5 + 0.5 * math.sin(0.045 * x + 0.031 * y))
+    }
+
+    fn brush(dyn win, float x1, float y1, float x2, float y2, int r, int g, int b, int w, float ln) nil {
+        float wa = math.to_float(w) * swell(x1, y1)
+        float wb = math.to_float(w) * swell(x2, y2)
+
+        int parts = math.to_int(ln / 5.0)
+        if parts < 1 { parts = 1 }
+        if parts > 48 { parts = 48 }
+
+        int i = 0
+        while i < parts {
+            guard[0] = i         // anchor FIRST
+            float t0 = math.to_float(i) / math.to_float(parts)
+            float t1 = math.to_float(i + 1) / math.to_float(parts)
+            float tm = (t0 + t1) * 0.5
+            int ww = math.to_int(wa + (wb - wa) * tm + 0.5)
+            if ww < 1 { ww = 1 }
+            thick(win, x1 + (x2 - x1) * t0, y1 + (y2 - y1) * t0,
+                       x1 + (x2 - x1) * t1, y1 + (y2 - y1) * t1, r, g, b, ww)
+            i = i + 1
+        }
+    }
+
+    // A speckle that is the same every time. A random number would break the
+    // one rule the export depends on — two renders of the same artwork are
+    // identical (adr 0006) — so the scatter is computed from the coordinates.
+    fn scatter(int a, int b, int c, int span) int {
+        int h = a * 7919 + b * 104729 + c * 1299709
+        if h < 0 { h = 0 - h }
+        return h % (2 * span + 1) - span
+    }
+
+    fn spray(dyn win, float x1, float y1, float ux, float uy, int r, int g, int b, int w, float ln, int gap, float phase) nil {
+        int span = w + 3
+        int step = gap
+        if step < 2 { step = 2 }
+
+        float pos = 0.0 - math.fmod(phase, math.to_float(step))
+        if pos < 0.0 { pos = pos + math.to_float(step) }
+        int k = 0
+        while pos < ln {
+            guard[0] = k         // anchor FIRST
+            int px = math.to_int(x1 + ux * pos)
+            int py = math.to_int(y1 + uy * pos)
+
+            int j = 0
+            while j < 3 {
+                guard[0] = j     // anchor FIRST
+                int ox = scatter(px, py, k * 3 + j, span)
+                int oy = scatter(py, px, k * 3 + j + 91, span)
+                graph.draw_circle(win, px + ox, py + oy, 1, r, g, b)
+                j = j + 1
+            }
+
+            k = k + 1
+            pos = pos + math.to_float(step)
+        }
+    }
+
+    // One shape at a point, pointing the way the stroke is going: a triangle
+    // (style 8), a square (9) or a five-pointed star (10).
+    fn shape(dyn win, float cx, float cy, float ux, float uy, int r, int g, int b, int size, int style) nil {
+        float rad = math.to_float(size)
+        if rad < 2.0 { rad = 2.0 }
+
+        // NOT `n`: this Block already has a field called that (the segment
+        // count), and a local of the same name resolves to the field — the trap
+        // AGENTS.md §3 describes. Here it drew polygons with as many sides as
+        // the path had segments, and divided by zero when there were none.
+        int sides = 3
+        if style == 9 { sides = 4 }
+        if style == 10 { sides = 10 }
+
+        float base = math.rad_to_deg(math.atan2(uy, ux))
+        float da = 360.0 / math.to_float(sides)
+        // An even-sided shape gets half a step of turn, so a square walks along
+        // the path as a square and not as a diamond — the same rule the
+        // ready-made `polygon` follows.
+        if sides % 2 == 0 && sides < 10 { base = base + da * 0.5 }
+
+        float px = 0.0
+        float py = 0.0
+        int i = 0
+        while i <= sides {
+            guard[0] = i         // anchor FIRST
+            float rr = rad
+            if style == 10 && i % 2 == 1 { rr = rad * 0.42 }
+            float a = math.deg_to_rad(base + da * math.to_float(i))
+            float qx = cx + rr * math.cos(a)
+            float qy = cy + rr * math.sin(a)
+            if i > 0 {
+                graph.draw_line(win, math.to_int(px), math.to_int(py), math.to_int(qx), math.to_int(qy), r, g, b)
+            }
+            px = qx
+            py = qy
+            i = i + 1
         }
     }
 

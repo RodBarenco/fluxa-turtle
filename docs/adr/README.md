@@ -23,3 +23,4 @@ because it came out of a runtime constraint measured in practice.
 | [0015](0015-one-live-loop-and-a-panel-to-learn-with.md) | One live loop, and a panel to learn with |
 | [0016](0016-a-shape-is-a-batch-of-steps-that-returns-the-next-one.md) | A shape is a batch of steps that returns the next one |
 | [0017](0017-going-back-is-the-step-run-backwards.md) | Going back is the step run backwards |
+| [0018](0018-a-stroke-can-be-drawn-in-layers.md) | A stroke can be drawn in layers, and the rhythm belongs to the path |

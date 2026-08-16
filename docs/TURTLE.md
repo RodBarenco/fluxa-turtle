@@ -189,6 +189,48 @@ The four styles. Each sets its own rhythm:
 `path_solid` leaves the rhythm alone, so going back to solid and then to dotted
 keeps whatever `path_dash` you had set.
 
+### The richer strokes — appearance
+
+Seven more looks, and they are the same kind of call as the four above: an
+appearance change that applies from the next step this turtle declares.
+
+| Call | What it is |
+|---|---|
+| `path_brush()` | the width breathes along the stroke, like a loaded brush |
+| `path_marker()` | a translucent halo the width of the nib, with a solid core |
+| `path_glow()` | drawn three times, wide and faint to narrow and solid: neon |
+| `path_spray()` | dots scattered around the line, thicker near it |
+| `path_triangles()` | triangles repeated along the path, pointing the way she walks |
+| `path_squares()` | the same with squares |
+| `path_stars()` | the same with five-pointed stars |
+
+```fluxa
+leo.path_glow()
+leo.path_width(3)
+leo.ring(1, 36, 500.0, 170.0)
+```
+
+The three shape styles use the rhythm as **size and spacing**, so `path_dash(10,
+24)` makes them bigger and further apart. Their default is a size the stroke's
+width looks right against.
+
+The rhythm — dots, dashes, shapes — belongs to the **path**, not to each
+segment: it runs continuously through corners, so a figure written as a loop of
+short strokes gets an even row of shapes instead of one at every joint
+([adr 0018](adr/0018-a-stroke-can-be-drawn-in-layers.md)).
+
+**What they cost.** Nothing per frame — they are baked like every other stroke.
+They cost the **rebuild**, which happens once per save. Measured over 600
+segments: solid 50 ms, brush 49, spray 49, stars 64, marker 117, glow 100. A
+marker or a glow is drawn in two passes over the whole artwork — every halo
+first, every core over them, because otherwise each halo covers the previous
+core and the stroke comes out looking dashed — so an artwork containing one
+takes about twice as long to rebuild. That is the price of the look, and it is
+worth knowing before painting three thousand segments with it.
+
+`path_spray` is scattered from the coordinates and not from a random number: a
+rebuild, a replay and an export all produce the same speckle.
+
 ### `path_dash(dash, gap)` — appearance
 
 Adjusts the rhythm of whichever style is on.
@@ -546,6 +588,8 @@ are untouched.
 | `color(r, g, b)` · `size(s)` · `show()` · `hide()` · `speed(px_s)` | appearance |
 | `path_color(r, g, b)` · `path_width(w)` · `path_opacity(pct)` | appearance |
 | `path_solid()` · `path_dotted()` · `path_dashed()` · `path_dots()` · `path_dash(d, g)` | appearance |
+| `path_brush()` · `path_marker()` · `path_glow()` · `path_spray()` | appearance |
+| `path_triangles()` · `path_squares()` · `path_stars()` | appearance |
 | `path_on()` · `path_off()` | appearance |
 | `go(step, dist, turn)` · `go_silent(...)` · `go_at(..., px_s)` · `go_silent_at(...)` | step |
 | `ring(first, count, dist, turn)` · `ring_silent(...)` · `spiral(..., grow, turn)` | steps |

@@ -388,12 +388,35 @@ Block Runner {
         // comes out black.
         dyn img = stage.Stage.picture()
 
+        // A marker and a glow are a halo with a core inside it, and one
+        // segment's halo would cover the previous one's core — which is what
+        // turned a marker into a dashed line. When the artwork uses either, the
+        // whole path is replayed twice: every halo first, every core over them
+        // (adr 0018). It costs a second pass, and only artworks that ask for it
+        // pay.
+        int layers = timeline.Timeline.has_layered_style()
+
         graph.begin_frame(win)
         stage.Stage.paint(win, img)
+
+        if layers == 1 { painter.Painter.set_layer(1) }
         int s = 1
         while s <= upto {
             instant(win, s)
             s = s + 1
+        }
+
+        if layers == 1 {
+            painter.Painter.set_layer(2)
+            pool.Pool.home_all()
+            pool.Pool.reset_styles()
+            painter.Painter.reset()
+            int s2 = 1
+            while s2 <= upto {
+                instant(win, s2)
+                s2 = s2 + 1
+            }
+            painter.Painter.set_layer(0)
         }
         graph.end_frame(win)
         painter.Painter.bake(win, canvas)
@@ -504,7 +527,7 @@ Block Runner {
                     pool.Pool.set_pos(t, aim_x, aim_y)
 
                     if draws(k) == 1 && pool.Pool.get_pen(t) == 1 && s > pool.Pool.get_clear(t) && pool.Pool.erased(t, s) == 0 {
-                        painter.Painter.stroke(win, t, x1, y1, aim_x, aim_y)
+                        painter.Painter.replay(win, t, x1, y1, aim_x, aim_y)
                     }
                 }
             }

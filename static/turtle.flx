@@ -89,6 +89,59 @@ Block Turtle {
         timeline.Timeline.style(id, 6, 0, 1, 12, 0.0)
     }
 
+    // The richer strokes (pillars §4). They are the same four events as the
+    // ones above — a style and a rhythm — so everything already true of a style
+    // is true of these: they apply from the next step this turtle declares,
+    // they are replayed by the rebuild, and they cost nothing per frame because
+    // the path is baked.
+    //
+    // What they cost is the rebuild, and it is not nothing: measured over 3000
+    // segments, solid takes 160 ms, brush and glow about twice that. Worth
+    // knowing before painting a whole artwork with one.
+
+    // A brush: the width breathes along the stroke instead of being constant.
+    // Neighbouring strokes agree at the point they share, so a long path comes
+    // out as one continuous swelling line, not a row of leaves.
+    fn path_brush() nil {
+        timeline.Timeline.style(id, 5, 4, 0, 0, 0.0)
+    }
+
+    // A felt marker: a translucent halo the width of the nib with a solid core
+    // inside it.
+    fn path_marker() nil {
+        timeline.Timeline.style(id, 5, 5, 0, 0, 0.0)
+    }
+
+    // A glow trail: the stroke drawn three times, wide and faint to narrow and
+    // solid. Over a dark stage this is neon.
+    fn path_glow() nil {
+        timeline.Timeline.style(id, 5, 6, 0, 0, 0.0)
+    }
+
+    // Spray: dots scattered around the line, thicker near it. Scattered from
+    // the coordinates themselves and not from a random number, so a rebuild,
+    // a replay and an export all produce the same speckle (adr 0006).
+    fn path_spray() nil {
+        timeline.Timeline.style(id, 5, 7, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 3, 5, 0.0)
+    }
+
+    // Shapes repeated along the path, pointing the way she is walking. The
+    // rhythm is the shape's size and the space between two of them, so
+    // `path_dash(10, 24)` makes them bigger and further apart.
+    fn path_triangles() nil {
+        timeline.Timeline.style(id, 5, 8, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 7, 16, 0.0)
+    }
+    fn path_squares() nil {
+        timeline.Timeline.style(id, 5, 9, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 6, 16, 0.0)
+    }
+    fn path_stars() nil {
+        timeline.Timeline.style(id, 5, 10, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 8, 20, 0.0)
+    }
+
     fn path_dash(int dash, int gap) nil { timeline.Timeline.style(id, 6, 0, dash, gap, 0.0) }
 
     // Clears the path already drawn by THIS turtle, on the given step. Her

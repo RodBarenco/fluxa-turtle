@@ -290,6 +290,21 @@ leo.pivot(300, 12.0, 467, 470)   // turn what she has drawn, without redrawing i
 leo.image("turtle.png", 0.6)     // and she can be a picture, pointing where she walks
 ```
 
+### The stroke is not just a line
+
+```fluxa
+leo.path_glow()        // neon: wide and faint, over narrow and solid
+leo.path_marker()      // a felt marker: a halo with a core
+leo.path_brush()       // the width breathes along the stroke
+leo.path_spray()       // dots scattered around the line
+leo.path_triangles()   // shapes repeated along it, pointing where she walks
+```
+
+Plus `path_squares`, `path_stars`, and the four that were always there —
+`path_solid`, `path_dotted`, `path_dashed`, `path_dots`. They cost nothing per
+frame, because the path is baked; a marker or a glow does make the rebuild
+(once per save) about twice as slow, which the guide measures.
+
 ### Shapes you do not have to work out
 
 A figure is a batch of steps, and these declare it for you — placed by its

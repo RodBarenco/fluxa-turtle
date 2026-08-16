@@ -217,6 +217,19 @@ Block Timeline {
     // Did anything MOVE at this step? A move repaints what is already on the
     // canvas, so the runner has to rebuild the texture for it, the same way it
     // does for a cleared path.
+    // Does the artwork ask for a stroke drawn in layers — a marker or a glow?
+    // The rebuild needs to know before it starts, because those two have to be
+    // drawn haloes first and cores after, over the whole path (adr 0018).
+    fn has_layered_style() int {
+        int i = 0
+        while i < en {
+            guard[0] = i         // anchor FIRST
+            if ekind[i] == 5 && (ea[i] == 5 || ea[i] == 6) { return 1 }
+            i = i + 1
+        }
+        return 0
+    }
+
     fn moves_at(int s) int {
         int i = 0
         while i < en {

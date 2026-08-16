@@ -3,6 +3,37 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.15.0] — 2026-08-16
+
+### Added
+
+- **Seven richer strokes** (pillars §4): `path_brush`, `path_marker`,
+  `path_glow`, `path_spray`, `path_triangles`, `path_squares`, `path_stars`.
+  They are style values on the same appearance event as the four that already
+  existed, so they apply from the next step the turtle declares, the rebuild
+  replays them, and they cost nothing per frame. The shape styles use the rhythm
+  as size and spacing, so `path_dash(10, 24)` tunes them
+  ([adr 0018](adr/0018-a-stroke-can-be-drawn-in-layers.md)).
+
+  Measured over 600 segments: solid 50 ms, brush 49, spray 49, stars 64, marker
+  117, glow 100 — the last two are drawn in two passes over the whole artwork,
+  so an artwork containing one takes about twice as long to rebuild.
+
+  `path_spray` scatters from the coordinates and not from a random number, so a
+  rebuild, a replay and an export produce the same speckle — verified by
+  rendering it twice and comparing the PNGs.
+
+- `lab/brush.flx` — the eight looks over one wave, the cost of each, and the
+  spray drawn twice.
+
+### Fixed
+
+- **A dash, a dot or a shape restarted at every segment.** The rhythm is now
+  measured along the whole path: the painter keeps a per-turtle running length,
+  records it on each segment, and starts the pattern from it. A figure written
+  as a loop of short strokes gets an even row of shapes instead of one at every
+  joint, and dotted and dashed strokes stopped resynchronising at corners.
+
 ## [0.14.0] — 2026-08-16
 
 ### Added
