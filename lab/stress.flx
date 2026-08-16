@@ -25,6 +25,8 @@ runner.Runner.open(win)      // one cleared frame, so the window is not the desk
 pool.Pool.reset()
 timeline.Timeline.reset()
 
+dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+
 Block leo typeof turtle.Turtle
 leo.spawn(400.0, 300.0)
 leo.color(0, 220, 140)
@@ -60,7 +62,7 @@ print("rebuild 3000 + bake ......... ms = ", time.elapsed_ms(t1))
 int t2 = time.now_ms()
 int f = 0
 while f < 120 {
-    runner.Runner.frame(win, canvas)
+    runner.Runner.frame(win, canvas, sheet)
     f = f + 1
 }
 print("live stage .................. ms/frame = ", time.elapsed_ms(t2) / 120)

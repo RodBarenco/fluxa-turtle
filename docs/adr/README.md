@@ -18,3 +18,4 @@ because it came out of a runtime constraint measured in practice.
 | [0010](0010-the-video-is-a-second-pass-over-the-frames.md) | The video is a second pass over the frames |
 | [0011](0011-the-artwork-file-declares.md) | The artwork file declares, the runner executes |
 | [0012](0012-a-turtle-can-move-what-she-has-drawn.md) | A turtle can move what she has already drawn |
+| [0013](0013-one-sheet-for-every-sprite.md) | One sheet for every sprite |

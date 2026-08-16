@@ -34,6 +34,32 @@ Block Turtle {
     fn show() nil                    { timeline.Timeline.style(id, 4, 1, 0, 0, 0.0) }
     fn hide() nil                    { timeline.Timeline.style(id, 4, 0, 0, 0, 0.0) }
 
+    // ── a picture instead of a circle ─────────────────────────────
+    //
+    //     leo.image("turtle.png", 0.6)                  // the whole file
+    //     ana.sprite("sheet.png", 0, 0, 64, 64, 1.0)    // one region of it
+    //
+    // Draw the art facing RIGHT: 0 degrees is right everywhere in this project,
+    // and the picture is turned by her heading, so she points where she walks.
+    // The second form is for a spritesheet — several turtles, one file, a region
+    // each — and the first is the same thing with the region left out.
+    //
+    // The scale belongs to the file: the same picture at two scales is two
+    // entries in the sheet, so two turtles can wear it at different sizes.
+    // Eight files, composed into one 1024x1024 sheet before the frame loop
+    // (adr 0013). A file that cannot be read prints why and she stays a circle.
+    //
+    // These are declarations, like `spawn` and `face`: they are not a step and
+    // they do not animate.
+
+    fn image(str path, float scale) nil {
+        pool.Pool.set_sprite(id, pool.Pool.use_file(path, scale), 0, 0, 0, 0)
+    }
+
+    fn sprite(str path, int sx, int sy, int sw, int sh, float scale) nil {
+        pool.Pool.set_sprite(id, pool.Pool.use_file(path, scale), sx, sy, sw, sh)
+    }
+
     // ── path ──────────────────────────────────────────────────────
 
     fn path_color(int r, int g, int b) nil { timeline.Timeline.style(id, 1, r, g, b, 0.0) }

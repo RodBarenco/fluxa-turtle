@@ -27,6 +27,8 @@ runner.Runner.open(win)      // one cleared frame, so the window is not the desk
 pool.Pool.reset()
 timeline.Timeline.reset()
 
+dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+
 Block leo typeof turtle.Turtle
 leo.spawn(200.0, 300.0)
 leo.color(0, 220, 140)
@@ -51,7 +53,7 @@ export.Exporter.setup("lab/frames", 30)
 export.Exporter.hold(5, 5)
 
 int t0 = time.now_ms()
-runner.Runner.export(win, canvas)
+runner.Runner.export(win, canvas, sheet)
 int took = time.elapsed_ms(t0)
 
 print("")

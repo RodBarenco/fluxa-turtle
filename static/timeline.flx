@@ -161,7 +161,8 @@ Block Timeline {
     // already drawn is not "from the next step this turtle declares" — it
     // happens on the step the artwork names, which is what makes an animation
     // out of it.
-    fn style_at(int t, int step, int k, int a, int b, int c, float f) nil {
+    // `at` and not `step`: this Block has a field called step (guide trap).
+    fn style_at(int t, int at, int k, int a, int b, int c, float f) nil {
         if t < 0 { return }
         if t >= config.MAX_TURTLES() { return }
         if en >= config.MAX_STYLES() {
@@ -170,7 +171,7 @@ Block Timeline {
             return
         }
         eowner[en] = t
-        efrom[en]  = step
+        efrom[en]  = at
         ekind[en]  = k
         ea[en]     = a
         eb[en]     = b
@@ -181,7 +182,7 @@ Block Timeline {
         // A move is something that HAPPENS on a step, so the artwork does not
         // end before it: the last step counts it, the same way it counts the
         // last movement.
-        if step > top { top = step }
+        if at > top { top = at }
     }
 
     // Moves are not applied step by step like a colour: a rotation declared at

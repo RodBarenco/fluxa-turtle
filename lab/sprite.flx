@@ -1,0 +1,144 @@
+// lab/sprite.flx — a turtle can be a picture (pillars §3).
+// Run from the project root:  ./fluxa run lab/sprite.flx
+//
+// Generates two PNGs first — one arrow, one sheet of four coloured arrows —
+// then draws six turtles with them: the whole file, regions of the sheet, the
+// same file at two scales, and one left as a circle for comparison. Every
+// arrow points along its turtle's heading, which is the whole reason for
+// drawing a sprite instead of a dot.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static runner
+
+dyn win    = graph.init(800, 600, "sprite")
+dyn canvas = image.new(800, 600)
+
+// ── make the art ──────────────────────────────────────────────────
+// An arrow pointing RIGHT, which is the convention: 0 degrees is right, and
+// the sprite is turned by the turtle's heading.
+
+fn arrow(dyn w, int cx, int cy, int r, int g, int b) nil {
+    graph.draw_triangle(w, cx - 22, cy - 16, cx - 22, cy + 16, cx + 26, cy, r, g, b)
+    graph.draw_rect(w, cx - 30, cy - 5, 12, 10, r, g, b)
+}
+
+graph.begin_frame(win)
+graph.clear(win, 0, 0, 0)
+arrow(win, 40, 40, 90, 220, 255)
+graph.end_frame(win)
+// The cell is cut out with a blit into a small image — std.image has no crop,
+// and resizing the whole capture would shrink the arrow to nothing.
+danger {
+    dyn shotA = graph.capture(win)
+    dyn one = image.new(80, 80)
+    image.blit(one, shotA, 0, 0)
+    image.save(one, "lab/sprite_one.png")
+    image.discard(one)
+    image.discard(shotA)
+}
+if err != nil { print("art: ", err[0]) }
+
+// a sheet: four 80x80 cells in a row, one colour each
+graph.begin_frame(win)
+graph.clear(win, 0, 0, 0)
+arrow(win,  40, 40, 255, 200,  60)
+arrow(win, 120, 40, 120, 255, 150)
+arrow(win, 200, 40, 255, 120, 160)
+arrow(win, 280, 40, 160, 160, 255)
+graph.end_frame(win)
+danger {
+    dyn shotB = graph.capture(win)
+    dyn sheet4 = image.new(320, 80)
+    image.blit(sheet4, shotB, 0, 0)
+    image.save(sheet4, "lab/sprite_sheet.png")
+    image.discard(sheet4)
+    image.discard(shotB)
+}
+if err != nil { print("art: ", err[0]) }
+
+print("art written ..........  ", fs.exists("lab/sprite_one.png"), " ", fs.exists("lab/sprite_sheet.png"), "   (expected true true)")
+
+// ── the turtles ───────────────────────────────────────────────────
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+// the whole file, at two different scales: two entries, one path
+Block a typeof turtle.Turtle
+a.spawn(140.0, 140.0)
+a.image("lab/sprite_one.png", 1.0)
+a.face(0.0)
+a.path_color(90, 220, 255)
+a.go(1, 150.0, 0.0)
+
+Block b typeof turtle.Turtle
+b.spawn(140.0, 300.0)
+b.image("lab/sprite_one.png", 0.5)
+b.face(45.0)
+b.path_color(90, 220, 255)
+b.go(1, 150.0, 0.0)
+
+// regions of the sheet: four turtles, one file
+Block c typeof turtle.Turtle
+c.spawn(480.0, 120.0)
+c.sprite("lab/sprite_sheet.png", 0, 0, 80, 80, 1.0)
+c.face(90.0)
+c.path_color(255, 200, 60)
+c.go(1, 120.0, 0.0)
+
+Block d typeof turtle.Turtle
+d.spawn(600.0, 120.0)
+d.sprite("lab/sprite_sheet.png", 80, 0, 80, 80, 1.0)
+d.face(135.0)
+d.path_color(120, 255, 150)
+d.go(1, 120.0, 0.0)
+
+Block e typeof turtle.Turtle
+e.spawn(480.0, 380.0)
+e.sprite("lab/sprite_sheet.png", 160, 0, 80, 80, 1.0)
+e.face(180.0)
+e.path_color(255, 120, 160)
+e.go(1, 120.0, 0.0)
+
+// and one with no picture at all, still a circle
+Block f typeof turtle.Turtle
+f.spawn(680.0, 460.0)
+f.color(0, 220, 140)
+f.size(14.0)
+f.face(300.0)
+f.path_color(0, 220, 140)
+f.go(1, 100.0, 0.0)
+
+dyn sheet = pool.Pool.atlas()
+print("sprite files .........  ", pool.Pool.sprites(), "   (expected 3: one at 1.0, the same at 0.5, and the sheet)")
+
+runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.frame(win, canvas, sheet)
+
+print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count())
+print("expected: five arrows, each pointing the way its turtle walked, and one circle")
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/sprite.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)

@@ -285,6 +285,7 @@ they are and paints what comes after. Move it above them and it affects them.
 leo.toward(5, 400.0, 300.0)      // be at this point, rather than turn-and-walk
 leo.erase(1, 8)                  // take those eight steps of hers back out
 leo.pivot(300, 12.0, 467, 470)   // turn what she has drawn, without redrawing it
+leo.image("turtle.png", 0.6)     // and she can be a picture, pointing where she walks
 ```
 
 **[docs/TURTLE.md](docs/TURTLE.md) is the full guide** — every call, what it
@@ -476,6 +477,7 @@ The harnesses in `lab/` check the behaviour and produce an image:
 ./fluxa run lab/background.flx  # the three background image modes
 ./fluxa run lab/toward.flx      # walking to a point, and a shape as a loop
 ./fluxa run lab/erase.flx       # erase(from, to) takes a piece out, not the rest
+./fluxa run lab/sprite.flx      # a turtle as a picture: files, regions, rotation
 ./fluxa run lab/preview.flx     # the main.flx artwork with everything on
 ```
 

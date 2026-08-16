@@ -24,6 +24,8 @@ runner.Runner.open(win)      // one cleared frame, so the window is not the desk
 pool.Pool.reset()
 timeline.Timeline.reset()
 
+dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+
 // solid
 Block a typeof turtle.Turtle
 a.spawn(80.0, 70.0)
@@ -102,7 +104,7 @@ a.go(4, 180.0, 90.0)
 pool.Pool.home_all()
 painter.Painter.reset()
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas)
+runner.Runner.frame(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 print("clear of 'a' at step ", pool.Pool.get_clear(0), " (expected 3)")

@@ -71,6 +71,36 @@ takes — and it is beaten by a speed declared on the action itself.
 
 ---
 
+## A picture instead of a circle
+
+```fluxa
+leo.image("turtle.png", 0.6)                   // the whole file, at 60%
+ana.sprite("sheet.png", 0, 0, 64, 64, 1.0)     // one region of a spritesheet
+```
+
+Draw the art **facing right** — 0° is right everywhere in this project — and it
+is turned by her heading, so she points where she walks. `sprite` is for one
+file serving several turtles, a region each; `image` is the same call with the
+region left out.
+
+The scale belongs to the entry, not to the turtle: the same file at two scales
+is two entries, so two turtles can wear one picture at different sizes.
+
+Every sprite in the artwork is composed into a single 1024×1024 sheet before the
+frame loop starts, because a body is drawn every frame and decoding a PNG that
+often is not affordable ([adr 0013](adr/0013-one-sheet-for-every-sprite.md)).
+Eight files; a sheet of regions gives all thirty-two turtles a different look
+inside one of them. A file that cannot be read prints why and she stays a
+circle.
+
+Transparency comes from the file: a PNG with no alpha channel draws its
+background along with the picture.
+
+These are declarations, like `spawn` and `face` — not steps, and they do not
+animate.
+
+---
+
 ## The stroke
 
 ```fluxa
@@ -216,7 +246,9 @@ drawing. Three hundred steps of beating spend six seconds of rendering, once.
 |---|---|---|
 | `spawn(x, y)` | declaration | where she is born |
 | `face(deg)` | declaration | the heading she is born with |
-| `color(r, g, b)` | appearance | her body colour |
+| `image(path, scale)` | declaration | draw her as a picture |
+| `sprite(path, sx, sy, sw, sh, scale)` | declaration | ... as a region of one |
+| `color(r, g, b)` | appearance | her body colour, when she has no picture |
 | `size(s)` | appearance | her body radius |
 | `show()` · `hide()` | appearance | whether she is drawn at all |
 | `speed(px_s)` | appearance | her default speed, in pixels per second |
@@ -275,6 +307,7 @@ stage. Asking for more steps than the artwork has generates what there is.
 | actions, all turtles together | 65536 |
 | appearance changes and moves | 2048 |
 | erased ranges, per turtle | 4 |
+| sprite files | 8, composed into one 1024×1024 sheet |
 | strokes not yet baked | 8192 |
 
 All of them are in `static/config.flx`, and each is mirrored by an array

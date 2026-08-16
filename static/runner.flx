@@ -38,6 +38,10 @@ Block Runner {
     float aim_y = 0.0
 
     fn play(dyn win, dyn canvas, int done) int {
+        // Every sprite in the artwork, composed into one image, built once and
+        // alive for the whole run — the body is drawn every frame and a Block
+        // cannot hold a `dyn` (adr 0013). With no sprites it is a 1x1 blank.
+        dyn sheet = pool.Pool.atlas()
         // Nothing has been presented yet, so the window is still showing
         // whatever was behind it — somebody's desktop, framed. It stays that way
         // until the first frame lands, which on a big artwork is a whole second
@@ -52,7 +56,7 @@ Block Runner {
         // Whatever the artwork file declared — export.Video or export.Frames —
         // is generated here, before the stage comes up. Outside the replay loop
         // on purpose: pressing R redoes the drawing, not the file on disk.
-        deliver(win, canvas)
+        deliver(win, canvas, sheet)
 
         int cur = done
         int again = 1
@@ -68,7 +72,7 @@ Block Runner {
                 if graph.should_close(win) { stop = 1 }
                 if stop == 0 {
                     int nxt = cur + 1
-                    animate(win, canvas, nxt)
+                    animate(win, canvas, sheet, nxt)
                     cur = nxt
                     // clearing a path, or moving one, repaints the texture
                     if has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
@@ -78,7 +82,7 @@ Block Runner {
                     // the repaint (adr 0012).
                     if timeline.Timeline.moves_at(nxt) == 1 {
                         rebuild(win, canvas, cur)
-                        frame(win, canvas)
+                        frame(win, canvas, sheet)
                     }
                 }
             }
@@ -88,7 +92,7 @@ Block Runner {
                 guard[0] = cur       // anchor FIRST
                 if graph.should_close(win) { idle = 0 }
                 if idle == 1 {
-                    frame(win, canvas)
+                    frame(win, canvas, sheet)
                     hotkeys(win)
                     if graph.key_pressed(win, "R") {
                         print("[turtle] replay: redoing ", limit, " steps from the start")
@@ -107,7 +111,7 @@ Block Runner {
     // It does not record the screen: it redoes the artwork from the beginning,
     // with time advancing 1/fps per frame, and saves each one. The settings
     // (folder, fps, step range, still frames at each end) live in the Exporter.
-    fn export(dyn win, dyn canvas) nil {
+    fn export(dyn win, dyn canvas, dyn sheet) nil {
         int a = export.Exporter.get_from()
         int b = export.Exporter.get_to()
         if a < 1 { a = 1 }
@@ -124,21 +128,21 @@ Block Runner {
         // the state at the start of the exported range
         rebuild(win, canvas, a - 1)
 
-        hold(win, canvas, export.Exporter.get_hold_start())
+        hold(win, canvas, sheet, export.Exporter.get_hold_start())
 
         int s = a
         while s <= b {
-            animate(win, canvas, s)
+            animate(win, canvas, sheet, s)
             if has_clear(s) == 1 { rebuild(win, canvas, s) }
             if timeline.Timeline.moves_at(s) == 1 {
                 rebuild(win, canvas, s)
-                frame(win, canvas)
+                frame(win, canvas, sheet)
                 export.Exporter.save(win)
             }
             s = s + 1
         }
 
-        hold(win, canvas, export.Exporter.get_hold_end())
+        hold(win, canvas, sheet, export.Exporter.get_hold_end())
 
         exporting = 0
         graph.set_fps(win, config.FPS())
@@ -153,7 +157,7 @@ Block Runner {
     // and says so. The line is written once and the drawing keeps growing under
     // it; making the user come back and fix the number would be the tool
     // getting in the way.
-    fn deliver(dyn win, dyn canvas) nil {
+    fn deliver(dyn win, dyn canvas, dyn sheet) nil {
         int what = export.Exporter.wanted()
         if what == 0 { return }
 
@@ -179,13 +183,13 @@ Block Runner {
 
         print("[export] steps ", a, " to ", b, " at ", fps, " fps")
 
-        if what == 1 { movie(win, canvas, a, b, fps) }
+        if what == 1 { movie(win, canvas, sheet, a, b, fps) }
         if what == 2 {
             int still = fps / 2
             export.Exporter.setup_free("export", fps)
             export.Exporter.range(a, b)
             export.Exporter.hold(still, still)
-            export(win, canvas)
+            export(win, canvas, sheet)
         }
     }
 
@@ -219,7 +223,7 @@ Block Runner {
     // The video cursor is opened and closed right here. A `dyn` cannot be a
     // Block FIELD, but it can be a local inside a method — the same thing
     // Painter.bake does with the capture (adr 0010).
-    fn movie(dyn win, dyn canvas, int from, int to, int rate) nil {
+    fn movie(dyn win, dyn canvas, dyn sheet, int from, int to, int rate) nil {
         int still = rate / 2
         // A free folder, because an export/ from an earlier run is somebody's
         // frames and this one deletes what it uses.
@@ -227,7 +231,7 @@ Block Runner {
         export.Exporter.range(from, to)
         export.Exporter.hold(still, still)
 
-        export(win, canvas)
+        export(win, canvas, sheet)
 
         export.Exporter.video_file("artwork")
         danger {
@@ -248,11 +252,11 @@ Block Runner {
     }
 
     // Still frames: the artwork sits on screen with nothing moving.
-    fn hold(dyn win, dyn canvas, int n) nil {
+    fn hold(dyn win, dyn canvas, dyn sheet, int n) nil {
         int i = 0
         while i < n {
             guard[0] = i         // anchor FIRST
-            frame(win, canvas)
+            frame(win, canvas, sheet)
             export.Exporter.save(win)
             i = i + 1
         }
@@ -323,12 +327,12 @@ Block Runner {
 
     // one frame of the idle stage: the path texture, what was born now, and
     // the turtles on top
-    fn frame(dyn win, dyn canvas) nil {
+    fn frame(dyn win, dyn canvas, dyn sheet) nil {
         graph.begin_frame(win)
         stage.Stage.clear(win)
         graph.draw_image(win, canvas, 0, 0)
         painter.Painter.draw(win)
-        pool.Pool.draw(win)
+        pool.Pool.draw(win, sheet)
         graph.end_frame(win)
     }
 
@@ -393,7 +397,7 @@ Block Runner {
 
     // Animates a whole step. The turn is applied on departure; the displacement
     // is interpolated over time, each turtle at its own speed.
-    fn animate(dyn win, dyn canvas, int s) nil {
+    fn animate(dyn win, dyn canvas, dyn sheet, int s) nil {
         timeline.Timeline.apply_at(s)
         an = 0
         int nt = pool.Pool.count()
@@ -487,7 +491,7 @@ Block Runner {
                 i = i + 1
             }
 
-            pool.Pool.draw(win)
+            pool.Pool.draw(win, sheet)
             graph.end_frame(win)
 
             // No keyboard during a controlled render: the export answers to the

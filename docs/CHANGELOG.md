@@ -3,6 +3,41 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.0] — 2026-08-15
+
+### Added
+
+- **A turtle can be a picture** (pillars §3, the sprint the pillars call
+  fundamental to the artistic side):
+
+  ```fluxa
+  leo.image("turtle.png", 0.6)                   // the whole file
+  ana.sprite("sheet.png", 0, 0, 64, 64, 1.0)     // one region of it
+  ```
+
+  Both forms, because both are wanted: one turtle with her own file, or several
+  sharing a spritesheet with a region each. Draw the art facing right and it is
+  turned by her heading, so she points where she walks. No picture, or a file
+  that cannot be read: she is a circle, as before.
+
+  Every sprite is composed into one 1024×1024 sheet before the frame loop, since
+  a body is drawn every frame and a Block cannot hold a `dyn` — so it is a local
+  of `Runner.play` and one parameter carries every sprite in the artwork
+  ([adr 0013](adr/0013-one-sheet-for-every-sprite.md)). Eight files; the scale
+  belongs to the entry, so one picture at two sizes is two entries. `main.flx`
+  never sees any of it.
+
+- `lab/sprite.flx` — draws its own art, then six turtles: a file whole, the same
+  file at half size, three regions of a sheet, and one left as a circle.
+
+### Fixed
+
+- Two shadowing bugs of the kind AGENTS.md already warns about, found by
+  scanning every Block for locals and parameters that share a field's name:
+  `int y` inside the Pool (which has `float arr y[32]`) and `int step` as a
+  parameter of `Timeline.style_at` (which has `int arr step[65536]`). The scan
+  is worth keeping — it is four lines of regex and it caught both.
+
 ## [0.8.0] — 2026-08-15
 
 ### Added

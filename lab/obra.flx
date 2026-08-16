@@ -17,6 +17,8 @@ dyn win    = graph.init(800, 600, "obra")
 dyn canvas = image.new(800, 600)
 pool.Pool.reset()
 timeline.Timeline.reset()
+
+dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
 stage.Stage.background(16, 17, 24)
 runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
 Block leo typeof turtle.Turtle
@@ -46,7 +48,7 @@ ana.go_silent(1, 260.0, 0.0)
 ana.ring(2, 12, 300.0, 150.0)
 
 runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
-runner.Runner.frame(win, canvas)
+runner.Runner.frame(win, canvas, sheet)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/obra_hero_final.png")

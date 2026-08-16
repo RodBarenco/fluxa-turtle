@@ -50,6 +50,30 @@ Block Pool {
     int arr efrm[128]  = 0
     int arr eto[128]   = 0
 
+    // ── sprites ───────────────────────────────────────────────────
+    //
+    // A turtle can be a picture instead of a circle. The files are composed
+    // into ONE sheet before the frame loop starts, because the body is drawn
+    // every frame and a Block cannot hold a `dyn`: the sheet is a local of
+    // Runner.play, exactly like the canvas, and one parameter carries every
+    // sprite in the artwork (adr 0013).
+    //
+    // The same file at two different scales is two entries, so two turtles can
+    // wear the same picture at different sizes without either of them
+    // compromising. Eight entries; the sheet is 1024x1024.
+    str arr sfile[8]     = ""
+    float arr sfscale[8] = 1.0
+    int arr soffy[8]     = 0      // where that file sits in the sheet
+    int arr sfw[8]       = 0      // and how big it came out after scaling
+    int arr sfh[8]       = 0
+    int sfiles = 0
+
+    int arr sslot[32] = 0         // 0 = no sprite, otherwise the entry + 1
+    int arr ssx[32]   = 0         // a region inside that file, in its own pixels
+    int arr ssy[32]   = 0
+    int arr ssw[32]   = 0         // 0 = the whole file
+    int arr ssh[32]   = 0
+
     int arr vis[32] = 1
     float arr size[32] = 9.0
     float arr spd[32]  = 200.0    // pixels per second
@@ -59,7 +83,10 @@ Block Pool {
 
     // Called at the top of the scene, on every save: the whole declaration is
     // written again.
-    fn reset() nil { n = 0 }
+    fn reset() nil {
+        n = 0
+        sfiles = 0
+    }
 
     fn spawn(float px, float py) int {
         // without the warning the extra turtle would silently become slot 0's
@@ -93,6 +120,11 @@ Block Pool {
         rcy[id]    = 0
         offx[id]   = 0
         offy[id]   = 0
+        sslot[id]  = 0
+        ssx[id]    = 0
+        ssy[id]    = 0
+        ssw[id]    = 0
+        ssh[id]    = 0
         vis[id]    = 1
         size[id]   = 9.0
         spd[id]    = 200.0
@@ -166,6 +198,87 @@ Block Pool {
     fn set_shift(int i, int dx, int dy) nil {
         offx[i] = dx
         offy[i] = dy
+    }
+
+    // ── sprites ───────────────────────────────────────────────────
+
+    // Register a file at a scale, or find it if it is already there. The key is
+    // the path AND the scale: the same picture at two sizes is two entries, so
+    // neither turtle has to give up the size she asked for.
+    fn use_file(str path, float sc) int {
+        int i = 0
+        while i < sfiles {
+            guard[0] = i         // anchor FIRST
+            if sfile[i] == path && sfscale[i] == sc { return i }
+            i = i + 1
+        }
+        if sfiles >= 8 {
+            print("[turtle] sprite: eight files is the limit — ", path, " was ignored")
+            return 0 - 1
+        }
+        sfile[sfiles]   = path
+        sfscale[sfiles] = sc
+        sfiles = sfiles + 1
+        return sfiles - 1
+    }
+
+    fn set_sprite(int i, int slot, int sx, int sy, int sw, int sh) nil {
+        if slot < 0 { return }
+        sslot[i] = slot + 1
+        ssx[i]   = sx
+        ssy[i]   = sy
+        ssw[i]   = sw
+        ssh[i]   = sh
+    }
+
+    fn sprites() int { return sfiles }
+
+    // Every sprite file, composed into one image, stacked down the sheet. Built
+    // once per run — decoding a PNG per turtle per frame is not a thing anyone
+    // can afford — and handed to the frame loop as a local `dyn`.
+    //
+    // With no sprites declared it is a 1x1 blank, so the caller always has
+    // something valid to draw with and release.
+    fn atlas() dyn {
+        dyn sheet = image.new(1, 1)
+        if sfiles == 0 { return sheet }
+
+        image.resize(sheet, 1024, 1024)
+        int row = 0                  // not `y`: this Block has a field called y
+        int i = 0
+        while i < sfiles {
+            guard[0] = i         // anchor FIRST
+            danger {
+                dyn f = image.sload(sfile[i])
+                int fw = math.to_int(math.to_float(image.width(f)) * sfscale[i])
+                int fh = math.to_int(math.to_float(image.height(f)) * sfscale[i])
+                if fw < 1 { fw = 1 }
+                if fh < 1 { fh = 1 }
+                image.resize(f, fw, fh)
+                // The test comes first and the answer is kept: `row` moves when
+                // the file is placed, so re-testing it afterwards would report
+                // a file that fitted as one that did not.
+                int fits = 0
+                if fw <= 1024 && row + fh <= 1024 { fits = 1 }
+                if fits == 1 {
+                    image.blit(sheet, f, 0, row)
+                    soffy[i] = row
+                    sfw[i]   = fw
+                    sfh[i]   = fh
+                    row = row + fh
+                }
+                if fits == 0 {
+                    print("[turtle] sprite ", sfile[i], " does not fit the 1024x1024 sheet — skipped")
+                }
+                image.discard(f)
+            }
+            if err != nil {
+                print("[turtle] sprite ", sfile[i], ": ", err[0])
+                sfw[i] = 0
+            }
+            i = i + 1
+        }
+        return sheet
     }
 
     // A stroke made on step `s` by turtle `i`: is it inside a range she erased?
@@ -277,11 +390,12 @@ Block Pool {
 
     // ── drawing ───────────────────────────────────────────────────
 
-    fn draw(dyn win) nil {
+    fn draw(dyn win, dyn sheet) nil {
         int i = 0
         while i < n {
             guard[0] = i         // anchor FIRST
-            if vis[i] == 1 {
+            if vis[i] == 1 && sslot[i] > 0 { draw_sprite(win, sheet, i) }
+            if vis[i] == 1 && sslot[i] == 0 {
                 float cx = x[i]
                 float cy = y[i]
                 float sz = size[i]
@@ -300,5 +414,32 @@ Block Pool {
             }
             i = i + 1
         }
+    }
+
+    // Her picture, centred on where she is and turned to where she is pointing.
+    // Draw the art facing RIGHT: 0 degrees is right here, as everywhere else in
+    // this project, and the sprite is turned by her heading.
+    fn draw_sprite(dyn win, dyn sheet, int i) nil {
+        int k = sslot[i] - 1
+        if sfw[k] < 1 { return }             // the file did not load
+
+        int rx = 0
+        int ry = soffy[k]
+        int rw = sfw[k]
+        int rh = sfh[k]
+        if ssw[i] > 0 {
+            // a region of the file, in the file's own pixels, scaled with it
+            float sc = sfscale[k]
+            rx = math.to_int(math.to_float(ssx[i]) * sc)
+            ry = soffy[k] + math.to_int(math.to_float(ssy[i]) * sc)
+            rw = math.to_int(math.to_float(ssw[i]) * sc)
+            rh = math.to_int(math.to_float(ssh[i]) * sc)
+        }
+        if rw < 1 { return }
+        if rh < 1 { return }
+
+        graph.draw_sprite(win, sheet, rx, ry, rw, rh,
+                          math.to_int(x[i]) - rw / 2, math.to_int(y[i]) - rh / 2,
+                          0.0 - ang[i], 255, 255, 255, 255)
     }
 }

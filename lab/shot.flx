@@ -27,6 +27,8 @@ runner.Runner.open(win)      // one cleared frame, so the window is not the desk
 pool.Pool.reset()
 timeline.Timeline.reset()
 
+dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+
 // green square, starts pointing right
 Block leo typeof turtle.Turtle
 leo.spawn(180.0, 200.0)
@@ -80,7 +82,7 @@ while s <= timeline.Timeline.max_step() {
 }
 graph.end_frame(win)
 painter.Painter.bake(win, canvas)
-runner.Runner.frame(win, canvas)
+runner.Runner.frame(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 print("conflicts_ignored=", timeline.Timeline.conflicts())

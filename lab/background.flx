@@ -54,6 +54,8 @@ dyn canvas = image.new(800, 600)
 
 pool.Pool.reset()
 timeline.Timeline.reset()
+
+dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
 stage.Stage.background(16, 17, 24)
 runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
 
@@ -71,7 +73,7 @@ leo.go(3, 200.0, 120.0)
 
 stage.Stage.tile("lab/tile.png", 1.0)
 runner.Runner.rebuild(win, canvas, 3)
-runner.Runner.frame(win, canvas)
+runner.Runner.frame(win, canvas, sheet)
 danger {
     dyn s1 = graph.capture(win)
     image.save(s1, "lab/background_tile.png")
@@ -81,7 +83,7 @@ if err != nil { print("tile: ", err[0]) }
 
 stage.Stage.center("lab/tile.png", 3.0)
 runner.Runner.rebuild(win, canvas, 3)
-runner.Runner.frame(win, canvas)
+runner.Runner.frame(win, canvas, sheet)
 danger {
     dyn s2 = graph.capture(win)
     image.save(s2, "lab/background_center.png")
@@ -91,7 +93,7 @@ if err != nil { print("center: ", err[0]) }
 
 stage.Stage.stretch("lab/tile.png")
 runner.Runner.rebuild(win, canvas, 3)
-runner.Runner.frame(win, canvas)
+runner.Runner.frame(win, canvas, sheet)
 danger {
     dyn s3 = graph.capture(win)
     image.save(s3, "lab/background_stretch.png")
@@ -107,7 +109,7 @@ print("mode after three changes  ", stage.Stage.has_image(), "   (expected 1, st
 
 stage.Stage.tile("lab/there_is_no_such_file.png", 1.0)
 runner.Runner.rebuild(win, canvas, 3)
-runner.Runner.frame(win, canvas)
+runner.Runner.frame(win, canvas, sheet)
 print("mode after a missing file ", stage.Stage.has_image(), "   (expected 0, and a reason above)")
 
 danger {
