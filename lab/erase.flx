@@ -1,0 +1,88 @@
+// lab/erase.flx — taking a piece back out of a drawing (`erase`).
+// Run from the project root:  ./fluxa run lab/erase.flx
+//
+// Three rows of twelve equal strokes. The first is untouched, the second has
+// its middle four erased, the third has two separate pieces taken out. What
+// must survive is everything outside the ranges — an erase is not a clear.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static runner
+
+dyn win    = graph.init(800, 600, "erase")
+dyn canvas = image.new(800, 600)
+
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+// ── whole ─────────────────────────────────────────────────────────
+Block a typeof turtle.Turtle
+a.spawn(70.0, 140.0)
+a.hide()
+a.speed(1400.0)
+a.path_color(0, 220, 140)
+a.path_width(5)
+a.ring(1, 12, 55.0, 0.0)
+
+// ── the middle four taken out ─────────────────────────────────────
+Block b typeof turtle.Turtle
+b.spawn(70.0, 260.0)
+b.hide()
+b.speed(1400.0)
+b.path_color(255, 200, 60)
+b.path_width(5)
+b.ring(1, 12, 55.0, 0.0)
+b.erase(5, 8)
+
+// ── two pieces, and a colour change that must survive both ────────
+Block c typeof turtle.Turtle
+c.spawn(70.0, 380.0)
+c.hide()
+c.speed(1400.0)
+c.path_color(255, 120, 90)
+c.path_width(5)
+c.ring(1, 6, 55.0, 0.0)
+c.path_color(150, 130, 255)
+c.ring(7, 6, 55.0, 0.0)
+c.erase(2, 3)
+c.erase(9, 10)
+
+// ── and one that erases everything it ever drew ───────────────────
+Block d typeof turtle.Turtle
+d.spawn(70.0, 480.0)
+d.hide()
+d.speed(1400.0)
+d.path_color(120, 200, 255)
+d.path_width(5)
+d.ring(1, 12, 55.0, 0.0)
+d.erase(1, 12)
+
+runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.frame(win, canvas)
+
+print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+print("expected: row 1 whole, row 2 with a gap in the middle, row 3 with two gaps, row 4 empty")
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/erase.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(canvas)
+graph.close(win)

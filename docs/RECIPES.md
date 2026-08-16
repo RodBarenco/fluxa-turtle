@@ -1,5 +1,7 @@
 # Recipes
 
+Every call these use is in **[TURTLE.md](TURTLE.md)**, the full guide.
+
 Loose pieces to build your artwork with. Each block goes in the part
 indicated — either the **scene** (where the turtles are declared) or the
 **steps** (where the actions are declared).

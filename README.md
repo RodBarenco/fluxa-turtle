@@ -259,164 +259,49 @@ Each turtle is an independent instance:
 ```fluxa
 Block leo typeof turtle.Turtle
 leo.spawn(340.0, 363.0)
-```
-
-Angles are in degrees: **0 points right** and the angle grows
-counter-clockwise, as on the cartesian plane.
-
-### Appearance
-
-```fluxa
-leo.color(0, 224, 150)      // body colour (RGB 0–255)
-leo.size(9.0)               // body radius
-leo.face(90.0)              // initial heading, in degrees
-leo.speed(260.0)            // default speed, in pixels per second
-leo.hide()                  // hide her (she still moves and draws)
-leo.show()
-```
-
-### Path
-
-```fluxa
 leo.path_color(0, 224, 150)
 leo.path_width(3)
-leo.path_opacity(70)        // 0 to 100
+leo.hide()
 
-leo.path_solid()            // solid line
-leo.path_dotted()           // dotted
-leo.path_dashed()           // dashed
-leo.path_dots()             // round dots
-leo.path_dash(14, 9)        // adjusts the dash and gap of any of them
-
-leo.path_off()              // stop drawing
-leo.path_on()
-
-leo.path_clear(7)           // on step 7, clear THIS turtle's path
+leo.go(1, 200.0, 0.0)        // step 1: walk 200 px
+leo.ring(2, 35, 200.0, 170.0) // steps 2 to 36: the same, turning 170° each time
 ```
 
-### Appearance applies from where you write it
+Angles are in degrees: **0 points right** and the angle grows counter-clockwise.
 
-An appearance call is not retroactive. It takes effect from the **next step that
-turtle declares**, and what is already drawn keeps the look it was drawn with:
+Three kinds of call, and telling them apart explains most of what looks
+surprising at first:
+
+| Kind | When it happens | Examples |
+|---|---|---|
+| **declaration** | at once | `spawn`, `face` |
+| **appearance** | from the next step this turtle declares | `color`, `path_width`, `speed`, `hide` |
+| **step** | on the step number you give it | `go`, `toward`, `erase`, `pivot` |
+
+So a colour written between step 36 and step 37 leaves the first thirty-six as
+they are and paints what comes after. Move it above them and it affects them.
 
 ```fluxa
-leo.path_color(90, 200, 255)   // her starting colour: no step declared yet
-leo.ring(1, 36, 500.0, 170.0)  // steps 1 to 36 come out blue
-
-leo.path_color(255, 90, 160)   // from here on
-leo.ring(37, 36, 500.0, 170.0) // steps 37 to 72 come out pink
+leo.toward(5, 400.0, 300.0)      // be at this point, rather than turn-and-walk
+leo.erase(1, 8)                  // take those eight steps of hers back out
+leo.pivot(300, 12.0, 467, 470)   // turn what she has drawn, without redrawing it
 ```
 
-To change the whole artwork, move the call above the steps it should affect. The
-rule is the same for `color`, `size`, `speed`, `show`/`hide` and every `path_*`
-— the changes live in the timeline, at the step where they were written, and the
-rebuild replays them there ([adr 0009](docs/adr/0009-appearance-is-a-timeline-event.md)).
-
-`face` is the exception: it is the heading the turtle is born with, part of her
-declaration rather than something that happens on a step.
-
-### Movement
-
-```fluxa
-leo.go(1, 200.0, 90.0)                 // turn 90 degrees and walk 200 px
-leo.go_silent(2, 300.0, 0.0)           // same displacement, without drawing
-leo.go_at(3, 200.0, 0.0, 700.0)        // this action at 700 px/s
-leo.go_silent_at(4, 400.0, 0.0, 900.0)
-```
-
-The speed declared on the action beats the turtle's own speed. That is how one
-turtle speeds up on one leg and crawls on the next.
-
-### Walking to a point
-
-```fluxa
-leo.toward(5, 400.0, 300.0)   // be at this point — the turn and the distance
-leo.jump(6, 120.0, 480.0)     // are worked out when the step runs
-```
-
-`go` says "turn this much and walk that far"; `toward` says "be here". It is
-what makes a drawing writable as a loop over its points, and what lets a shape
-sketched anywhere be printed straight out as steps:
-
-```fluxa
-int i = 0
-while i <= 60 {
-    float a = math.to_float(i) * 6.0
-    float r = 150.0 * math.cos(math.deg_to_rad(a * 2.0))
-    rose.toward(5 + i, 400.0 + r * math.cos(math.deg_to_rad(a)),
-                       300.0 - r * math.sin(math.deg_to_rad(a)))
-    i = i + 1
-}
-```
-
-`jump` is the same move with the pen up — how one line ends and the next begins.
-
-### Moving what is already drawn
-
-```fluxa
-fin.pivot(300, 12.0, 467, 470)   // from step 300, turn her whole trail 12°
-fin.shift(400, 0, -20)           // about (467, 470) — or displace it
-```
-
-These do not draw. They **move what that turtle has drawn**, all of it, from
-that step on. The angle is absolute, so a loop can sweep it and come back
-exactly where it started — which is how something animates without being wiped
-and sketched again:
-
-```fluxa
-int k = 0
-while k < 60 {
-    fin.pivot(300 + k, 16.0 * math.sin(math.deg_to_rad(math.to_float(k) * 6.0)), 467, 470)
-    k = k + 1
-}
-```
-
-A move repaints the artwork for that step, the same cost `path_clear` has
-([adr 0012](docs/adr/0012-a-turtle-can-move-what-she-has-drawn.md)). It moves
-the drawing, never the turtle: her position and heading are untouched.
+**[docs/TURTLE.md](docs/TURTLE.md) is the full guide** — every call, what it
+does, when it happens, and the limits. Start there when this page runs out.
 
 ### The stage
 
 ```fluxa
 stage.Stage.background(16, 17, 24)          // solid colour
-
-stage.Stage.tile("texture.png", 1.0)        // repeated across the stage
+stage.Stage.tile("texture.png", 1.0)        // a PNG, repeated across the stage
 stage.Stage.center("logo.png", 2.0)         // once, in the middle
 stage.Stage.stretch("photo.png")            // taken to the screen size
-stage.Stage.image_off()                     // back to the plain colour
 ```
 
-The last number is the scale. If the file cannot be read, the drawing carries on
-and the reason is printed — a missing texture never costs you the artwork.
-
 You give the Stage a **path**, never an image: the file is decoded during the
-rebuild, which happens once per save, and goes into the baked texture, so it
-costs nothing per frame. That is also why nothing about an image handle appears
-in `main.flx` ([adr 0011](docs/adr/0011-the-artwork-file-declares.md)).
-
-### Everything she can do, in one place
-
-| Call | What it does |
-|---|---|
-| `spawn(x, y)` | where she is born |
-| `face(deg)` | the heading she is born with — the one call that is not a step |
-| `color(r, g, b)` · `size(s)` · `show()` · `hide()` | her own body |
-| `speed(px_s)` | her default speed |
-| `path_color(r, g, b)` · `path_width(w)` · `path_opacity(pct)` | the stroke |
-| `path_solid()` · `path_dotted()` · `path_dashed()` · `path_dots()` · `path_dash(d, g)` | its style and rhythm |
-| `path_on()` · `path_off()` | whether she leaves a trail at all |
-| `go(step, dist, turn)` · `go_silent(step, dist, turn)` | turn, then walk — with and without a trail |
-| `go_at(step, dist, turn, px_s)` · `go_silent_at(...)` | the same, at a speed declared on the action |
-| `ring(first, count, dist, turn)` · `ring_silent(...)` | a run of equal steps in one line |
-| `spiral(first, count, dist, grow, turn)` | the same, with the side growing |
-| `toward(step, x, y)` · `jump(step, x, y)` | be at this point — with the pen down or up |
-| `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | move what she has already drawn |
-| `path_clear(step)` | erase her own trail, on that step |
-
-Everything above the movement rows is an **appearance** call: it applies from the
-next step that turtle declares, never backwards. Everything from `go` down is a
-**step**: it happens at the number you give it, and turtles sharing a number move
-together.
+rebuild, once per save, and goes into the baked texture, so it costs nothing per
+frame. If it cannot be read, the drawing carries on and the reason is printed.
 
 ---
 
@@ -509,6 +394,7 @@ static/turtle.flx     the turtle (the type you use)
 static/export.flx     exporting: frames and MP4
 static/runner.flx     execution
 lab/                  verification harnesses
+docs/TURTLE.md        every call the turtle has, and when each one happens
 docs/                 artworks, recipes, changelog and design decisions
 ```
 
@@ -589,6 +475,7 @@ The harnesses in `lab/` check the behaviour and produce an image:
 ./fluxa run lab/video.flx       # the MP4: frame count, size and frame rate
 ./fluxa run lab/background.flx  # the three background image modes
 ./fluxa run lab/toward.flx      # walking to a point, and a shape as a loop
+./fluxa run lab/erase.flx       # erase(from, to) takes a piece out, not the rest
 ./fluxa run lab/preview.flx     # the main.flx artwork with everything on
 ```
 

@@ -221,8 +221,7 @@ Block Timeline {
         while i < en {
             guard[0] = i         // anchor FIRST
             if efrom[i] == s {
-                if ekind[i] == 10 { return 1 }
-                if ekind[i] == 11 { return 1 }
+                if ekind[i] >= 10 { return 1 }
             }
             i = i + 1
         }
@@ -245,6 +244,7 @@ Block Timeline {
         if k == 9 { pool.Pool.set_speed(t, ef[i]) }
         if k == 10 { pool.Pool.set_pivot(t, ef[i], ea[i], eb[i]) }
         if k == 11 { pool.Pool.set_shift(t, ea[i], eb[i]) }
+        if k == 12 { pool.Pool.add_erase(t, ea[i], eb[i]) }
     }
 
     // That turtle's action on that step, or -1 if it has none. This is how

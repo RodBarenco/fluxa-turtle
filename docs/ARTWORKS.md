@@ -3,6 +3,8 @@
 Compositions ready to copy and paste. Each one was rendered with this exact
 code — the image beside it is the result, not an illustration.
 
+Every call used here is in **[TURTLE.md](TURTLE.md)**, the full guide.
+
 **How to use:** open `main.flx`, delete whatever sits between
 `timeline.Timeline.reset()` and the execution line, and paste the block in its
 place. Save.

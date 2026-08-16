@@ -3,6 +3,35 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.0] — 2026-08-15
+
+### Added
+
+- **`erase(from, to)`** — takes a piece back out of a drawing: the strokes this
+  turtle made between those two steps stop being drawn, and everything else of
+  hers stays, before and after. It happens on the step after the last one she
+  has declared — the appearance rule — so written at the end of a file it is the
+  last thing that happens and the piece disappears on screen. Four ranges per
+  turtle.
+
+  A method and not a free function (`leo.erase(1, 8)`, not `erase(leo, 1, 8)`):
+  every other call is already `leo.something(...)`, and a Block instance does not
+  pass cleanly as an argument.
+
+  `path_clear` remains the other eraser — it wipes everything up to a step;
+  this one takes out a range and keeps the rest.
+
+- **`docs/TURTLE.md`** — the full guide: every call the turtle has, grouped by
+  *when* it happens (declaration, appearance, step), with the gotchas that
+  follow from that and the limits at the end. Checked by script against
+  `static/turtle.flx`: the guide names every call and invents none.
+
+### Changed
+
+- **The README keeps only the basics** and points at the guide. What is left is
+  enough to draw something — spawn, a colour, `go`, `ring`, the three kinds of
+  call in a table — and the reference lives in one place instead of two.
+
 ## [0.7.0] — 2026-08-15
 
 ### Added

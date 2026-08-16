@@ -72,6 +72,25 @@ Block Turtle {
         timeline.Timeline.add(id, step, 2, 0.0, 0.0, 0.0)
     }
 
+    // Takes a piece back out of the drawing: the strokes this turtle made from
+    // step `from` to step `to`, inclusive, stop being drawn. Everything else of
+    // hers stays, including what she drew before and after that range.
+    //
+    //     leo.erase(1, 8)      // those eight steps of his are gone
+    //
+    // It happens on the step AFTER the last one she has declared, which is the
+    // same rule the appearance calls follow — so written at the end of a file it
+    // is the last thing that happens, and you watch the piece disappear. The
+    // artwork runs to that step even if nobody moves on it.
+    //
+    // `path_clear` is the other eraser: it wipes everything up to a step. This
+    // one takes out a range and leaves the rest.
+    //
+    // Four ranges per turtle. Past that it warns and ignores the extra.
+    fn erase(int from, int to) nil {
+        timeline.Timeline.style_at(id, timeline.Timeline.last_step(id) + 1, 12, from, to, 0, 0.0)
+    }
+
     // ── movement ──────────────────────────────────────────────────
     //
     // Walks `dist` pixels on the given step, turning `turn` degrees before

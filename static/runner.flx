@@ -382,7 +382,7 @@ Block Runner {
                     aim(t, i)
                     pool.Pool.set_pos(t, aim_x, aim_y)
 
-                    if draws(k) == 1 && pool.Pool.get_pen(t) == 1 && s > pool.Pool.get_clear(t) {
+                    if draws(k) == 1 && pool.Pool.get_pen(t) == 1 && s > pool.Pool.get_clear(t) && pool.Pool.erased(t, s) == 0 {
                         painter.Painter.stroke(win, t, x1, y1, aim_x, aim_y)
                     }
                 }

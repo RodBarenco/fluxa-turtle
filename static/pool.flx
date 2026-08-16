@@ -43,6 +43,13 @@ Block Pool {
     int arr offx[32]   = 0
     int arr offy[32]   = 0
 
+    // Ranges of steps this turtle has erased. Four per turtle, indexed
+    // t * 4 + k — a small fixed number, like everything else in the pools, and
+    // enough for the thing this is for: taking a piece back out of a drawing.
+    int arr ecount[32] = 0
+    int arr efrm[128]  = 0
+    int arr eto[128]   = 0
+
     int arr vis[32] = 1
     float arr size[32] = 9.0
     float arr spd[32]  = 200.0    // pixels per second
@@ -120,6 +127,7 @@ Block Pool {
             rcy[i]    = 0
             offx[i]   = 0
             offy[i]   = 0
+            ecount[i] = 0
             vis[i]    = 1
             size[i]   = 9.0
             spd[i]    = 200.0
@@ -158,6 +166,30 @@ Block Pool {
     fn set_shift(int i, int dx, int dy) nil {
         offx[i] = dx
         offy[i] = dy
+    }
+
+    // A stroke made on step `s` by turtle `i`: is it inside a range she erased?
+    // Four comparisons at worst, on the rebuild path only.
+    fn add_erase(int i, int from, int to) nil {
+        if ecount[i] >= 4 {
+            print("[turtle] erase: four ranges per turtle is the limit — this one was ignored")
+            return
+        }
+        int k = i * 4 + ecount[i]
+        efrm[k] = from
+        eto[k]  = to
+        ecount[i] = ecount[i] + 1
+    }
+
+    fn erased(int i, int s) int {
+        int k = 0
+        while k < ecount[i] {
+            guard[0] = k         // anchor FIRST
+            int j = i * 4 + k
+            if s >= efrm[j] && s <= eto[j] { return 1 }
+            k = k + 1
+        }
+        return 0
     }
 
     fn get_rot(int i) float { return rot[i] }
