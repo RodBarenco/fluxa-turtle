@@ -29,7 +29,8 @@ runner.Runner.open(win)      // one cleared frame, so the window is not the desk
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+dyn sheet = pool.Pool.atlas()
+dyn part  = [0.0, 0.0]   // nothing in flight in a harness   // no sprites here: a 1x1 blank
 
 // colour: blue on the left, pink on the right
 Block a typeof turtle.Turtle
@@ -110,7 +111,7 @@ painter.Painter.reset()
 
 int s = 1
 while s <= timeline.Timeline.max_step() {
-    runner.Runner.animate(win, live, sheet, s)
+    runner.Runner.animate(win, live, sheet, part, s)
     s = s + 1
 }
 runner.Runner.frame(win, live, sheet)

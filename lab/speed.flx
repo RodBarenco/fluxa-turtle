@@ -29,7 +29,8 @@ runner.Runner.open(win)      // one cleared frame, so the window is not the desk
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+dyn sheet = pool.Pool.atlas()
+dyn part  = [0.0, 0.0]   // nothing in flight in a harness   // no sprites here: a 1x1 blank
 
 // slow: 100 px/s
 Block lenta typeof turtle.Turtle
@@ -67,15 +68,15 @@ painter.Painter.reset()
 runner.Runner.rebuild(win, canvas, 0)
 
 int t1 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, 1)
+runner.Runner.animate(win, canvas, sheet, part, 1)
 print("  1    |   2.00   | ", math.to_float(time.elapsed_ms(t1)) / 1000.0)
 
 int t2 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, 2)
+runner.Runner.animate(win, canvas, sheet, part, 2)
 print("  2    |   0.75   | ", math.to_float(time.elapsed_ms(t2)) / 1000.0)
 
 int t3 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, 3)
+runner.Runner.animate(win, canvas, sheet, part, 3)
 print("  3    |   4.00   | ", math.to_float(time.elapsed_ms(t3)) / 1000.0)
 
 print("final position slow  x=", pool.Pool.get_x(0), " (expected 300)")

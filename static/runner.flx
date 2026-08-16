@@ -37,7 +37,21 @@ Block Runner {
     float aim_x = 0.0            // where the action being run ends up
     float aim_y = 0.0
 
-    fn play(dyn win, dyn canvas, int done) int {
+    // Did the last step animated actually reach its end? A save cancels the
+    // frame loop from underneath us and execution carries on at the next
+    // statement, so "the loop ended" and "the movement finished" are not the
+    // same thing, and only one of them may advance the artwork (adr 0014).
+    int arrived = 0
+
+    // `part` is the one thing that has to cross a save besides `done`: the step
+    // that was in flight and how far into it we got. A one-element-per-value
+    // `prst dyn` from main.flx, because a Block field is re-declared on every
+    // reload and a function cannot see the artwork's scope — mutating it
+    // through the parameter is the same trick the canvas uses (adr 0014).
+    //
+    //   part[0] = the step being animated, 0 when nothing is
+    //   part[1] = how far through it, 0.0 to 1.0
+    fn play(dyn win, dyn canvas, dyn part, int done) int {
         // Every sprite in the artwork, composed into one image, built once and
         // alive for the whole run — the body is drawn every frame and a Block
         // cannot hold a `dyn` (adr 0013). With no sprites it is a 1x1 blank.
@@ -72,15 +86,19 @@ Block Runner {
                 if graph.should_close(win) { stop = 1 }
                 if stop == 0 {
                     int nxt = cur + 1
-                    animate(win, canvas, sheet, nxt)
-                    cur = nxt
+                    animate(win, canvas, sheet, part, nxt)
+                    // Interrupted by a save: the step is not finished, so it is
+                    // not counted. `part` keeps how far it got and the next run
+                    // picks it up there.
+                    if arrived == 0 { stop = 1 }
+                    if arrived == 1 { cur = nxt }
                     // clearing a path, or moving one, repaints the texture
-                    if has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
+                    if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
                     // A step where the only thing that happens is a move has
                     // nothing to animate — `animate` returns at once — but it
                     // does change the picture, so it gets its frame here, after
                     // the repaint (adr 0012).
-                    if timeline.Timeline.moves_at(nxt) == 1 {
+                    if arrived == 1 && timeline.Timeline.moves_at(nxt) == 1 {
                         rebuild(win, canvas, cur)
                         frame(win, canvas, sheet)
                     }
@@ -96,6 +114,9 @@ Block Runner {
                     hotkeys(win)
                     if graph.key_pressed(win, "R") {
                         print("[turtle] replay: redoing ", limit, " steps from the start")
+                        // a replay starts clean: nothing is half-done any more
+                        part[0] = 0.0
+                        part[1] = 0.0
                         cur = 0
                         again = 1
                         idle = 0
@@ -112,6 +133,9 @@ Block Runner {
     // with time advancing 1/fps per frame, and saves each one. The settings
     // (folder, fps, step range, still frames at each end) live in the Exporter.
     fn export(dyn win, dyn canvas, dyn sheet) nil {
+        // The export renders by frame index and must not disturb the progress
+        // of the run that is being watched: it gets a scratch pair of its own.
+        dyn part_none = [0.0, 0.0]
         int a = export.Exporter.get_from()
         int b = export.Exporter.get_to()
         if a < 1 { a = 1 }
@@ -132,7 +156,7 @@ Block Runner {
 
         int s = a
         while s <= b {
-            animate(win, canvas, sheet, s)
+            animate(win, canvas, sheet, part_none, s)
             if has_clear(s) == 1 { rebuild(win, canvas, s) }
             if timeline.Timeline.moves_at(s) == 1 {
                 rebuild(win, canvas, s)
@@ -397,7 +421,7 @@ Block Runner {
 
     // Animates a whole step. The turn is applied on departure; the displacement
     // is interpolated over time, each turtle at its own speed.
-    fn animate(dyn win, dyn canvas, dyn sheet, int s) nil {
+    fn animate(dyn win, dyn canvas, dyn sheet, dyn part, int s) nil {
         timeline.Timeline.apply_at(s)
         an = 0
         int nt = pool.Pool.count()
@@ -434,7 +458,10 @@ Block Runner {
             t = t + 1
         }
 
-        if an == 0 { return }
+        if an == 0 {
+            arrived = 1
+            return
+        }
 
         // the step lasts as long as the slowest turtle
         float dmax = 0.0
@@ -454,8 +481,21 @@ Block Runner {
             if nf < 1 { nf = 1 }
         }
 
+        // Carrying on from a save: if this is the step that was in flight, it
+        // starts where it stopped instead of from the beginning (pillars §5).
+        // The in-flight stroke is drawn from the step's start point every frame
+        // anyway, so resuming at 40% leaves no gap — the first frame back draws
+        // those 40% and the walk carries on.
+        float from = 0.0
+        if math.to_int(part[0]) == s {
+            if part[1] > 0.0 && part[1] < 1.0 {
+                from = part[1]
+                print("[turtle] carrying on from ", math.to_int(part[1] * 100.0), "% of step ", s)
+            }
+        }
+
         int t0 = time.now_ms()
-        float el = 0.0
+        float el = dmax * from
         int fk = 0
         int running = 1
         while running == 1 {
@@ -465,7 +505,12 @@ Block Runner {
             // right frame rate even on a machine that is slow to generate each
             // image (§8). The frame at instant zero is not written again: it is
             // already the previous step's last frame (or the opening stills).
-            if exporting == 0 { el = math.to_float(time.elapsed_ms(t0)) / 1000.0 }
+            if exporting == 0 {
+                el = dmax * from + math.to_float(time.elapsed_ms(t0)) / 1000.0
+                // written every frame: a save can land on any of them
+                part[0] = math.to_float(s)
+                part[1] = el / dmax
+            }
             if exporting == 1 {
                 fk = fk + 1
                 el = dmax * math.to_float(fk) / math.to_float(nf)
@@ -501,6 +546,26 @@ Block Runner {
 
             if el >= dmax { running = 0 }
             if graph.should_close(win) { running = 0 }
+        }
+
+        // Did we get there, or did a save cut the loop short? On a cancel the
+        // runtime breaks the loop and carries on from here, so this is the only
+        // place that can tell the difference — and it decides whether the step
+        // counts as done.
+        arrived = 0
+        if el >= dmax { arrived = 1 }
+
+        if arrived == 0 {
+            // Interrupted. The turtles stay exactly where the last frame put
+            // them, nothing is added to the path, and `part` keeps the fraction
+            // for the next run to carry on from.
+            return
+        }
+
+        // The step is over: nothing is half-done any more.
+        if exporting == 0 {
+            part[0] = 0.0
+            part[1] = 0.0
         }
 
         // close the step: exact final position and the path becomes permanent

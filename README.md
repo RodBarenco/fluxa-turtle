@@ -202,7 +202,9 @@ Three rules follow from it:
 
 **Finished steps do not repeat.** When you save again, what already happened is
 rebuilt instantly and execution carries on from the next step not yet
-performed. That is what lets you build the artwork bit by bit.
+performed. That is what lets you build the artwork bit by bit — and a save that
+lands in the *middle* of a movement is not lost either: that step carries on
+from where it was ([adr 0014](docs/adr/0014-a-movement-survives-the-save.md)).
 
 **The same step means simultaneous.** Different turtles with actions on the
 same step move at the same time. The step only ends when the last of them
@@ -411,8 +413,6 @@ names the cap and tells you to raise it.
   back to a stub backend rather than failing, so the window opens, the steps
   run, and every capture comes out blank. `graph.version()` says which one you
   have.
-- **Saving in the middle of a movement restarts that step.** Only finished
-  steps count; partial progress does not survive the reload yet.
 - **A move repaints the artwork.** `pivot`, `shift` and `path_clear` change
   strokes that are already in the baked texture, so the step they happen on
   costs a rebuild — about 20 ms for a 900-action drawing. Five beats of sixty
@@ -440,6 +440,7 @@ The harnesses in `lab/` check the behaviour and produce an image:
 ./fluxa run lab/toward.flx      # walking to a point, and a shape as a loop
 ./fluxa run lab/erase.flx       # erase(from, to) takes a piece out, not the rest
 ./fluxa run lab/sprite.flx      # a turtle as a picture: files, regions, rotation
+./fluxa run lab/resume.flx      # a movement resumed from the middle
 ./fluxa run lab/preview.flx     # the main.flx artwork with everything on
 ```
 

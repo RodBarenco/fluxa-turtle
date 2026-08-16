@@ -212,6 +212,10 @@ logical moment. Turtles with actions on the same step move together, and the
 step ends when the last of them arrives. A turtle gets one action per step — a
 second one on the same number is ignored, and the run is not interrupted.
 
+Saving while a movement is in flight does not cost it: the step carries on from
+the fraction it had reached, and only a step that actually arrived is counted as
+done ([adr 0014](adr/0014-a-movement-survives-the-save.md)).
+
 ### `go(step, dist, turn)` — step
 
 Turn, then walk, leaving a trail.

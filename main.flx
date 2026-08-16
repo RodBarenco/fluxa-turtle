@@ -43,6 +43,12 @@ prst dyn win    = graph.init(config.W(), config.H(), "Fluxa Turtle")
 prst dyn canvas = image.new(config.W(), config.H())
 prst int done   = 0
 
+// The step that was in flight when you saved, and how far into it we were.
+// Saving in the middle of a movement carries on from there instead of starting
+// that step again (pillars §5). Two numbers, in a `prst dyn` because that is
+// what survives a reload and can still be written from inside the runner.
+prst dyn part   = [0.0, 0.0]
+
 graph.set_fps(win, config.FPS())
 
 
@@ -172,4 +178,4 @@ leo.go(1, 500.0, 0.0)
 
 print("[turtle] finished: ", done, " | declared: ", timeline.Timeline.max_step(), " | turtles: ", pool.Pool.count())
 
-done = runner.Runner.play(win, canvas, done)
+done = runner.Runner.play(win, canvas, part, done)

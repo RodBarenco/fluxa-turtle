@@ -3,6 +3,34 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0] — 2026-08-15
+
+### Added
+
+- **A movement survives the save** (pillars §5, the last pillar still open).
+  `main.flx` carries a fourth `prst` — `part = [0.0, 0.0]`, the step in flight
+  and how far into it — which `animate` writes on every frame and clears when
+  the step completes. The next run picks that step up at the same fraction.
+
+  Measured end to end with an eight-second step and three saves during it: the
+  turtle carried on from 43%, then from 78%, then finished, and never went back
+  to the start. The stroke has no gap, because the in-flight segment is drawn
+  from the step's start point on every frame.
+
+### Fixed
+
+- **A save used to complete the movement instead of interrupting it.** The
+  runtime cancels a script by breaking the loop it is in and carrying on at the
+  next statement — so a save inside `animate` fell through to the code that
+  closes the step, and the artwork gained a whole stroke nobody watched being
+  drawn. `Runner.arrived` now compares elapsed against duration after the loop,
+  which is the only place that can tell a completed movement from a cancelled
+  one, and a step that did not arrive is not counted
+  ([adr 0014](adr/0014-a-movement-survives-the-save.md)).
+
+  That behaviour was not what the plan assumed either: the note said saving
+  *restarted* the step. It completed it. Worth measuring before designing.
+
 ## [0.9.0] — 2026-08-15
 
 ### Added

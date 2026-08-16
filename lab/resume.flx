@@ -1,0 +1,92 @@
+// lab/resume.flx — carrying on from the middle of a movement (pillars §5).
+// Run from the project root:  ./fluxa run lab/resume.flx
+//
+// Saving during an animation used to restart that step. Now the runner writes
+// how far into it we are on every frame, into a `prst dyn` that survives the
+// reload, and the next run picks the step up from there.
+//
+// A reload cannot be forced from inside a harness, so this checks the mechanism
+// the reload relies on: a step animated from scratch, then the same step
+// animated with the progress pre-set to 60%. The second one has to take about
+// 40% of the time and has to end at exactly the same place — resuming must not
+// cost distance.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static runner
+
+dyn win    = graph.init(800, 600, "resume")
+dyn canvas = image.new(800, 600)
+
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+dyn sheet = pool.Pool.atlas()
+dyn part  = [0.0, 0.0]
+
+// 600 px at 300 px/s: two seconds, long enough to measure honestly
+Block a typeof turtle.Turtle
+a.spawn(100.0, 200.0)
+a.hide()
+a.speed(300.0)
+a.path_color(0, 220, 140)
+a.path_width(4)
+a.go(1, 600.0, 0.0)
+
+// ── the whole step ────────────────────────────────────────────────
+int t0 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 1)
+int whole = time.elapsed_ms(t0)
+float endx = pool.Pool.get_x(0)
+print("whole step ...........  ", whole, " ms, ends at x=", math.to_int(endx), "   (expected ~2000 ms, x=700)")
+print("progress after it .....  ", part[0], " ", part[1], "   (expected 0 0 — nothing is in flight)")
+
+// ── the same step, resumed at 60% ─────────────────────────────────
+pool.Pool.home_all()
+painter.Painter.reset()
+part[0] = 1.0
+part[1] = 0.6
+
+int t1 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 1)
+int rest = time.elapsed_ms(t1)
+float endx2 = pool.Pool.get_x(0)
+print("resumed at 60% .......  ", rest, " ms, ends at x=", math.to_int(endx2), "   (expected ~800 ms, x=700)")
+
+// ── a stale progress for another step is ignored ──────────────────
+pool.Pool.home_all()
+painter.Painter.reset()
+part[0] = 9.0
+part[1] = 0.9
+
+int t2 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 1)
+int again = time.elapsed_ms(t2)
+print("stale progress .......  ", again, " ms   (expected ~2000: it belongs to another step)")
+
+runner.Runner.frame(win, canvas, sheet)
+
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/resume.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)
