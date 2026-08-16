@@ -354,6 +354,34 @@ again in reverse, slowly enough to watch.
 
 ---
 
+## Tracing a drawing you already have
+
+```bash
+python3 tools/trace.py logo.svg -o art.flx
+```
+
+`tools/trace.py` reads an **SVG** (no dependencies) or a **raster image**
+(needs Pillow), turns every outline into a run of `toward` steps, and writes
+Fluxa to paste into `main.flx`:
+
+```
+[trace] 6 outlines, 177 actions, 62 steps, 3 turtles -> art.flx
+```
+
+What comes out is ordinary turtle code — colours, speeds and steps you can edit,
+that animates, exports and obeys `pivot`, `shift` and `erase` like anything else
+you wrote by hand. `--turtles 4` draws it with four turtles at once, and
+`--max-steps` simplifies until the drawing fits the budget you give it.
+
+SVG keeps its shape, because the file is already curves and they are sampled
+rather than guessed at. A raster image is traced by outlining its dark areas,
+which works on line art, logos and silhouettes, and not on photographs.
+
+**[docs/TRACE.md](docs/TRACE.md)** has every option and what to do with the
+result.
+
+---
+
 ## Exporting
 
 One line in `main.flx` — from which step, to which step, and how many frames per
@@ -395,6 +423,7 @@ static/export.flx     exporting: frames and MP4
 static/runner.flx     execution
 lab/                  verification harnesses
 docs/TURTLE.md        every call the turtle has, and when each one happens
+docs/TRACE.md         tools/trace.py: an SVG or an image into turtle code
 docs/                 artworks, recipes, changelog and design decisions
 ```
 

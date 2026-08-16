@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="600" height="400">
+  <g transform="translate(10,10) scale(0.9)">
+    <path d="M20,100 C20,40 80,20 140,40 S260,80 280,60" stroke="#ffc83c" fill="none"/>
+    <path d="M40,150 Q100,110 160,150 T280,150" stroke="#ff785a" fill="none"/>
+    <path d="M60,180 A40,25 0 0 1 140,180 A40,25 0 0 0 220,180" stroke="#96c878" fill="none"/>
+  </g>
+  <polyline points="10,190 40,170 70,190 100,170" style="stroke:#c896ff;fill:none"/>
+  <rect x="240" y="10" width="50" height="30" stroke="red" fill="none" transform="rotate(15 265 25)"/>
+  <ellipse cx="150" cy="100" rx="60" ry="18" stroke="#78d0d6" fill="none"/>
+</svg>

@@ -3,6 +3,41 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.14.0] — 2026-08-16
+
+### Added
+
+- **`tools/trace.py`** — an SVG or a raster image into turtle code.
+
+  ```bash
+  python3 tools/trace.py logo.svg --turtles 3 -o art.flx
+  ```
+
+  SVG needs nothing installed and keeps its shape: `path` with every command
+  (`M L H V C S Q T A Z`, absolute and relative), `line`, `polyline`, `polygon`,
+  `rect`, `circle`, `ellipse`, `transform` on elements and groups, `viewBox`,
+  and colours from `stroke`, `fill` or `style`. A raster image needs Pillow and
+  is traced by outlining its dark areas — the border of every shape and of every
+  hole in it — which works on line art, logos and silhouettes and not on
+  photographs.
+
+  What it writes is ordinary turtle code: it animates, exports, and obeys
+  `pivot`, `shift` and `erase`. Turtles draw in parallel, so the cost in steps
+  is the longest turtle's run and `--turtles 4` costs about a quarter of the
+  steps. `--max-steps` is a budget the tool meets by searching for the smallest
+  simplification tolerance that fits, and it says which one it settled on.
+
+  Verified against the geometry rather than by eye: a traced circle of radius
+  100 in a 400×400 viewBox came out on the stage at 257.3–263.0 px from the
+  centre against the 260 the fit arithmetic predicts, and a fixture with
+  cubics, smooth cubics, quadratics, arcs, a rotated rect, a polyline, an
+  ellipse and a scaled group rendered every one of them in the right place. The
+  raster path was rewritten after its first version produced three fragments
+  instead of a star — it now walks borders with Moore following, and traces the
+  star and the hole inside it in 128 steps.
+
+- `docs/TRACE.md`, and `tools/example.svg` to try it on.
+
 ## [0.13.0] — 2026-08-16
 
 ### Changed
