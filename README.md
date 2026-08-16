@@ -327,58 +327,20 @@ export.Video(1, 36, 5)      // artwork.mp4
 export.Frames(1, 36, 60)    // numbered PNGs, in export/
 ```
 
-`0` as the second step means "through the last one". Asking for more steps than
-the artwork has is not a mistake: it generates what there is and says so, so the
-line can be written once and left there while the drawing grows under it.
+`0` as the second step means "through the last one", and asking for more steps
+than the artwork has generates what there is. The video is **H.264 written by
+Fluxa itself** — no ffmpeg, no external process, nothing left behind.
 
-The video is **H.264 written by Fluxa itself** — no ffmpeg, no external process,
-nothing left behind. Half a second of stillness is added at each end so it does
-not start and finish mid-gesture.
+It **does not record the screen**: the artwork is redone from the beginning with
+time advancing `1/fps` per frame, so a slow machine takes longer to generate and
+the file comes out the same. Two runs are byte-identical.
 
 **Nothing is ever written over.** The first render is `artwork.mp4`, the next
-`artwork1.mp4`, then `artwork2.mp4` — and the frames go to `export/`, `export1/`,
-`export2/` the same way. A render is work, and a file saved with the line still
-uncommented should not cost you the last one.
+`artwork1.mp4`; the frames go to `export/`, `export1/`, `export2/` the same way.
 
-Neither call renders anything by itself. They record what was asked for, and the
-Runner delivers it when execution reaches the stage — the artwork file declares,
-the runner executes ([adr 0011](docs/adr/0011-the-artwork-file-declares.md)).
-
-It **does not record the screen.** The artwork is redone from the beginning and
-each frame is rendered with time advancing `1/fps` per frame — never by the
-clock. A slow machine takes longer to generate and the video comes out exactly
-the same; two runs produce byte-identical frames.
-
-### The long way, for full control
-
-```fluxa
-export.Exporter.setup("frames", 60)     // folder and frame rate
-export.Exporter.hold(30, 90)            // still frames at the start and end
-export.Exporter.range(1, 5)             // only part of the artwork
-runner.Runner.export(win, canvas)       // writes the numbered PNGs
-```
-
-To turn those frames into a video and keep them:
-
-```fluxa
-danger {
-    dyn mp4 = video.open("artwork.mp4", config.W(), config.H(), export.Exporter.get_fps())
-    export.Exporter.to_video(mp4, 1)    // 1 keeps the PNGs, 0 deletes them
-    video.close(mp4)
-}
-if err != nil { print("video: ", err[0]) }
-```
-
-The video is a second pass over the frames that were just written, not a
-different render — the same exact images, in order
-([adr 0010](docs/adr/0010-the-video-is-a-second-pass-over-the-frames.md)).
-
-For WebM or GIF the frames are still there, and `finish()` prints the ffmpeg
-command ready to paste:
-
-```bash
-ffmpeg -framerate 60 -i frames/frame_%06d.png -vf split[a][b];[a]palettegen[p];[b][p]paletteuse out.gif
-```
+Keeping the frames, choosing the folder, setting the stillness at each end, or
+turning an existing folder into a video — all of that is in
+**[docs/TURTLE.md](docs/TURTLE.md#the-stage-and-everything-that-is-not-a-turtle)**.
 
 ---
 

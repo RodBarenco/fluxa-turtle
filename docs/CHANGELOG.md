@@ -56,16 +56,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `path_clear` remains the other eraser — it wipes everything up to a step;
   this one takes out a range and keeps the rest.
 
-- **`docs/TURTLE.md`** — the full guide: every call the turtle has, grouped by
-  *when* it happens (declaration, appearance, step), with the gotchas that
-  follow from that and the limits at the end. Checked by script against
-  `static/turtle.flx`: the guide names every call and invents none.
+- **`docs/TURTLE.md`** — the reference: **one entry per call**, with its
+  signature, a table saying what each argument is and what unit it is in, and
+  the note that only matters for that call. Thirty-two entries, grouped by what
+  they are for and labelled by when they take effect (declaration, appearance,
+  step).
+
+  Checked by script against `static/turtle.flx`: every call has an entry of its
+  own, no entry describes a call that does not exist, no signature disagrees on
+  arity, and no argument table describes a parameter the call does not take.
 
 ### Changed
 
 - **The README keeps only the basics** and points at the guide. What is left is
   enough to draw something — spawn, a colour, `go`, `ring`, the three kinds of
-  call in a table — and the reference lives in one place instead of two.
+  call in a table — and one short paragraph each for the stage and the export.
+  The reference material moved out entirely, including the Exporter's long
+  route, so nothing is written in two places and neither page can drift from
+  the other.
 
 ## [0.7.0] — 2026-08-15
 
