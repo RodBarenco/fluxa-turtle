@@ -104,6 +104,13 @@ Block Runner {
                     // straight back off — which is exactly what SPACE did.
                     panel.Panel.at(cur, limit, paused)
 
+                    // An arrow implies a pause. Pressing LEFT while the artwork
+                    // is still drawing stops it and goes back — having to press
+                    // SPACE first is a rule nobody should have to learn, and the
+                    // step in flight has not been committed anyway, so dropping
+                    // it costs nothing.
+                    if back == 1 { paused = 1 }
+
                     if replay == 1 {
                         print("[turtle] replay: redoing ", limit, " steps from the start")
                         replay = 0
@@ -137,14 +144,17 @@ Block Runner {
                             }
                         }
 
-                        // Back a step is a rebuild to one less: the artwork is
-                        // recomputed from the code every time anyway (adr 0002),
-                        // so walking backwards costs nothing to implement.
+                        // Back a step is that step run the other way round, at
+                        // the speed it was drawn with — the stroke shrinks back
+                        // into where it started instead of blinking out.
                         if back == 1 {
                             back = 0
                             if cur > 0 {
+                                rewind(win, canvas, sheet, cur)
                                 cur = cur - 1
-                                rebuild(win, canvas, cur)
+                                part[0] = 0.0
+                                part[1] = 0.0
+                                print("[turtle] back to step ", cur, " — RIGHT to draw it again, SPACE to carry on")
                             }
                         }
                     }
@@ -153,7 +163,20 @@ Block Runner {
                     if stop == 0 && paused == 0 && cur < limit {
                         int nxt = cur + 1
                         animate(win, canvas, sheet, part, nxt)
-                        if arrived == 0 { stop = 1 }
+
+                        // RIGHT pressed while this step was being drawn means
+                        // "one step, then stop" — and the step it means is this
+                        // one, which has just finished. Consuming it here is
+                        // what keeps the artwork from running one step further
+                        // than the key asked for.
+                        if forward == 1 {
+                            forward = 0
+                            paused = 1
+                            print("[turtle] paused at step ", nxt, " — RIGHT for one step, LEFT to go back, SPACE to carry on")
+                        }
+
+                        // A save is the only other way out of that animation.
+                        if arrived == 0 && back == 0 { stop = 1 }
                         if arrived == 1 { cur = nxt }
                         if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
                         if arrived == 1 && timeline.Timeline.moves_at(nxt) == 1 {
@@ -169,6 +192,8 @@ Block Runner {
                         panel.Panel.draw(win)
                         graph.end_frame(win)
                         hotkeys(win)
+                        // there is nothing after the last step to go forward to
+                        if forward == 1 { forward = 0 }
                     }
                 }
             }
@@ -489,7 +514,11 @@ Block Runner {
 
     // Animates a whole step. The turn is applied on departure; the displacement
     // is interpolated over time, each turtle at its own speed.
-    fn animate(dyn win, dyn canvas, dyn sheet, dyn part, int s) nil {
+    // Loads step `s` into the a* slots: who moves, from where to where, how
+    // long it takes and whether she leaves a trail. Both directions of time
+    // need exactly this, so it is one function — `animate` walks the fraction
+    // from 0 to 1 and `rewind` walks it back down.
+    fn arm(int s) nil {
         timeline.Timeline.apply_at(s)
         an = 0
         int nt = pool.Pool.count()
@@ -525,19 +554,29 @@ Block Runner {
             }
             t = t + 1
         }
+    }
 
-        if an == 0 {
-            arrived = 1
-            return
-        }
-
-        // the step lasts as long as the slowest turtle
+    // How long the armed step lasts: as long as its slowest turtle.
+    fn span() float {
         float dmax = 0.0
         int i = 0
         while i < an {
             if adur[i] > dmax { dmax = adur[i] }
             i = i + 1
         }
+        return dmax
+    }
+
+    fn animate(dyn win, dyn canvas, dyn sheet, dyn part, int s) nil {
+        arm(s)
+
+        if an == 0 {
+            arrived = 1
+            return
+        }
+
+        float dmax = span()
+        int i = 0
 
         // While exporting, the step has a whole and exact number of frames, and
         // each one's time is computed from the index — never accumulated.
@@ -615,6 +654,10 @@ Block Runner {
 
             if el >= dmax { running = 0 }
             if graph.should_close(win) { running = 0 }
+            // LEFT means "go back", and waiting for the stroke in flight to
+            // finish first would be the tool arguing with the key. The step is
+            // not committed, so leaving here drops it whole.
+            if exporting == 0 && back == 1 { running = 0 }
         }
 
         // Did we get there, or did a save cut the loop short? On a cancel the
@@ -643,6 +686,80 @@ Block Runner {
             int tt = aid[i]
             pool.Pool.set_pos(tt, atx[i], aty[i])
             if adraw[i] == 1 { painter.Painter.add(tt, asx[i], asy[i], atx[i], aty[i]) }
+            i = i + 1
+        }
+    }
+
+    // ── going back ────────────────────────────────────────────────
+    //
+    // The same step, walked the other way: the stroke shrinks back into the
+    // point it grew out of and the turtle walks home, over exactly the same
+    // number of seconds it took to draw. Going forward is watched, so going
+    // back should be watched too — a step that vanishes in one frame tells you
+    // nothing about what it was.
+    //
+    // It costs a rebuild first, to the step BEFORE this one: that is what takes
+    // the stroke out of the baked texture and puts the turtles back at the
+    // start of the movement. From there the loop is `animate`'s, with the
+    // fraction running from 1 down to 0 — the same in-flight stroke drawn from
+    // the step's start point to wherever she is now, which is why it shortens
+    // instead of being wiped (adr 0002: the artwork is recomputed from the
+    // code, never undone).
+    //
+    // Nothing is committed at the end. The artwork is already at `s - 1`; the
+    // turtles only have to land exactly on the point the rebuild gave them.
+    fn rewind(dyn win, dyn canvas, dyn sheet, int s) nil {
+        if s < 1 { return }
+
+        rebuild(win, canvas, s - 1)
+        arm(s)
+        if an == 0 { return }
+
+        float dmax = span()
+        if dmax <= 0.0 { return }
+
+        int t0 = time.now_ms()
+        float el = 0.0
+        int running = 1
+        while running == 1 {
+            guard[0] = s         // anchor FIRST
+            el = math.to_float(time.elapsed_ms(t0)) / 1000.0
+
+            graph.begin_frame(win)
+            stage.Stage.clear(win)
+            graph.draw_image(win, canvas, 0, 0)
+            painter.Painter.draw(win)
+
+            int i = 0
+            while i < an {
+                guard[0] = i     // anchor FIRST
+                float p = 0.0
+                if adur[i] > 0.0 { p = 1.0 - el / adur[i] }
+                if p < 0.0 { p = 0.0 }
+                if p > 1.0 { p = 1.0 }
+
+                float cx = asx[i] + (atx[i] - asx[i]) * p
+                float cy = asy[i] + (aty[i] - asy[i]) * p
+                pool.Pool.set_pos(aid[i], cx, cy)
+
+                if adraw[i] == 1 { painter.Painter.stroke(win, aid[i], asx[i], asy[i], cx, cy) }
+                i = i + 1
+            }
+
+            pool.Pool.draw(win, sheet)
+            panel.Panel.draw(win)
+            graph.end_frame(win)
+            hotkeys(win)
+
+            if el >= dmax { running = 0 }
+            if graph.should_close(win) { running = 0 }
+        }
+
+        // Home. Whether the loop ran out or a save cut it short, the artwork is
+        // the rebuild's and the turtles belong at the start of the step.
+        int i = 0
+        while i < an {
+            pool.Pool.set_pos(aid[i], asx[i], asy[i])
             i = i + 1
         }
     }

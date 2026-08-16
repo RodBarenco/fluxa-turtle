@@ -628,8 +628,8 @@ composition. With the window focused:
 |---|---|
 | **P** | The panel, over the stage. Off by default. |
 | **SPACE** | Pause / carry on. |
-| **→** | One step forward, animated. Only while paused. |
-| **←** | One step back. Only while paused. |
+| **→** | One step forward, animated. |
+| **←** | One step back, animated in reverse. |
 | **R** | Replay from step 1. |
 | **F** | Fullscreen, and back. |
 
@@ -661,13 +661,27 @@ the artwork, not the workshop.
 
 `SPACE` stops the artwork where it is, mid-movement included: the turtle holds
 the position the last frame gave her. From there, `→` animates exactly one step
-and `←` goes back one.
+and `←` walks the last one back.
 
-Back is a **rebuild**, not an undo: the artwork is drawn again from step 1 up to
-the step before, so what you see is the drawing as it was then — erased ranges,
-`pivot`, `shift` and appearance changes all resolved the way they were at that
-moment. It costs one rebuild (~160 ms for a large artwork), which is why it is a
-key you press, not something that happens per frame.
+**Neither arrow needs SPACE first.** Pressing one pauses the stage by itself —
+having to press two keys to look at something would be the tool arguing with
+you. Pressed while the artwork is still drawing:
+
+- `→` means "finish this step and stop there";
+- `←` drops the step in flight — it was never committed — and unwinds the last
+  completed one.
+
+**Going back is the step run the other way round**, over the same seconds it
+took to draw: the stroke shrinks back into the point it grew from and the turtle
+walks home. Going forward is something you watch, so going back should be too; a
+step that vanishes in one frame tells you nothing about what it was.
+
+Underneath it is still a rebuild — the artwork is recomputed from the code, it
+is never undone (adr 0002) — so what is left on screen is exactly the drawing as
+it was at that step, with erased ranges, `pivot`, `shift` and appearance changes
+all resolved the way they were then. Verified to the pixel in `lab/rewind.flx`.
+The rebuild costs ~160 ms on a large artwork, and it happens before the reverse
+animation starts.
 
 Pausing is a state of the window, not of the artwork: it touches neither the
 file, nor the progress that crosses a save, nor the export. **Saving while

@@ -3,6 +3,31 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.0] — 2026-08-16
+
+### Changed
+
+- **An arrow implies a pause.** `←` and `→` no longer need SPACE first. Pressed
+  while the artwork is still drawing, `→` means "finish this step and stop
+  there" and `←` drops the step in flight — it was never committed — and unwinds
+  the last completed one, leaving the animation immediately instead of waiting
+  for the stroke to finish.
+
+- **Going back is the step run the other way round**, over the same seconds it
+  took to draw: the stroke shrinks back into the point it grew from and the
+  turtle walks home. It is still a rebuild underneath, for the reason it always
+  was — the artwork is recomputed from the code, never undone — so what is left
+  on screen is exactly the drawing as it was at that step
+  ([adr 0017](adr/0017-going-back-is-the-step-run-backwards.md)).
+
+  Measured in `lab/rewind.flx`: 2050 ms back against 2017 ms forward for the
+  same 400 px step at 200 px/s, ending exactly where the step began, with the
+  result pixel-identical to the artwork at the previous step.
+
+- Arming a step — who moves, from where to where, how long it takes, whether it
+  draws — came out of `animate` into `Runner.arm`, with `Runner.span` for the
+  duration. One place to arm a step, two ways to walk it.
+
 ## [0.12.0] — 2026-08-16
 
 ### Added

@@ -1,0 +1,103 @@
+// lab/rewind.flx — going back a step, at the speed it was drawn.
+// Run from the project root:  ./fluxa run lab/rewind.flx
+//
+// LEFT used to rebuild to the previous step, which took the stroke out in one
+// frame. Now the step runs the other way round: the stroke shrinks back into
+// the point it grew from, over the same seconds it took to draw.
+//
+// Three things have to be true, and none of them can be judged by eye:
+//
+//   1. it lasts as long as the step did — 400 px at 200 px/s is two seconds
+//      forwards and two seconds back;
+//   2. it ends with the turtle exactly where the step began;
+//   3. what is left on screen is the artwork at the previous step, to the
+//      pixel. The PNGs it saves are compared by script for that.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "rewind")
+dyn canvas = image.new(800, 600)
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+dyn sheet = pool.Pool.atlas()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+dyn part = [0.0, 0.0]
+
+// Three sides of a square, 400 px each at 200 px/s: two seconds a side.
+// The turns are negative because angles grow anticlockwise and the stage's y
+// grows downwards: -90 from "pointing right" is down the screen.
+Block a typeof turtle.Turtle
+a.spawn(200.0, 150.0)
+a.hide()
+a.speed(200.0)
+a.path_color(120, 208, 214)
+a.path_width(3)
+a.go(1, 400.0,  0.0)
+a.go(2, 400.0, -90.0)
+a.go(3, 400.0, -90.0)
+
+// ── forwards ──────────────────────────────────────────────────────
+
+int f0 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 1)
+runner.Runner.animate(win, canvas, sheet, part, 2)
+int fwd2 = time.elapsed_ms(f0)
+
+// the reference: the artwork with two steps done
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn ref = graph.capture(win)
+    image.save(ref, "lab/rewind_ref2.png")
+    image.discard(ref)
+}
+if err != nil { print("capture: ", err[0]) }
+
+int f1 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 3)
+int fwd3 = time.elapsed_ms(f1)
+print("step 3 forwards ......  ", fwd3, " ms   (expected ~2000: 400 px at 200 px/s)")
+print("she is at ............  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
+      "   (expected 200,550 — the far corner)")
+
+// ── and back ──────────────────────────────────────────────────────
+
+int b0 = time.now_ms()
+runner.Runner.rewind(win, canvas, sheet, 3)
+int bwd = time.elapsed_ms(b0)
+print("step 3 backwards .....  ", bwd, " ms   (expected ~2000 too, plus a rebuild)")
+print("she is back at .......  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
+      "   (expected 600,550 — where step 3 set off from)")
+
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/rewind.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+print("")
+print("rewind.png must equal rewind_ref2.png — the artwork at step 2, to the pixel")
+print("(two steps forwards took ", fwd2, " ms, so the clock in this harness is honest)")
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)
