@@ -90,11 +90,27 @@ against a plain stroke.
 
 ---
 
-## Sprint 7 — Movement with a shape · easing and duration
+## Sprint 7 — Movement with a shape · acceleration and duration
 
-**Deliver:** `ease_in()`, `ease_out()`, `ease_in_out()`, `ease_off()`, and
-`go_for(step, dist, turn, seconds)` — a step declared by how long it should
-take instead of how fast the turtle is.
+**Deliver:** `go_accel(step, dist, turn, start_px_s, end_px_s)` and
+`go_silent_accel(...)` — a movement that begins at one speed and ends at
+another — plus `go_for(step, dist, turn, seconds)`, a step declared by how long
+it should take instead of how fast the turtle is.
+
+**Accel replaces the easing this sprint used to propose**, and it is the better
+spelling for this tool. `ease_in_out()` names a curve; "start at 100 px/s and
+finish at 800" is the same curve said in the unit the person already has, which
+is the same reason `circle(cx, cy, r)` beat working out a polar loop. A named
+easing can always be added later on top of it.
+
+**The arithmetic, so nobody re-derives it.** A speed ramping linearly from `v0`
+to `v1` over distance `d` takes `T = 2d / (v0 + v1)` — the average speed, not
+the final one — and the distance at time `t` is `v0·t + ½·a·t²` with
+`a = (v1 - v0) / T`. Both are exact and cheap; `arm` already computes a
+duration, and this is a different formula in the same place.
+
+**Careful:** `v0 + v1` must not be zero, and a movement that starts and ends at
+zero never arrives.
 
 Every movement in the tool is linear today: `animate` walks the fraction
 straight from 0 to 1. This is the cheapest large improvement left, and it is
@@ -115,10 +131,75 @@ retrace going forward.
 `arm(s)` already computes a duration from distance and speed; `go_for` gives it
 one instead, which is a smaller change than it sounds.
 
-**Verify:** `lab/ease.flx` — time each easing over the same step (the total must
-not change), and sample the position at 25%, 50% and 75% against the curve's own
-numbers. Plus one PNG with four turtles racing the same distance under the four
-curves.
+**Storage:** an action carries one speed today (`Timeline.get_speed`). Accel
+needs a second one, which is one more array of `MAX_ACTIONS` floats — 65536
+of them, about 512 KB. That is the decision to take before writing anything:
+a second speed on every action, or a separate small table for the actions that
+accelerate.
+
+**Verify:** `lab/accel.flx` — the duration against `2d / (v0 + v1)`, the
+position sampled at a quarter, a half and three quarters of the time against the
+equation, that the total time is the same whichever end is faster, and that a
+rewind of an accelerated step takes as long as the step did.
+
+---
+
+## Sprint 7b — `follow` · a whole trajectory in one call
+
+**Deliver** (from the path proposal, renamed — see below):
+
+```fluxa
+follow(first, points, px_s)                        // -> next free step
+follow_silent(first, points, px_s)
+follow_accel(first, points, start_px_s, end_px_s)
+follow_silent_accel(first, points, start_px_s, end_px_s)
+```
+
+One `(x, y)` list, one call, **one step per segment** — the step model is
+untouched, and what shrinks is the artwork file, not the timeline. That is worth
+being clear about: a traced drawing still costs 1345 steps, it just stops
+costing 1345 lines.
+
+**Not called `path`.** The turtle already has `path_color`, `path_width`,
+`path_dotted`, `path_opacity`, `path_clear`, `path_on/off` — nine calls where
+`path_` means *how the trail looks*. Hanging movement off the same prefix puts
+two unrelated ideas under one word in the API a beginner reads first, and
+`path_silent` is worse than ambiguous now that the tool has sound: it reads as
+"make the path quiet". `follow(first, points, ...)` says what it does, and
+`follow_silent` inherits the meaning `go_silent` already established.
+
+**The `dyn` question, which is smaller than it looks.** `points` is a `dyn`, and
+a Block field cannot hold one (adr 0013) — but `follow` does not need to hold
+it. It reads the list once, at declaration time, and emits one `toward` per
+segment into the timeline, exactly as `ring` emits its `go`s. A `dyn` arriving
+as a method parameter is the pattern the canvas already uses. **No new
+architecture.**
+
+**Decide first, and measure it:** how big a `dyn` literal `main.flx` can hold.
+A traced drawing is ~2700 floats in one literal, and the caps in `fluxa.toml`
+size the AST — `ast_pool_cap` is 16384 and a full artwork measured 5794 nodes.
+Whether a 2700-element literal fits, and what it costs to parse on every save,
+is a ten-minute experiment and it decides whether `follow` is what `trace.py`
+should emit.
+
+**Accel over a path is distance-based**, as the proposal says, and that is not a
+detail: points come out of a tracer unevenly spaced, so a progression by point
+index would accelerate through dense regions and crawl through sparse ones. The
+speed at a point is a function of the distance travelled so far over the total.
+
+There are two ways to spend that, and they should be measured against each
+other rather than argued about: give each segment a constant speed sampled at
+its midpoint (a staircase, invisible at ~10 px a segment, and it needs nothing
+new), or give each segment its own `v0`/`v1` (exactly smooth, and it needs
+Sprint 7's second speed field).
+
+**Verify:** `lab/follow.flx` — the returned step against the point count, the
+drawing pixel-identical to the same trajectory written as individual `toward`
+calls, and for the accel version the time of each segment against the
+distance-based speed at its midpoint.
+
+**Then:** `tools/trace.py` gets a `--emit follow` mode, and the artwork it
+writes goes from 1944 lines to a few dozen.
 
 ---
 
@@ -337,18 +418,24 @@ designed before something actually needs them.
 ## Order, and why
 
 1. **Sprint 6** — the last pillar item, and small now that rotation exists.
-2. **Sprint 7** — the biggest visible change per line of code, and it unblocks
+2. **Sprint 7b** before **7**, if the studio is the goal. `follow` is
+   independent of everything else, it is what `trace.py` should have been
+   emitting all along, and a studio that records a hand moving produces exactly
+   one thing: a list of points. Accel is the bigger visual change; `follow` is
+   the one the rest of the plan leans on.
+3. **Sprint 7** — the biggest visible change per line of code, and it unblocks
    half of the expansions' animation list.
-3. **Sprint 8** — text is the most asked-for thing in a turtle tool that does
+4. **Sprint 8** — text is the most asked-for thing in a turtle tool that does
    not have it.
-4. **Sprint 10** — export options are small, independent, and each one is
+5. **Sprint 10** — export options are small, independent, and each one is
    immediately useful.
-5. **Sprint 12** — the panel is cheap to extend and it is the teaching half of
+6. **Sprint 12** — the panel is cheap to extend and it is the teaching half of
    the project.
-6. **Sprint 9** — the camera is the largest and it should wait until the
+7. **Sprint 9** — the camera is the largest and it should wait until the
    off-screen question is answered on paper.
-7. **Sprint 11** — audio, the day the runtime can make a sound.
 8. **Sprints 13 and 14** — when there is an artwork that wants them.
+
+Sprint 11 (audio) is done.
 
 Sprints 6, 7, 8, 10 and 12 are independent of each other and can be done in any
 order. 9 and 11 each have a question to answer before any code.
