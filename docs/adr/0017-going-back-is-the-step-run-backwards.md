@@ -69,6 +69,14 @@ it.
   different from every other piece of state here. `rewind` now takes every
   turtle's heading before it arms anything and restores it at the end, on every
   path out of the function.
+- **And restoring it through the wrong setter was worse than not restoring it.**
+  `Pool.set_face` writes the heading a turtle is *born* with — the one
+  `home_all` puts back at the start of every rebuild — so using it to put the
+  current heading back rewrote where she starts from, and the next rebuild drew
+  the entire figure rotated. `Pool.set_ang` is the one that means "where she is
+  pointing now", and it exists because these two were one call too few. A
+  harness that rewinds and then *rebuilds* is what makes that visible: without
+  the rebuild, the corrupted birth heading is never read.
 - A save landing inside a reverse run is harmless: the artwork is already the
   rebuild's, and the turtles are put home whether the loop finished or not.
 - `lab/rewind.flx` measures all three claims that matter — the reverse takes as

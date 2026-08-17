@@ -120,6 +120,24 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
+// ── and the artwork survives being rebuilt afterwards ─────────────
+//
+// The check that would have caught the worse of the two bugs here. A rebuild
+// starts by sending every turtle home — to the position and the heading she was
+// BORN with — so anything that quietly writes a birth heading does not show up
+// until the next rebuild, and then it turns the entire figure. Rebuilding here
+// and comparing is what makes that visible.
+
+runner.Runner.rebuild(win, canvas, 3)
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn again = graph.capture(win)
+    image.save(again, "lab/rewind_rebuilt.png")
+    image.discard(again)
+}
+if err != nil { print("capture: ", err[0]) }
+print("rewind_rebuilt.png must equal rewind_redone.png — a rebuild after a rewind draws the same artwork")
+
 print("")
 print("rewind.png must equal rewind_ref2.png — the artwork at step 2, to the pixel")
 print("rewind_redone.png must differ from it in step 3's stroke and nowhere else")

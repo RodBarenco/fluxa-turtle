@@ -350,6 +350,13 @@ Block Pool {
 
     fn turn(int i, float deg) nil { ang[i] = ang[i] + deg }
 
+    // Where she is pointing NOW. Not `set_face`, which sets the heading she is
+    // BORN with — the one `home_all` puts back at the start of every rebuild.
+    // Writing the current heading through `set_face` turns the whole artwork on
+    // its next rebuild, which is a memorable way to find out they are different
+    // things.
+    fn set_ang(int i, float deg) nil { ang[i] = deg }
+
     fn set_pos(int i, float px, float py) nil {
         x[i] = px
         y[i] = py

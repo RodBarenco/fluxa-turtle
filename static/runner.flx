@@ -851,7 +851,7 @@ Block Runner {
         int q = 0
         while q < nt {
             guard[0] = q     // anchor FIRST
-            pool.Pool.set_face(q, aang[q])
+            pool.Pool.set_ang(q, aang[q])
             q = q + 1
         }
     }
