@@ -132,6 +132,7 @@ Block Runner {
                         panel.Panel.draw(win)
                         graph.end_frame(win)
                         hotkeys(win)
+                        audio.Audio.tick()
 
                         // A key is cleared when it is ACTED ON, never in
                         // passing: animating one step takes a second or so, and
@@ -197,6 +198,7 @@ Block Runner {
                         panel.Panel.draw(win)
                         graph.end_frame(win)
                         hotkeys(win)
+                        audio.Audio.tick()
                         // there is nothing after the last step to go forward to
                         if forward == 1 { forward = 0 }
                     }
@@ -694,7 +696,10 @@ Block Runner {
 
             // No keyboard during a controlled render: the export answers to the
             // frame index and to nothing else (adr 0006).
-            if exporting == 0 { hotkeys(win) }
+            if exporting == 0 {
+                hotkeys(win)
+                audio.Audio.tick()
+            }
             if exporting == 1 { export.Exporter.save(win) }
 
             if el >= dmax { running = 0 }
@@ -724,6 +729,11 @@ Block Runner {
             part[0] = 0.0
             part[1] = 0.0
         }
+
+        // The step is over, so its sound is too: `draw` is four and a half
+        // seconds and a step is often shorter, and one gesture's sound playing
+        // under the next three is not a rhythm.
+        if exporting == 0 { audio.Audio.ends() }
 
         // close the step: exact final position and the path becomes permanent
         i = 0
@@ -795,6 +805,7 @@ Block Runner {
             panel.Panel.draw(win)
             graph.end_frame(win)
             hotkeys(win)
+            audio.Audio.tick()
 
             if el >= dmax { running = 0 }
             if graph.should_close(win) { running = 0 }

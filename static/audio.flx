@@ -70,6 +70,23 @@ Block Audio {
     int gap_ms = 70
     int last_ms = 0
 
+    // ── a sound does not outlive its step ─────────────────────────
+    //
+    // `draw` is four and a half seconds and a step is often half of that, so
+    // without this the sound of one gesture goes on under the next three. When
+    // the step closes, whatever it was playing is faded out over 70 ms and
+    // stopped — long enough not to click, short enough to still belong to the
+    // step it came from.
+    //
+    // std.sound has no fade, so this is a volume ramp driven by `tick`, which
+    // the runner calls once per presented frame. The fade therefore carries on
+    // across the frames of the NEXT step, which is what makes it a fade rather
+    // than a cut.
+    int cur_h    = 0         // the step sound playing right now
+    int fading   = 0
+    int fade_t0  = 0
+    int fade_ms  = 70
+
     int track = 0 - 1        // slot of the background track, -1 = none
 
     int arr cue_step[64] = 0
@@ -82,6 +99,7 @@ Block Audio {
     // is the whole point of `is_playing` — across a save it must stay 1.
     int fired   = 0
     int started = 0
+    int loads   = 0          // files actually read from disk this session
 
     int arr guard[1] = 0     // hot-loop anchor
 
@@ -185,7 +203,52 @@ Block Audio {
         if on == false { sound.resume(eng, hnd[track]) }
     }
 
+    // Is the step's own sound still going? Only a harness asks.
+    fn heard() int {
+        if eng <= 0 { return 0 }
+        if cur_h <= 0 { return 0 }
+        bool on = sound.is_playing(eng, cur_h)
+        if on { return 1 }
+        return 0
+    }
+
+    fn level() float { return math.to_float(vol) / 100.0 }
+
+    fn stop_fade() nil {
+        fading = 0
+        if eng <= 0 { return }
+        if cur_h > 0 { sound.volume(eng, cur_h, level()) }
+    }
+
+    // The step is over. Let go of its sound.
+    fn ends() nil {
+        if eng <= 0 { return }
+        if cur_h <= 0 { return }
+        fading = 1
+        fade_t0 = time.now_ms()
+    }
+
+    // One frame of the fade. Called by the runner wherever a frame is
+    // presented — the same places the keyboard is read, and for the same
+    // reason: it is the only clock this program has.
+    fn tick() nil {
+        if fading == 0 { return }
+        if eng <= 0 { return }
+        if cur_h <= 0 { return }
+        int el = time.now_ms() - fade_t0
+        if el >= fade_ms {
+            sound.stop(eng, cur_h)
+            sound.volume(eng, cur_h, level())     // ready for the next step
+            fading = 0
+            cur_h = 0
+            return
+        }
+        float k = 1.0 - math.to_float(el) / math.to_float(fade_ms)
+        sound.volume(eng, cur_h, level() * k)
+    }
+
     fn fires()  int { return fired }
+    fn loaded() int { return loads }
     fn starts() int { return started }
     fn count() int { return files }
     fn cue_count() int { return cues }
@@ -222,6 +285,20 @@ Block Audio {
         while i < files {
             guard[0] = i     // anchor FIRST
             int h = math.to_int(a[1 + i])
+
+            // Does this slot still hold the file the artwork names now?
+            int want = strings.hash(path[i])
+            if h != 0 {
+                if math.to_int(a[5 + i]) != want {
+                    if h > 0 {
+                        sound.stop(eng, h)
+                        sound.unload(eng, h)
+                    }
+                    h = 0
+                    a[1 + i] = 0.0
+                }
+            }
+
             if h == 0 {
                 // A file that is not there is not a reason to stop drawing: it
                 // stays silent and says why, the same courtesy the background
@@ -233,7 +310,9 @@ Block Audio {
                     print("[audio] ", path[i], ": ", err[0])
                     h = 0 - 1
                 }
+                if h > 0 { loads = loads + 1 }
                 a[1 + i] = 1.0 * math.to_float(h)
+                a[5 + i] = 1.0 * math.to_float(want)
             }
             hnd[i] = h
             if h > 0 { sound.volume(eng, h, math.to_float(vol) / 100.0) }
@@ -247,14 +326,14 @@ Block Audio {
         while k < 6 {
             guard[0] = k     // anchor FIRST
             if wants(k) == 1 {
-                int h = math.to_int(a[5 + k])
+                int h = math.to_int(a[9 + k])
                 if h == 0 {
                     danger { h = sound.load(eng, kit[k]) }
                     if err != nil {
                         print("[audio] ", kit[k], ": ", err[0])
                         h = 0 - 1
                     }
-                    a[5 + k] = 1.0 * math.to_float(h)
+                    a[9 + k] = 1.0 * math.to_float(h)
                 }
                 kit_h[k] = h
                 if h > 0 { sound.volume(eng, h, math.to_float(vol) / 100.0) }
@@ -303,7 +382,11 @@ Block Audio {
             if kit_h[kind] > 0 {
                 int now = time.now_ms()
                 if now - last_ms >= gap_ms {
-                    sound.play(eng, kit_h[kind])
+                    // A fade in progress belongs to the step that just ended;
+                    // this one wants the sound at full level again.
+                    stop_fade()
+                    cur_h = kit_h[kind]
+                    sound.play(eng, cur_h)
                     last_ms = now
                     fired = fired + 1
                 }

@@ -760,7 +760,10 @@ and the video are — one line, in `main.flx`:
 
 ### `audio.Track(path)`
 
-Plays while the artwork runs, and **keeps playing across a save**. That is the
+Plays while the artwork runs, and **keeps playing across a save** — unless you
+change the filename, which is noticed: the path is hashed and carried with the
+handle, so a slot that no longer holds what the artwork names is stopped,
+released and read again. That is the
 whole reason it exists as its own call: the engine and the loaded files survive
 the reload, and `Track` presses play only when nothing is already playing. Live
 coding with music that restarted on every Ctrl-S would be no fun.
@@ -796,6 +799,14 @@ turns the step sound off from that point.
 
 **One sound at the start of the step, and no more** — a step is one gesture, so
 it makes one noise when it begins, however long it takes to walk.
+
+**And it does not outlive the step.** `draw` is four and a half seconds; a step
+is often shorter, and one gesture's sound going on under the next three is not a
+rhythm. When the step closes, whatever it was playing is faded over 70 ms and
+stopped — long enough not to click, short enough to still belong to the step it
+came from. `std.sound` has no fade, so it is a volume ramp driven once per
+presented frame, which means the fade carries on across the beginning of the
+next step rather than cutting.
 
 **Two are never closer together than 70 ms.** That is a floor and nothing more:
 a short step restarting the sound is the drawing keeping up with itself, and a

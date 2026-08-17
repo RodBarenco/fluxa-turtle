@@ -45,7 +45,7 @@ stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
 
 dyn part = [0.0, 0.0]
-dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 print("backend: ", sound.version(), "   (a stub here means no runtime audio — nothing below proves anything)")
 
@@ -83,6 +83,29 @@ print("track pressed play ...  ", audio.Audio.starts(), "   (expected 1)")
 audio.Audio.open(snd)
 audio.Audio.open(snd)
 print("after two more opens .  ", audio.Audio.starts(), "   (expected 1 still — the music did not restart)")
+
+// ── editing a filename is noticed ─────────────────────────────────
+//
+// A handle is kept across a save by POSITION — "the first file this artwork
+// named" — so changing `Track("a.wav")` to `Track("b.wav")` used to reuse the
+// handle from a.wav and go on playing it. The path's hash rides along in the
+// same array to catch exactly that.
+//
+// Simulated here by poking the carried hash: a slot whose hash no longer
+// matches has to be unloaded and loaded again, which shows up as a new handle.
+
+// Nothing is read from disk twice while the paths stay put — that is what
+// keeps the music playing across a save.
+int reads = audio.Audio.loaded()
+audio.Audio.open(snd)
+print("reads on a plain save .  ", audio.Audio.loaded() - reads, "   (expected 0 — nothing was reloaded)")
+
+// Now the same slot, pointing somewhere else.
+reads = audio.Audio.loaded()
+snd[5] = 12345.0                       // as if that slot came from another file
+audio.Audio.open(snd)
+print("reads after a rename ..  ", audio.Audio.loaded() - reads, "   (expected 1 — the old file was let go and this one read)")
+print("hash now stored .......  ", math.to_int(snd[5]) != 12345, "   (expected true — the real path's)")
 
 // ── the rebuild is silent ─────────────────────────────────────────
 
@@ -168,6 +191,44 @@ int rapid = audio.Audio.fires() - was
 print("20 steps in a blur ...  ", rapid, " heard of 20   (expected a handful: they span")
 print("                        about 330 ms and the floor is 70 ms. Restarting a sound on a")
 print("                        short stroke is wanted; a hundred a second is not)")
+
+// ── a sound does not outlive its step ─────────────────────────────
+//
+// `draw` is 4470 ms. A step is usually shorter, and one gesture's sound going
+// on under the next three is not a rhythm. When the step closes, whatever it
+// was playing is faded over 70 ms and stopped — so 100 ms after the step ends,
+// with the frames that carry the fade having gone by, nothing is playing.
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+audio.Draw()
+
+// Far enough from the last test that the 70 ms floor cannot swallow this one.
+time.sleep(200)
+
+Block e typeof turtle.Turtle
+e.spawn(120.0, 500.0)
+e.hide()
+e.speed(2000.0)
+e.path_color(255, 200, 60)
+e.path_width(3)
+e.go(1, 200.0, 0.0)
+
+runner.Runner.rebuild(win, canvas, 0)
+int hb = audio.Audio.fires()
+runner.Runner.animate(win, canvas, sheet, part, 1)
+print("")
+print("step 1 made a sound ..  ", audio.Audio.fires() - hb, "   (expected 1)")
+print("playing after step 1 .  ", audio.Audio.heard(), "   (expected 1 — a 4470 ms sound on a 100 ms step)")
+
+int f = 0
+while f < 12 {
+    runner.Runner.shown(win, canvas, sheet)
+    audio.Audio.tick()
+    time.sleep(10)
+    f = f + 1
+}
+print("after 120 ms of frames  ", audio.Audio.heard(), "   (expected 0 — faded out over 70 ms and stopped)")
 
 // ── an export says nothing ────────────────────────────────────────
 

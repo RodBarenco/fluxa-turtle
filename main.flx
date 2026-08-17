@@ -59,8 +59,10 @@ prst dyn part   = [0.0, 0.0]
 // silent on the fourth save — and because nothing here is closed or loaded
 // twice, a soundtrack keeps playing straight through a save.
 //
-//   [engine, four files the artwork loaded, six sounds a step can make]
-prst dyn snd    = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+//   [engine | four file handles | the hash of each of their paths | six step
+//    sounds]. The hashes are what notice that you edited a filename: without
+//    them the handle is kept by position and the old sound goes on playing.
+prst dyn snd    = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 graph.set_fps(win, config.FPS())
 
@@ -84,7 +86,7 @@ leo.path_color(90, 230, 230)
 leo.path_width(1)
 leo.speed(900.0)
 leo.hide()
-audio.Draw()  
+audio.Pencil()  
 leo.go(1, 500.0, 0.0)
 
 
