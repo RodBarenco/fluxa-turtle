@@ -530,6 +530,24 @@ ranges per turtle.
 
 Neither eraser touches another turtle's drawing.
 
+### `erase_at(step, from, to)` — step
+
+The same, on a step you choose.
+
+| | |
+|---|---|
+| `step` | `int` — when the strokes stop being drawn |
+| `from`, `to` | `int` — the range of her steps to take out |
+
+```fluxa
+lines.erase_at(436, 1, 387)     // the sketch goes the moment the painting arrives
+```
+
+`erase` happens after everything that turtle has declared, which is what you
+want at the end of a file and not what you want in a composition where something
+else has to happen first. The step here is explicit, so it can be earlier than
+her last one, and the artwork runs to that step even if nobody moves on it.
+
 ---
 
 # Moving what is already drawn
@@ -598,7 +616,7 @@ are untouched.
 | `circle(step, cx, cy, r)` · `ellipse(step, cx, cy, rx, ry)` | steps, returns the next |
 | `star(step, cx, cy, r, inner, points)` · `arc(step, cx, cy, r, from, to)` | steps, returns the next |
 | `toward(step, x, y)` · `jump(step, x, y)` | step |
-| `path_clear(step)` · `erase(from, to)` | step |
+| `path_clear(step)` · `erase(from, to)` · `erase_at(step, from, to)` | step |
 | `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | step |
 
 ---

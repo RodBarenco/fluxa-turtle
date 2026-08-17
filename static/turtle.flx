@@ -170,6 +170,19 @@ Block Turtle {
         timeline.Timeline.style_at(id, timeline.Timeline.last_step(id) + 1, 12, from, to, 0, 0.0)
     }
 
+    // The same, on a step you choose. `erase` happens after everything she has
+    // declared so far, which is what you want at the end of a file and not what
+    // you want in a composition where something else has to happen first — a
+    // sketch that disappears only once the painting has swum into place.
+    //
+    //     lines.erase_at(471, 1, 387)
+    //
+    // The step is explicit, so it can be earlier than her last one, and the
+    // artwork runs to that step even if nobody moves on it.
+    fn erase_at(int step, int from, int to) nil {
+        timeline.Timeline.style_at(id, step, 12, from, to, 0, 0.0)
+    }
+
     // ── movement ──────────────────────────────────────────────────
     //
     // Walks `dist` pixels on the given step, turning `turn` degrees before

@@ -377,7 +377,9 @@ python3 tools/trace.py logo.svg -o art.flx
 
 `tools/trace.py` reads an **SVG** (no dependencies) or a **raster image**
 (needs Pillow), turns every outline into a run of `toward` steps, and writes
-Fluxa to paste into `main.flx`:
+Fluxa to paste into `main.flx`. A drawing on paper goes through
+`tools/cutout.py` first, which takes the paper out and hands back the drawing on
+transparency — ready to be traced, or to be a sprite:
 
 ```
 [trace] 6 outlines, 177 actions, 62 steps, 3 turtles -> art.flx

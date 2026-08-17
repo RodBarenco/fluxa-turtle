@@ -371,7 +371,14 @@ Block Runner {
     }
 
     // Redraws the finished artwork in a single frame and pins it to the texture.
-    fn rebuild(dyn win, dyn canvas, int upto) nil {
+    // Everything the replay needs in place before a single stroke is drawn:
+    // the turtles home, the marks cleared, the appearance back to its defaults,
+    // the moves and the erases of the whole artwork resolved, and an empty
+    // segment pool. A pass over the artwork starts here — and a layered stroke
+    // needs TWO passes, which is why this is a function and not six lines
+    // inline. Getting the second pass to start from a different state is how
+    // an erased sketch came back from the dead.
+    fn ready(int upto) nil {
         pool.Pool.home_all()
         pool.Pool.clear_marks()
         pool.Pool.reset_styles()
@@ -381,6 +388,10 @@ Block Runner {
         timeline.Timeline.apply_moves(upto)
         scan_clears(upto)
         painter.Painter.reset()
+    }
+
+    fn rebuild(dyn win, dyn canvas, int upto) nil {
+        ready(upto)
 
         // The background image lives here, as a local, for exactly one frame.
         // It has to: graph.draw_image batches, so releasing it before end_frame
@@ -408,9 +419,7 @@ Block Runner {
 
         if layers == 1 {
             painter.Painter.set_layer(2)
-            pool.Pool.home_all()
-            pool.Pool.reset_styles()
-            painter.Painter.reset()
+            ready(upto)
             int s2 = 1
             while s2 <= upto {
                 instant(win, s2)

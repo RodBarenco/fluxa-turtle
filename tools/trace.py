@@ -428,14 +428,26 @@ def read_svg(path, density):
 
 # ── raster: outline the dark areas ────────────────────────────────────────
 
-def read_raster(path, threshold, invert):
+def read_raster(path, threshold, invert, blur=0.0):
     try:
         from PIL import Image
     except ImportError:
         sys.exit("a raster image needs Pillow:  pip install Pillow\n"
                  "(an SVG needs nothing at all)")
 
-    im = Image.open(path).convert("L")
+    im = Image.open(path)
+    # A cut-out arrives with transparency, and "transparent" has to mean paper
+    # here, not ink: composited onto white it traces the drawing and not the
+    # hole it was cut from.
+    if im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info):
+        im = im.convert("RGBA")
+        sheet = Image.new("RGBA", im.size, (255, 255, 255, 255))
+        sheet.paste(im, (0, 0), im)
+        im = sheet
+    im = im.convert("L")
+    if blur > 0:
+        from PIL import ImageFilter
+        im = im.filter(ImageFilter.GaussianBlur(blur))
     w, h = im.size
     scale = 1.0
     if max(w, h) > 900:                 # tracing a huge photo helps nobody
@@ -546,6 +558,22 @@ PALETTE = [(120, 208, 214), (255, 200, 60), (255, 120, 90), (150, 200, 120),
            (200, 150, 255), (240, 240, 245), (90, 230, 180), (255, 160, 200)]
 
 
+def emit_svg(subs, src, W, H, stroke, color, keep):
+    """The same outlines, as an SVG — the drawing vectorised, not turtle code."""
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">',
+           f'  <!-- traced from {os.path.basename(src)} by tools/trace.py -->']
+    for i, sb in enumerate(subs):
+        c = color or (sb.color if keep and sb.color else PALETTE[i % len(PALETTE)])
+        pts = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in sb.pts)
+        shut = "Z" if sb.closed else ""
+        d = "M " + pts.replace(" ", " L ", 1).replace(",", " ", 1)
+        out.append(f'  <polyline points="{pts}" fill="none" '
+                   f'stroke="rgb({c[0]},{c[1]},{c[2]})" stroke-width="{stroke}" '
+                   f'stroke-linejoin="round" stroke-linecap="round"/>')
+    out.append("</svg>")
+    return "\n".join(out)
+
+
 def emit(groups, src, speed, stroke, color, keep, W, H):
     n_actions = sum(len(s.pts) for g in groups for s in g)
     steps = total_steps(groups)
@@ -593,6 +621,8 @@ def main():
         description="Turn an SVG or a raster image into Fluxa Turtle code.")
     ap.add_argument("input", help="an .svg, or a .png/.jpg (needs Pillow)")
     ap.add_argument("-o", "--out", help="write here instead of stdout")
+    ap.add_argument("--emit", choices=("flx", "svg"), default="flx",
+                    help="turtle code (default), or the outlines as an SVG")
     ap.add_argument("--turtles", type=int, default=1,
                     help="draw with this many turtles, in parallel (max 32)")
     ap.add_argument("--stage", default="800x600", help="stage size, WxH")
@@ -612,6 +642,10 @@ def main():
                     help="drop outlines shorter than this many points")
     ap.add_argument("--threshold", type=int, default=128,
                     help="raster only: a pixel darker than this is ink")
+    ap.add_argument("--blur", type=float, default=0.0,
+                    help="raster: smooth this many pixels before deciding what is ink. "
+                         "A pencil line photographed on paper is grainy and comes out as "
+                         "a cloud of specks without it")
     ap.add_argument("--invert", action="store_true",
                     help="raster only: trace the light areas instead")
     args = ap.parse_args()
@@ -635,7 +669,7 @@ def main():
     if ext == ".svg":
         subs = read_svg(args.input, args.density)
     else:
-        subs = read_raster(args.input, args.threshold, args.invert)
+        subs = read_raster(args.input, args.threshold, args.invert, args.blur)
 
     subs = [s for s in subs if len(s.pts) > 1]
     if not subs:
@@ -655,8 +689,11 @@ def main():
         sys.exit("everything was simplified away — try --min-points 2 or --tolerance 0")
 
     groups = split(kept, args.turtles)
-    code = emit(groups, args.input, args.speed, args.stroke, color,
-                args.keep_colors, W, H)
+    if args.emit == "svg":
+        code = emit_svg(kept, args.input, W, H, args.stroke, color, args.keep_colors)
+    else:
+        code = emit(groups, args.input, args.speed, args.stroke, color,
+                    args.keep_colors, W, H)
 
     if args.out:
         with open(args.out, "w") as fh:
@@ -665,8 +702,11 @@ def main():
     steps = total_steps(groups)
     actions = sum(len(s.pts) for g in groups for s in g)
     where = args.out if args.out else "stdout"
-    print(f"[trace] {len(kept)} outlines, {actions} actions, {steps} steps, "
-          f"{len(groups)} turtles -> {where}", file=sys.stderr)
+    if args.emit == "svg":
+        print(f"[trace] {len(kept)} outlines, {actions} points -> {where}", file=sys.stderr)
+    else:
+        print(f"[trace] {len(kept)} outlines, {actions} actions, {steps} steps, "
+              f"{len(groups)} turtles -> {where}", file=sys.stderr)
     if tol:
         print(f"[trace] simplified with a tolerance of {tol:.2f} px "
               f"to fit --max-steps {args.max_steps}", file=sys.stderr)

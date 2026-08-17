@@ -3,6 +3,38 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.0] — 2026-08-16
+
+### Added
+
+- **`tools/cutout.py`** — takes the paper out of a photo of a drawing and writes
+  it on transparency, cropped, ready to be a sprite or to be traced. It decides
+  by two tests together, because both are needed: the paper is pale and grey, so
+  everything the pencil or the paint touched is either coloured or darker than
+  the sheet around it. `--shrink` pulls the edge in, which is what kills the pale
+  halo of paper a photographed edge leaves around a sprite, and `--width` writes
+  it small enough to fit the 1024×1024 sprite sheet.
+
+- **`trace.py --emit svg`** — the same outlines as an SVG instead of turtle code,
+  so a photograph can become a vector file that is kept, edited and traced again
+  at any size. Plus `--blur`, without which a pencil line photographed on paper
+  traces as a cloud of specks, and transparency handled properly: a cut-out is
+  composited onto white first, so tracing it traces the drawing and not the hole
+  it was cut from.
+
+- **`erase_at(step, from, to)`** — `erase` on a step you choose. `erase` happens
+  after everything that turtle has declared, which is right at the end of a file
+  and wrong in a composition where something else has to happen first.
+
+### Fixed
+
+- **An erased stroke came back in the second pass.** The layered rebuild added in
+  0.15.0 re-homed the turtles and reset their styles before its second pass, but
+  did not re-apply the moves and the erases — so an artwork using a glow *and* an
+  erase drew the erased strokes again. The preamble is now one function,
+  `Runner.ready(upto)`, used by both passes
+  ([adr 0018](adr/0018-a-stroke-can-be-drawn-in-layers.md)).
+
 ## [0.15.0] — 2026-08-16
 
 ### Added

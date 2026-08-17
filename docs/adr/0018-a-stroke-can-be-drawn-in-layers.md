@@ -66,6 +66,11 @@ from the next export.
   continuously instead of breaking into leaves.
 - `lab/brush.flx` draws all eight looks over the same wave, times each one, and
   renders the spray twice to compare the PNGs pixel by pixel.
+- **A second pass has to start from the same state as the first.** The one it
+  shipped with re-homed the turtles and reset their styles but did not re-apply
+  the moves and the erases, so anything `erase`d came back from the dead in the
+  second pass — visible only in an artwork that used a glow *and* an erase. The
+  preamble is now one function, `Runner.ready(upto)`, called by both.
 - One bug worth remembering: the shape helper declared `int n` for its number of
   sides, and `n` is the Painter's own field — the segment count. The local
   resolved to the field, so shapes came out with as many sides as the path had
