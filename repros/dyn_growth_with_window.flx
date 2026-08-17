@@ -42,6 +42,25 @@
 // sixty three — which is what a stale pointer to a reallocated buffer looks
 // like, hit or missed depending on what the allocator does next.
 //
+// ── what does not change it ───────────────────────────────────────
+//
+// Six runs each, over the same program:
+//
+//   `prst dyn p` instead of `dyn p` .................. 1/6 survive
+//   reading `p[0]` on every iteration ................ 0/6
+//   the anchor idiom, `guard[0] = k` before the write  2/6
+//   gc_cap 8192 instead of 1024 ...................... 0/6
+//   gc_cap 65536 ..................................... 1/6
+//
+// So it is not the value being unrooted, and it is not the GC table filling.
+// The control is 2/6, and none of these move it.
+//
+// Where it dies is not fixed either. Printing the index after each write, over
+// five runs: 24, 66, 80, and twice it reached the end. So no particular growth
+// step is the bad one — which, with the recursive `value_release_data` frames,
+// reads as a pointer to a buffer that has already been handed back, hit
+// whenever the allocator happens to have reused it.
+//
 // Found while writing a call that takes a list of points: an artwork building
 // that list in a loop, with the stage already up, is exactly this program.
 
