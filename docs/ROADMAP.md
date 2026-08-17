@@ -309,12 +309,11 @@ the same two statements with the growth *before* the window survive 6/6, with
 the window first 0/6. That is the shape of a stale pointer to a reallocated
 buffer, hit or missed depending on what the allocator does next.
 
-**So this sprint waits on the runtime.** Not on all of it: `follow` reading a
-list that was written as a literal is untouched by this, and that is most of the
-value. What waits is the case the sprint was aimed at — an artwork building a
-long list in a loop and handing it over — which is exactly the pattern the crash
-kills. Build `follow` against literals, keep the loop case behind the repro, and
-re-measure the day the runtime changes.
+**Fixed in the runtime built 2026-08-17 17:07**, and re-measured: the repro
+survives 12/12 where it survived 4/12, a list grown to 4000 elements survives
+8/8, and 600 points built in pairs and read back survive 8/8. The suite passes
+on that build too. **The gate is open** — `follow` can be built against lists an
+artwork fills in a loop, which is the case the sprint exists for.
 
 **Gate out:** `lab/follow.flx` — the same trajectory drawn by `follow` and by
 hand-written `toward` calls, pixel-identical; the returned step against the

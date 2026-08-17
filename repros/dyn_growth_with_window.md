@@ -1,8 +1,23 @@
 # Bug report — growing a `dyn` after a window exists segfaults
 
+**FIXED** in the runtime built 2026-08-17 17:07 (`md5 2e777413…`). Re-measured
+on that build, and kept here because the measurements are what a re-check
+should be run against:
+
+| | old build (`19699c49…`) | new build (`2e777413…`) |
+|---|---|---|
+| the repro, grown to 160 | 4/12 survive | **12/12** |
+| grown to 800 | — | **8/8** |
+| grown to 4000 | — | **8/8** |
+| 600 points built in pairs, then read back | — | **8/8** |
+
+The whole harness suite passes on the new build as well — twenty-one of them,
+plus the published artwork. What the sprint was blocked on is unblocked: an
+artwork can build a list in a loop and hand it to one call.
+
 **Repro:** [`repros/dyn_growth_with_window.flx`](dyn_growth_with_window.flx) ·
 **Found in:** Fluxa Turtle, writing a call that takes a list of points ·
-**Severity:** crashes the process, no error, no message
+**Severity:** crashed the process, no error, no message
 
 ---
 
