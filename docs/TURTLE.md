@@ -794,10 +794,19 @@ leo.ring(37, 60, 120.0, 40.0)
 `Place` is the one to start with — a step *is* a thing being put down. `Quiet()`
 turns the step sound off from that point.
 
+**One sound at the start of the step, and no more** — a step is one gesture, so
+it makes one noise when it begins, however long it takes to walk.
+
 **Two are never closer together than 70 ms.** A drawing traced from a photograph
 has a thousand steps and would machine-gun through them; a step every 11 ms is
 not a chess move, it is a buzz. What you hear on a dense artwork is a rhythm at
 about fourteen a second, not one sound per step.
+
+**Changing it does not reach backwards.** Save with a different sound and the
+steps that are already finished are not replayed — they never repeat, that is
+the whole tool — so what you hear is the new sound on the steps animated *after*
+the save. To hear it over what is already drawn, press **R**, or **←** and
+**→**. It is the same rule a colour follows, and it surprises people once.
 
 ### `audio.Volume(pct)`
 
@@ -811,16 +820,24 @@ pencil on paper.
 
 | | |
 |---|---|
-| `place.wav` | a piece set down — a low wooden knock, 220 ms, peak at 95 Hz |
-| `tap.wav` | the same, lighter and higher: a small move |
-| `slide.wav` | a piece pushed across the board — a knock with a rasp dragged out of it |
-| `pencil.wav` | a short scribble, graphite on paper |
-| `stroke.wav` | a longer line being drawn |
+| `place.wav` | a piece set down — a wooden knock, 240 ms, peak at 79 Hz |
+| `tap.wav` | the same, lighter: a small move, peak at 147 Hz |
+| `slide.wav` | pushed across the board — a knock with a scratch dragged out of it |
+| `pencil.wav` | **tch-tch-tch**: three graphite marks, 255 ms |
+| `stroke.wav` | one longer line, the same voice lower — centre around 1.2 kHz |
 
-They are **synthesised**, by `tools/sounds.py`, from decaying inharmonic
-partials over a click (the knocks) and filtered noise with a grainy envelope
-(the graphite). Running that script writes identical bytes every time, so the
-recipe is in the repository and not only the result.
+They are **synthesised**, by `tools/sounds.py`: the knocks are decaying
+inharmonic partials over a click, and the graphite is band-limited noise with a
+grainy envelope. Running that script writes identical bytes every time, so the
+repository holds the recipe and not only the result.
+
+Two things in there were learned by getting them wrong, and both are in the
+file as comments. **The click is what makes a scratch a gunshot** — noise that
+reaches full amplitude in one sample *is* a gunshot — so the graphite ramps in
+over 19 ms instead of 1 ms. And **one filter pole is not a filter** when the
+material is noise: at 6 dB per octave, a "2.6 kHz" lowpass still let the octaves
+above it put the spectral centre at 4.8 kHz, and the pencil came out brighter
+than the beep it replaced. Four poles is 24 dB per octave and audibly a band.
 
 ### What to know
 

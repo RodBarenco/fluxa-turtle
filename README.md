@@ -391,9 +391,10 @@ audio.Volume(70)                     // 0 to 100, everything at once
 
 `Place`, `Tap`, `Slide`, `Pencil`, `Stroke` and `Quiet` say **what a step sounds
 like from there on** — a band on the timeline, like a colour, so a drawing can
-knock its way through the outline and scribble through the shading. Two of them
-are never closer together than 70 ms, because a step every 11 ms is not a chess
-move, it is a buzz.
+knock its way through the outline and scribble through the shading. One sound at
+the start of each step, never two closer than 70 ms, and changing it does not
+reach backwards: finished steps do not repeat, so you hear the new one on what
+is animated after the save (or press **R**).
 
 wav, mp3 and flac; four files in total. **A** turns the sound off and on while
 it runs.

@@ -84,7 +84,7 @@ leo.path_color(90, 230, 230)
 leo.path_width(1)
 leo.speed(900.0)
 leo.hide()
-
+audio.Stroke()  
 leo.go(1, 500.0, 0.0)
 
 
