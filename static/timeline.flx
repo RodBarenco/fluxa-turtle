@@ -32,8 +32,8 @@ Block Timeline {
     // The occupancy grid: one row per turtle, MAX_STEPS + 1 columns, because
     // steps are numbered from 1 and column 0 is never used. 32 × 6001 = 192032,
     // and `stride` below is what indexes it — reset() checks the two agree.
-    int arr taken[192032] = 0
-    int stride = 6001
+    int arr taken[1600032] = 0   // 32 x (50000 + 1) — costs 33 MB, measured
+    int stride = 50001
 
     // ── appearance changes, by step ───────────────────────────────
     //
@@ -69,7 +69,7 @@ Block Timeline {
     // Called at the top of the scene, on every save: the queue is declared
     // again in full, so it starts empty.
     fn reset() nil {
-        // The grid is only cleared where it was written: walking all 192032
+        // The grid is only cleared where it was written: walking all 1600032
         // slots on every save would be work proportional to the cap instead of
         // to the artwork.
         int i = 0

@@ -23,6 +23,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `sound.init()` gives out four engines and no more, and a Block field would
   burn one per save.
 
+- **A sound for every step**: `audio.Place()`, `Tap()`, `Slide()`, `Pencil()`,
+  `Stroke()`, `Quiet()`. A movement makes a noise the way a chess piece does
+  when it is put down, and which noise is a **band on the timeline** like a
+  colour — it applies from the step where it is written, so an artwork can knock
+  through its outline and scribble through its shading. Two step sounds are
+  never closer together than 70 ms: a traced drawing has a thousand steps and a
+  sound every 11 ms is a buzz, not a rhythm.
+
+- **50000 steps**, up from 6000, because drawing by hand — the studio that is
+  coming — spends steps the way written code does not. Measured: the occupancy
+  grid went from 192032 to 1600032 slots and the process from 101.4 MB to
+  134.5 MB, `Timeline.reset` stayed at 0 ms because it clears only what was
+  written, and a reload does not grow it. The rebuild is the part that felt it:
+  it walks every step from 1 to where the artwork is, so the worst case the caps
+  allow now measures 7.1 s against about a second at 6000. An artwork of 500
+  steps still rebuilds in milliseconds, and making `instant` walk the actions
+  instead of the steps is written down in the roadmap as what a 50000-step
+  artwork will need first.
+
 - **The A key** turns the sound off and on while the artwork runs. The
   listener's choice and the export's mute are separate flags, so finishing an
   export does not turn the sound back on for somebody who asked for silence.

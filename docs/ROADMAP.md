@@ -31,6 +31,28 @@ sequence, step ranges and frame rates.
 
 ---
 
+## Known before it bites: the rebuild is O(steps), not O(actions)
+
+The step limit was raised from 6000 to **50000** for the studio, and the caps
+took it well — the occupancy grid went from 192032 to 1600032 slots, the process
+from 101.4 MB to 134.5 MB, and `Timeline.reset` stayed at 0 ms because it clears
+only what was written.
+
+What did not take it well is the rebuild. It walks **every step from 1 to where
+the artwork is**, asking all 32 turtles what they do on each one, so the worst
+case the caps now allow measures **7.1 s** against about a second at 6000. That
+is fine today, because an artwork of 500 steps still rebuilds in milliseconds —
+and it is not fine for a studio, where 50000 steps is the point and every save
+pays for them.
+
+**Before any 50000-step artwork is usable, `instant` has to walk the actions
+instead of the steps.** The timeline already holds them in declaration order;
+what a step-by-step walk buys is the appearance events, which apply per step. A
+sparse walk over "steps that have anything at all" is the shape of the answer.
+Measure it against `lab/limits.flx`, which is exactly this worst case.
+
+---
+
 ## Sprint 6 — `pathTexture` · the last pillar gap
 
 **Deliver:** `leo.path_image("leaf.png", 0.4)` — the stroke stamped with a

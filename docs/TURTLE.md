@@ -264,7 +264,7 @@ Turn, then walk, leaving a trail.
 
 | | |
 |---|---|
-| `step` | `int` — 1 to 6000 |
+| `step` | `int` — 1 to 50000 |
 | `dist` | `float` — pixels; negative walks backwards |
 | `turn` | `float` — degrees to turn **before** setting off; positive is counter-clockwise |
 
@@ -776,6 +776,29 @@ audio.Cue(1, "sounds/place.wav")
 audio.Cue(36, "sounds/stroke.wav")
 ```
 
+### `audio.Place()` · `Tap()` · `Slide()` · `Pencil()` · `Stroke()` · `Quiet()`
+
+**What a step sounds like, from here on.** Every movement makes the noise — a
+piece being put down, a pencil mark — and it is a **band on the timeline**, like
+a colour: it applies from the step where you wrote it and leaves what came
+before alone.
+
+```fluxa
+audio.Place()                  // the outline knocks its way along
+leo.ring(1, 36, 500.0, 170.0)
+
+audio.Pencil()                 // and the shading scribbles
+leo.ring(37, 60, 120.0, 40.0)
+```
+
+`Place` is the one to start with — a step *is* a thing being put down. `Quiet()`
+turns the step sound off from that point.
+
+**Two are never closer together than 70 ms.** A drawing traced from a photograph
+has a thousand steps and would machine-gun through them; a step every 11 ms is
+not a chess move, it is a buzz. What you hear on a dense artwork is a rhythm at
+about fourteen a second, not one sound per step.
+
 ### `audio.Volume(pct)`
 
 0 to 100, everything at once.
@@ -820,7 +843,7 @@ heard. The artwork still draws.
 | | |
 |---|---|
 | turtles | 32 |
-| steps | 6000 |
+| steps | 50000 |
 | actions, all turtles together | 65536 |
 | appearance changes and moves | 2048 |
 | erased ranges, per turtle | 4 |

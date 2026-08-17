@@ -382,10 +382,18 @@ again in reverse, slowly enough to watch.
 ## Sound
 
 ```fluxa
-audio.Cue(1, "sounds/place.wav")     // fires when step 1 is animated
+audio.Place()                        // every step sounds like a piece put down
+audio.Pencil()                       // and from here on, like a pencil
+audio.Cue(36, "sounds/stroke.wav")   // one sound on one step
 audio.Track("music.mp3")             // plays while the artwork runs
 audio.Volume(70)                     // 0 to 100, everything at once
 ```
+
+`Place`, `Tap`, `Slide`, `Pencil`, `Stroke` and `Quiet` say **what a step sounds
+like from there on** — a band on the timeline, like a colour, so a drawing can
+knock its way through the outline and scribble through the shading. Two of them
+are never closer together than 70 ms, because a step every 11 ms is not a chess
+move, it is a buzz.
 
 wav, mp3 and flac; four files in total. **A** turns the sound off and on while
 it runs.
@@ -513,14 +521,17 @@ names the cap and tells you to raise it.
 
 ## Known limits
 
-- **32 turtles, 6000 steps, 65536 actions, 2048 appearance changes, 8192
+- **32 turtles, 50000 steps, 65536 actions, 2048 appearance changes, 8192
   not-yet-baked segments.** Every one of them is in `static/config.flx`, next to
   the stage size and the frame rate, and each is mirrored by an array
   declaration the file points at — a Fluxa array is declared with a literal
   size, so the two are changed together. Going past a limit prints a warning and
   ignores the extra, never silently corrupts the artwork.
-- **A 6000-step artwork rebuilds in about a second**, once per save. It is the
-  worst case of the declared limits (32 turtles × 6000 steps); 3000 steps with
+- **The rebuild walks every step from 1 to where the artwork is**, so its cost
+  is the artwork's length, not the cap: a 500-step drawing rebuilds in
+  milliseconds. The worst case the caps allow — 32 turtles reaching step
+  50000 — takes 7.1 s, measured, which is the number to remember before writing
+  an artwork that long. 3000 steps with
   one turtle rebuild in 145 ms.
 - **Opacity is not an alpha channel.** `graph.draw_line` only takes R, G and B,
   so transparency is obtained by mixing with the background. Two translucent

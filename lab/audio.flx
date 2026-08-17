@@ -14,7 +14,7 @@
 // Plus the plain ones: the engine exists, the files load, a missing file is
 // silent rather than fatal, and the export mutes everything.
 //
-// It makes noise. Two short tones, and a hum under them.
+// It makes noise: a few knocks and a scribble.
 
 import std graph
 import std image
@@ -45,16 +45,16 @@ stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
 
 dyn part = [0.0, 0.0]
-dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0]
+dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 print("backend: ", sound.version(), "   (a stub here means no runtime audio — nothing below proves anything)")
 
 // ── what the artwork declares ─────────────────────────────────────
 
-audio.Track("tools/hum.wav")
-audio.Cue(2, "tools/beep.wav")
-audio.Cue(4, "tools/beep.wav")
-audio.Cue(3, "tools/not_here.wav")     // missing on purpose
+audio.Track("sounds/stroke.wav")
+audio.Cue(2, "sounds/tap.wav")
+audio.Cue(4, "sounds/tap.wav")
+audio.Cue(3, "sounds/not_here.wav")     // missing on purpose
 audio.Volume(45)
 
 Block a typeof turtle.Turtle
@@ -99,6 +99,75 @@ while s <= 4 {
 }
 print("cues after four steps   ", audio.Audio.fires(),
       "   (expected 2 — steps 2 and 4; step 3's file does not exist)")
+
+// ── the sound a step makes ────────────────────────────────────────
+//
+// A band on the timeline, like a colour: it applies from the step where it was
+// asked for. Declared here AFTER four steps exist, so `Pencil` covers step 5
+// onwards and `Place` covers everything before it.
+
+audio.Place()
+print("")
+print("band at step 1 .......  ", audio.Audio.sound_at(1),
+      "   (expected -1: the call came after four steps existed, so it does not reach back)")
+
+Block c typeof turtle.Turtle
+c.spawn(120.0, 380.0)
+c.hide()
+c.speed(300.0)
+c.path_color(150, 200, 120)
+c.path_width(3)
+c.go(5, 90.0, 0.0)
+c.go(6, 90.0, 0.0)
+
+audio.Pencil()
+c.go(7, 90.0, 0.0)
+c.go(8, 90.0, 0.0)
+
+print("band at step 6 .......  ", audio.Audio.sound_at(6), "   (expected 0 — still place)")
+print("band at step 7 .......  ", audio.Audio.sound_at(7), "   (expected 3 — pencil, from where it was written)")
+
+audio.Audio.open(snd)
+
+int was = audio.Audio.fires()
+runner.Runner.rebuild(win, canvas, 8)
+print("steps heard on rebuild  ", audio.Audio.fires() - was, "   (expected 0 — a redraw is still silent)")
+
+was = audio.Audio.fires()
+runner.Runner.rebuild(win, canvas, 4)
+int k = 5
+while k <= 8 {
+    runner.Runner.animate(win, canvas, sheet, part, k)
+    k = k + 1
+}
+print("steps heard, 5 to 8 ..  ", audio.Audio.fires() - was, "   (expected 4 — 300 ms a step, so none is dropped)")
+
+// The same four steps at a speed where they land 11 ms apart: the limiter has
+// to swallow most of them, because that is a buzz and not a rhythm.
+pool.Pool.reset()
+timeline.Timeline.reset()
+Block d typeof turtle.Turtle
+d.spawn(120.0, 430.0)
+d.hide()
+d.speed(40000.0)
+d.path_color(200, 150, 255)
+d.path_width(2)
+int q = 1
+while q <= 20 {
+    d.go(q, 12.0, 0.0)
+    q = q + 1
+}
+was = audio.Audio.fires()
+runner.Runner.rebuild(win, canvas, 0)
+int r = 1
+while r <= 20 {
+    runner.Runner.animate(win, canvas, sheet, part, r)
+    r = r + 1
+}
+int rapid = audio.Audio.fires() - was
+print("20 steps in a blur ...  ", rapid, " heard of 20   (expected far fewer than 20:")
+print("                        each is one frame, so 20 of them span about 330 ms, and the")
+print("                        limiter lets one through every 70 ms)")
 
 // ── an export says nothing ────────────────────────────────────────
 

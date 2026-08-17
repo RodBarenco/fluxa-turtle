@@ -42,6 +42,31 @@ Block Audio {
     int arr hnd[4]  = 0
     int files = 0
 
+    // ── the sound a step makes ────────────────────────────────────
+    //
+    // Every movement can make a noise, the way a chess piece does when it is
+    // put down. Which noise is a BAND on the timeline, like a colour: it
+    // applies from the step where the artwork asked for it, so a drawing can
+    // knock its way through the outline and scribble its way through the
+    // shading.
+    //
+    // The five live in `sounds/` and have fixed slots in the carried array, so
+    // switching between them mid-artwork costs nothing and they are loaded
+    // only if they are asked for.
+    str arr kit[5] = ""
+    int arr kit_h[5] = 0
+    int arr band_from[16] = 0
+    int arr band_kind[16] = 0     // -1 = quiet
+    int bands = 0
+
+    // A step every 11 ms is not a chess move, it is a buzz. A drawing traced
+    // from a photograph has more than a thousand steps and would machine-gun
+    // through them, so two step sounds are never closer together than this.
+    // It costs nothing to state and it is the difference between a rhythm and
+    // a noise.
+    int gap_ms = 70
+    int last_ms = 0
+
     int track = 0 - 1        // slot of the background track, -1 = none
 
     int arr cue_step[64] = 0
@@ -92,6 +117,33 @@ Block Audio {
         cues = cues + 1
     }
 
+    // `audio.Place()` and the rest: from here on, this is what a step sounds
+    // like. Called before any step is declared it is the whole artwork's
+    // sound; called in the middle it changes from there.
+    fn want_step_sound(int kind) nil {
+        if bands >= 16 {
+            print("[audio] sixteen changes of step sound is the limit — this one was ignored")
+            return
+        }
+        band_from[bands] = timeline.Timeline.max_step() + 1
+        band_kind[bands] = kind
+        bands = bands + 1
+    }
+
+    // Which of the five a step should use, or -1 for none. The last band that
+    // started at or before this step wins, which is the same rule an
+    // appearance change follows.
+    fn sound_at(int s) int {
+        int kind = 0 - 1
+        int i = 0
+        while i < bands {
+            guard[0] = i     // anchor FIRST
+            if band_from[i] <= s { kind = band_kind[i] }
+            i = i + 1
+        }
+        return kind
+    }
+
     fn want_volume(int pct) nil {
         vol = pct
         if vol < 0 { vol = 0 }
@@ -140,7 +192,16 @@ Block Audio {
     //
     // `a` is main.flx's `prst dyn snd`:  [engine, h0, h1, h2, h3]
 
+    fn names() nil {
+        kit[0] = "sounds/place.wav"
+        kit[1] = "sounds/tap.wav"
+        kit[2] = "sounds/slide.wav"
+        kit[3] = "sounds/pencil.wav"
+        kit[4] = "sounds/stroke.wav"
+    }
+
     fn open(dyn a) nil {
+        names()
         int e = math.to_int(a[0])
         if e <= 0 {
             danger { e = sound.init() }
@@ -175,7 +236,39 @@ Block Audio {
             i = i + 1
         }
 
+        // The five, in fixed slots after the artwork's own files. Only the
+        // ones an artwork actually asks for are loaded, and a slot that
+        // already holds a handle was loaded before the save.
+        int k = 0
+        while k < 5 {
+            guard[0] = k     // anchor FIRST
+            if wants(k) == 1 {
+                int h = math.to_int(a[5 + k])
+                if h == 0 {
+                    danger { h = sound.load(eng, kit[k]) }
+                    if err != nil {
+                        print("[audio] ", kit[k], ": ", err[0])
+                        h = 0 - 1
+                    }
+                    a[5 + k] = 1.0 * math.to_float(h)
+                }
+                kit_h[k] = h
+                if h > 0 { sound.volume(eng, h, math.to_float(vol) / 100.0) }
+            }
+            k = k + 1
+        }
+
         start_track()
+    }
+
+    fn wants(int kind) int {
+        int i = 0
+        while i < bands {
+            guard[0] = i     // anchor FIRST
+            if band_kind[i] == kind { return 1 }
+            i = i + 1
+        }
+        return 0
     }
 
     // The soundtrack. Pressing play on a save would start it over, which is
@@ -198,6 +291,21 @@ Block Audio {
     fn fire(int step) nil {
         if eng <= 0 { return }
         if silent() == 1 { return }
+
+        // The sound of the step itself, before anything the artwork placed on
+        // it by hand.
+        int kind = sound_at(step)
+        if kind >= 0 {
+            if kit_h[kind] > 0 {
+                int now = time.now_ms()
+                if now - last_ms >= gap_ms {
+                    sound.play(eng, kit_h[kind])
+                    last_ms = now
+                    fired = fired + 1
+                }
+            }
+        }
+
         int i = 0
         while i < cues {
             guard[0] = i     // anchor FIRST
@@ -240,6 +348,15 @@ Block Audio {
 // ── what the artwork writes ───────────────────────────────────────
 //
 // At the bottom, because a module function only sees a Block declared above it.
+
+// What a step sounds like, from here on. The first one is the chess piece,
+// because that is what a step is: a thing being put down.
+fn Place() nil   { Audio.want_step_sound(0) }
+fn Tap() nil     { Audio.want_step_sound(1) }
+fn Slide() nil   { Audio.want_step_sound(2) }
+fn Pencil() nil  { Audio.want_step_sound(3) }
+fn Stroke() nil  { Audio.want_step_sound(4) }
+fn Quiet() nil   { Audio.want_step_sound(0 - 1) }
 
 fn Track(str path) nil        { Audio.want_track(path) }
 fn Cue(int step, str path) nil { Audio.want_cue(step, path) }

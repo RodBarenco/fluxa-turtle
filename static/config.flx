@@ -27,7 +27,13 @@ fn H()   int { return 600 }
 fn FPS() int { return 60 }
 
 fn MAX_TURTLES()  int { return 32 }      // turtles on the stage
-fn MAX_STEPS()    int { return 6000 }    // highest step number a turtle can use
+// 50000, and the reason is the studio that is coming: drawing by hand spends
+// steps the way nothing written by hand does. Measured when it was raised from
+// 6000 — the occupancy grid in timeline.flx is turtles x steps, so it went from
+// 192032 to 1600032 slots and the process from 101.4 MB to 134.5 MB resident.
+// Reset stayed at 0 ms, because it is cleared only where it was written, and a
+// reload does not grow it.
+fn MAX_STEPS()    int { return 50000 }   // highest step number a turtle can use
 fn MAX_ACTIONS()  int { return 65536 }   // movements declared, all turtles together
 fn MAX_STYLES()   int { return 2048 }    // appearance changes declared
 fn MAX_SEGMENTS() int { return 8192 }    // not-yet-baked segments, per save
