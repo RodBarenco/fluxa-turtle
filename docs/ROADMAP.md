@@ -175,12 +175,39 @@ segment into the timeline, exactly as `ring` emits its `go`s. A `dyn` arriving
 as a method parameter is the pattern the canvas already uses. **No new
 architecture.**
 
-**Decide first, and measure it:** how big a `dyn` literal `main.flx` can hold.
-A traced drawing is ~2700 floats in one literal, and the caps in `fluxa.toml`
-size the AST — `ast_pool_cap` is 16384 and a full artwork measured 5794 nodes.
-Whether a 2700-element literal fits, and what it costs to parse on every save,
-is a ten-minute experiment and it decides whether `follow` is what `trace.py`
-should emit.
+**Measured, and it is a language-side question rather than a tool-side one.**
+A `dyn` literal in this build holds **about 200 numbers** — 200 parses, 204
+does not:
+
+```
+[fluxa] Parse error (line 1): expression nested too deeply (got '660.1')
+```
+
+That is `FLUXA_MAX_EXPR_DEPTH`, the parser's stack-overflow guard, fixed at 200
+(spec §"Parser expr depth"). It is not read from the environment and there is no
+`[runtime]` knob for it in this binary — both were tried. And it counts real
+nesting correctly: 180 nested parentheses parse, 260 do not.
+
+The interesting part is that **a flat list of numbers is not nested**. The depth
+grows one level per element, which means the array literal's elements are being
+parsed by recursion rather than in a loop — so the guard is doing its job on
+input that is not deep at all. Parsing list elements iteratively would lift the
+limit entirely without weakening the guard for the expressions it exists to
+protect. That is a change in the language, not here.
+
+**What this means for `follow` today:** up to 100 points per call, which is
+plenty for a hand-written trajectory and not enough for a traced drawing. Since
+`follow` returns the next free step, a tracer chains them —
+
+```fluxa
+int s = 1
+s = t0.follow(s, [ /* 100 points */ ], 900.0)
+s = t0.follow(s, [ /* 100 points */ ], 900.0)
+```
+
+— which turns Leonardo's 1345 lines into 14 calls. Worth building on that basis;
+worth revisiting the chunk size the day the parser stops counting a list as
+nesting.
 
 **Accel over a path is distance-based**, as the proposal says, and that is not a
 detail: points come out of a tracer unevenly spaced, so a progression by point
