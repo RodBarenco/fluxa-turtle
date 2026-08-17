@@ -59,6 +59,16 @@ it.
   artwork sits at `s - 1`, because `arm` applies it so the un-drawing looks like
   the drawing. The next `animate`, `rewind` or rebuild sets it right, so the
   only trace is the panel's colour swatch during that pause.
+- **The heading is not one of those, and getting that wrong was a real bug.**
+  `arm` calls `aim`, and `aim` *turns* the turtle — a `go` carries its turn on
+  departure, a `toward` faces the point. So arming a step in order to walk it
+  backwards leaves her pointing where that step left her. The first version put
+  the position back and not the heading, and the next step then turned again
+  from there: press LEFT, press SPACE, and the drawing carried on at the wrong
+  angle. A turn is relative and therefore accumulates, which is what makes it
+  different from every other piece of state here. `rewind` now takes every
+  turtle's heading before it arms anything and restores it at the end, on every
+  path out of the function.
 - A save landing inside a reverse run is harmless: the artwork is already the
   rebuild's, and the turtles are put home whether the loop finished or not.
 - `lab/rewind.flx` measures all three claims that matter — the reverse takes as

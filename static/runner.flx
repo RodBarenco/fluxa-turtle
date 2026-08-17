@@ -37,6 +37,14 @@ Block Runner {
     float aim_x = 0.0            // where the action being run ends up
     float aim_y = 0.0
 
+    // Every turtle's heading before a rewind armed the step it is undoing.
+    // `aim` TURNS her — a `go` carries its turn, a `toward` faces the point —
+    // so arming a step to walk it backwards leaves her pointing where that step
+    // left her. Position was put back and heading was not, and the next step
+    // then turned again from there: the drawing carried on at the wrong angle
+    // (adr 0017).
+    float arr aang[32] = 0.0
+
     // Did the last step animated actually reach its end? A save cancels the
     // frame loop from underneath us and execution carries on at the next
     // statement, so "the loop ended" and "the movement finished" are not the
@@ -767,11 +775,27 @@ Block Runner {
         if s < 1 { return }
 
         rebuild(win, canvas, s - 1)
+
+        // Taken before `arm`, because arming is what turns her.
+        int nt = pool.Pool.count()
+        int q = 0
+        while q < nt {
+            guard[0] = q     // anchor FIRST
+            aang[q] = pool.Pool.get_ang(q)
+            q = q + 1
+        }
+
         arm(s)
-        if an == 0 { return }
+        if an == 0 {
+            home_angles(nt)
+            return
+        }
 
         float dmax = span()
-        if dmax <= 0.0 { return }
+        if dmax <= 0.0 {
+            home_angles(nt)
+            return
+        }
 
         int t0 = time.now_ms()
         float el = 0.0
@@ -812,11 +836,23 @@ Block Runner {
         }
 
         // Home. Whether the loop ran out or a save cut it short, the artwork is
-        // the rebuild's and the turtles belong at the start of the step.
+        // the rebuild's and the turtles belong at the start of the step —
+        // pointing the way they pointed before it, which is the half that was
+        // missing.
         int i = 0
         while i < an {
             pool.Pool.set_pos(aid[i], asx[i], asy[i])
             i = i + 1
+        }
+        home_angles(nt)
+    }
+
+    fn home_angles(int nt) nil {
+        int q = 0
+        while q < nt {
+            guard[0] = q     // anchor FIRST
+            pool.Pool.set_face(q, aang[q])
+            q = q + 1
         }
     }
 }

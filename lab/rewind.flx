@@ -89,14 +89,40 @@ print("she is back at .......  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_
 
 runner.Runner.shown(win, canvas, sheet)
 danger {
+    dyn back = graph.capture(win)
+    image.save(back, "lab/rewind.png")
+    image.discard(back)
+}
+if err != nil { print("capture: ", err[0]) }
+
+// ── and forwards again, which is where it used to break ───────────
+//
+// `arm` turns her: a `go` carries its turn on departure. So arming step 3 to
+// walk it backwards leaves her pointing the way step 3 left her, and if the
+// rewind puts the position back but not the heading, the next step turns again
+// from there and the whole drawing carries on at the wrong angle. That is what
+// pressing LEFT and then SPACE used to do.
+
+print("")
+print("heading after the rewind  ", math.to_int(pool.Pool.get_ang(0)),
+      "   (expected -90: where step 2 left her, not where step 3 did)")
+
+runner.Runner.animate(win, canvas, sheet, part, 3)
+print("redone step 3 ends at ..  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
+      "   (expected 200,550 — exactly where it ended the first time)")
+print("and facing ............   ", math.to_int(pool.Pool.get_ang(0)), "   (expected -180)")
+
+runner.Runner.shown(win, canvas, sheet)
+danger {
     dyn shot = graph.capture(win)
-    image.save(shot, "lab/rewind.png")
+    image.save(shot, "lab/rewind_redone.png")
     image.discard(shot)
 }
 if err != nil { print("capture: ", err[0]) }
 
 print("")
 print("rewind.png must equal rewind_ref2.png — the artwork at step 2, to the pixel")
+print("rewind_redone.png must differ from it in step 3's stroke and nowhere else")
 print("(two steps forwards took ", fwd2, " ms, so the clock in this harness is honest)")
 
 image.discard(sheet)
