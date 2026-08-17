@@ -11,6 +11,35 @@ it.
 
 ---
 
+## How a sprint is run
+
+Every sprint has two gates. They are not ceremony: each one is a thing that has
+already gone wrong here at least once.
+
+**Gate in — before a line is written.** The sprint's open question is answered
+by measurement and the answer is written down. Half the work in this project has
+been spent undoing designs that were decided by reasoning about a runtime rather
+than asking it: caps guessed at when `nave/fluxa.toml` already documented them, a
+sprite sheet designed around a `dyn` that could not be a field, a camera planned
+before anybody checked whether `std.image` draws off-screen. If the gate cannot
+be answered in an afternoon's experiment, that experiment IS the first task of
+the sprint.
+
+**Gate out — before it is called done.** All of:
+
+- a harness in `lab/` that **measures** the claim, not one that renders something
+  plausible. Numbers with expectations printed beside them;
+- the whole suite green — every harness, not the new one;
+- the numbers that will be quoted later written where they belong: in the code
+  next to the constant, in `docs/TURTLE.md` next to the call, in the commit;
+- an ADR when a decision was made that the next person would otherwise re-open;
+- `docs/CHANGELOG.md`, and `docs/TURTLE.md` or `README.md` if the surface
+  changed.
+
+**A sprint that cannot state its gate out in numbers is not ready to start.**
+
+---
+
 ## Where the project stands
 
 **The pillars are done except one.** §1 environment, §2 turtles, §3 appearance,
@@ -88,6 +117,17 @@ against a plain stroke.
 
 **Size:** small once the decision is made. Half of it is the decision.
 
+
+**Gate in:** decide how the sprite sheet reaches `Painter.paint` — threaded
+through `draw`/`instant`/`paint` as a parameter, or a stamp queue the runner
+drains while it still holds the sheet. Write the answer in an ADR before
+touching the painter; it is the whole sprint.
+
+**Gate out:** a ninth row in `lab/brush.flx`; stamps counted along a known
+length and evenly spaced across a corner; the rebuild timed against a plain
+stroke and the ratio recorded in `docs/TURTLE.md` beside the other stroke
+costs.
+
 ---
 
 ## Sprint 7 — Movement with a shape · acceleration and duration
@@ -141,6 +181,19 @@ accelerate.
 position sampled at a quarter, a half and three quarters of the time against the
 equation, that the total time is the same whichever end is faster, and that a
 rewind of an accelerated step takes as long as the step did.
+
+
+**Gate in:** one measurement and one decision. Measure whether a per-segment
+constant speed reads as a staircase at the segment lengths this tool produces —
+if it does not, the second speed field is not needed at all. Then decide where a
+second speed lives if it is: another `MAX_ACTIONS` array (~512 KB) or a small
+side table for the actions that accelerate.
+
+**Gate out:** `lab/accel.flx` — duration against `2d / (v0 + v1)`; position
+sampled at a quarter, a half and three quarters against `v0·t + ½at²`; the total
+time equal whichever end is faster; a rewind of an accelerated step taking as
+long as the step did; and an export of an accelerated artwork byte-identical
+across two runs, because the curve has to be a pure function of the fraction.
 
 ---
 
@@ -228,6 +281,21 @@ distance-based speed at its midpoint.
 **Then:** `tools/trace.py` gets a `--emit follow` mode, and the artwork it
 writes goes from 1944 lines to a few dozen.
 
+
+**Gate in — partly answered already, today.** Measured: a `dyn` grows when an
+artwork writes past its end (`len` went 1 → 4 → 240 in a loop), a `dyn` arrives
+in a Block method and `len` and indexing both work on it there, and a
+three-point `follow` emits three actions and returns the right step. What is
+NOT answered: **a 120-point harness core-dumped**, and where is not yet known —
+`follow` itself, the harness's own loop, or something under both. Isolate that
+crash first and file it; everything else in this sprint is easy and that is not.
+
+**Gate out:** `lab/follow.flx` — the same trajectory drawn by `follow` and by
+hand-written `toward` calls, pixel-identical; the returned step against the
+point count; `follow_silent` leaving no ink; the call's speed beating the
+turtle's own, timed. Then `tools/trace.py --emit follow`, and Leonardo's 1944
+lines quoted against whatever it becomes.
+
 ---
 
 ## Sprint 8 — Text · a turtle that writes
@@ -253,6 +321,16 @@ and the glyph table must be a Block field, so a literal-sized array per glyph.
 
 **Verify:** `lab/text.flx` — the same string at three sizes, the returned step
 against hand arithmetic, and the ink bounding box against the size asked for.
+
+
+**Gate in:** decide where the glyphs come from — a stroke font typed by hand,
+or one traced with `tools/trace.py` from an image of a character set. Trace one
+letter both ways and compare the step cost before committing to either.
+
+**Gate out:** `lab/text.flx` — one string at three sizes, the returned step
+against hand arithmetic, the ink's bounding box against the size asked for, and
+the step cost of a ten-letter word stated in `docs/TURTLE.md` where somebody
+about to write a sentence will see it.
 
 ---
 
@@ -300,6 +378,19 @@ and only then plan the sprint.
 **Verify:** a harness that draws a 2000×1500 scene, points the camera at three
 places, and checks each capture against the region it should show.
 
+
+**Gate in — and this one is a hard gate.** Answer, by experiment and in an
+ADR: can `std.image` be drawn into off-screen? Everything about this sprint
+follows from that one fact, and no part of it should be designed before the
+answer is written down. `graph.begin_cam2d` already gives pan and zoom over what
+is drawn, so the half of the sprint that is "look closer at the artwork" can
+ship on its own while the answer is being found.
+
+**Gate out:** a harness that draws a scene larger than the window, points the
+camera at three places, and checks each capture against the region it should
+show; the per-frame cost of a camera measured against no camera; and the bake
+strategy recorded in an ADR that supersedes the relevant part of adr 0003.
+
 ---
 
 ## Sprint 10 — Export options
@@ -321,6 +412,14 @@ places, and checks each capture against the region it should show.
 
 **Verify:** extend `lab/video.flx` — frame count, size and rate of each output,
 and two runs byte-identical.
+
+
+**Gate in:** check what `graph.capture` actually returns before promising a
+transparent background — alpha or no alpha decides whether that item exists.
+
+**Gate out:** `lab/video.flx` extended — frame count, size and rate of each
+output; two runs byte-identical; and the ffmpeg line for the formats
+`std.video` does not write printed by the tool rather than by the docs.
 
 ---
 
@@ -401,6 +500,13 @@ more strings; the cache rule does not bend for it.
 running Fluxa program its own source position. If the language ever exposes it,
 this becomes trivial; until then it is not a sprint, it is a language request.
 
+
+**Gate in:** none to measure. Read guide §12.5 again first: everything here
+is more strings, and the cache rule does not bend for a queue view.
+
+**Gate out:** `lab/panel.flx` extended — the queue's text at a known step, and
+a pixel count proving the artwork is untouched when the panel is off.
+
 ---
 
 ## Sprint 13 — Particles, gradients, animated backgrounds
@@ -424,6 +530,14 @@ already almost do.
 - **Shadow and lighting.** Cheap version: the same stroke offset and darkened,
   drawn in the halo pass that markers and glows already use.
 
+
+**Gate in:** particles that move cannot be baked, which makes them the first
+thing in this project that costs per frame. Measure that cost with a stand-in —
+2000 moving dots drawn per frame — before designing a pool for them.
+
+**Gate out:** the per-frame cost stated in `docs/TURTLE.md`, and a harness
+that holds the frame rate with the effect on and off.
+
 ---
 
 ## Sprint 14 — Extensibility
@@ -439,6 +553,13 @@ can call. **Composed objects** — a group of turtles that move together — is
 
 The other three are architecture, not features, and none of them should be
 designed before something actually needs them.
+
+
+**Gate in:** none of this is designed before something needs it. The gate is
+an artwork that wants it, in `docs/artworks/`, written by hand and awkward.
+
+**Gate out:** the awkward artwork rewritten with the new thing, and both
+versions kept side by side so the difference is visible.
 
 ---
 
