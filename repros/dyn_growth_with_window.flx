@@ -1,28 +1,49 @@
-// repros/dyn_growth_with_window.flx — a dyn grown while a window is open
+// repros/dyn_growth_with_window.flx — growing a dyn while a window exists
 //
-//   ./fluxa run repros/dyn_growth_with_window.flx      # run it eight times
+//   ./fluxa run repros/dyn_growth_with_window.flx
 //
-// Growing a `dyn` past its end is documented and works. Doing it while a
-// graphics window exists crashes the process about half the time, with no
-// error — the shell reports a core dump.
+// Growing a `dyn` past its end is documented and works. Doing it after a
+// graphics window has been created segfaults — in this shape, every time.
 //
-// Measured on fluxa with raylib/6.0, miniaudio/0.11.25, in eight runs each:
+// ── what it is not ────────────────────────────────────────────────
 //
-//   growth alone, no libs at all ................ 8/8 ok
-//   growth with std.image and image.new() ....... 8/8 ok
-//   window open, no growth ...................... 8/8 ok
-//   window open, grown to  20 elements .......... 8/8 ok
-//   window open, grown to  40 elements .......... 7/8 ok
-//   window open, grown to  80 elements .......... 5/8 ok
-//   window open, grown to 160 elements .......... 3/8 ok
+// Not raylib, as far as the stack can tell. gdb, on the crash:
 //
-// So it is the two together, and the odds get worse with the number of times
-// the list has to grow — which reads like a reallocation freeing something the
-// collector still reaches, and the window making the collector run more often
-// or at different moments. Nothing here touches the window after it opens.
+//   Thread 1 "fluxa" received signal SIGSEGV
+//   #0  value_release_data ()
+//   #1  value_release_data ()
+//   #2  eval ()
+//   #3  eval ()
+//   #4  eval ()
+//   #5  runtime_exec_persist.part ()
+//   #6  run_once ()
+//   #7  main ()
 //
-// This is the shape of the code it was found in: an artwork building a list of
-// points to hand to one call, with the stage already up.
+// No raylib frame anywhere, and the fault is in the runtime's own value
+// release path, reached from evaluating the assignment. What the window seems
+// to do is expose it rather than cause it.
+//
+// Nor is it allocation pressure or GL memory: two 1024x1024 images, made with
+// image.new and never discarded until the end, do not trigger it at all.
+//
+// ── what it is ────────────────────────────────────────────────────
+//
+// Six runs each, one thing changed at a time:
+//
+//   growth alone, no libs ........................... 6/6 survive
+//   growth after image.new(1024,1024) twice ......... 6/6 survive
+//   a window, no growth ............................. 6/6 survive
+//   growth FIRST, window opened afterwards .......... 6/6 survive
+//   window FIRST, then growth ....................... 0/6 survive
+//
+// The order is the whole thing: the same two statements in the other order are
+// stable. Growing less makes it flakier rather than safer — at twenty elements
+// it survived eight of eight, at forty seven, at eighty five, at a hundred and
+// sixty three — which is what a stale pointer to a reallocated buffer looks
+// like, hit or missed depending on what the allocator does next.
+//
+// Found while writing a call that takes a list of points: an artwork building
+// that list in a loop, with the stage already up, is exactly this program.
 
 import std graph
 

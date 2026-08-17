@@ -301,9 +301,13 @@ Eight runs each, isolating one thing at a time:
 | a window open, grown to 80 | 5/8 |
 | a window open, grown to 160 | 3/8 |
 
-`repros/dyn_growth_with_window.flx` is twelve lines and reproduces it. The
-worsening odds read like a reallocation freeing something the collector still
-reaches, with the window making the collector run more often.
+`repros/dyn_growth_with_window.flx` reproduces it, and gdb names the site:
+`value_release_data`, reached from `eval` — the runtime's own release path,
+with **no raylib frame on the stack**. Two 1024×1024 images do not trigger it,
+so it is not GL memory or allocation pressure either. And the order decides it:
+the same two statements with the growth *before* the window survive 6/6, with
+the window first 0/6. That is the shape of a stale pointer to a reallocated
+buffer, hit or missed depending on what the allocator does next.
 
 **So this sprint waits on the runtime.** Not on all of it: `follow` reading a
 list that was written as a literal is untouched by this, and that is most of the
