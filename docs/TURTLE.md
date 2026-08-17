@@ -844,12 +844,26 @@ python3 tools/import_sound.py note.ogg -o sounds/pencil.wav --from 0.19 --to 1.2
 ```
 
 It decodes anything ffmpeg reads (`std.sound` does not read ogg), trims to the
-seconds you name, and — the part that matters — **matches the level of the
-sounds already there**, by RMS rather than by peak, because two sounds with the
-same peak and different density do not sound equally loud. Run it with `--show`
-first: in the voice note this pencil came from, the loudest thing by 35 dB was
-the phone being handled at the end, and the graphite itself was the quiet part
-in the middle.
+seconds you name, sets the level, and **does nothing else** — the recording's
+own sample rate, no filtering, no limiting. That is deliberate and it was
+learned the hard way: an earlier version resampled to 22 kHz, high-passed at
+70 Hz and rounded the peaks with a soft knee, each defensible alone, and
+together they made a recorded pencil thinner and duller than the take it came
+from. What is left is a cut, a gain, and four milliseconds of fade so the cut
+does not click. Measured after: the imported pencil's spectral centre is 3679 Hz
+against the source segment's 3678.
+
+Run it with `--show` first. In the voice note this pencil came from, the loudest
+thing by 35 dB was the phone being handled at the end, and the graphite was the
+quiet part in the middle.
+
+**Level is matched over the loudest 300 ms**, not by peak and not by whole-file
+RMS, and the whole kit is set the same way. A knock is a moment and a long
+decay; a scratch is energy all the way through. Matched by peak, the scratch is
+much the louder of the two — which is exactly how it sounded, and what the ear
+judges is about a fifth of a second, so that is what gets measured. All six sit
+at 4400 by that ruler; their peaks land anywhere from 19766 to 31783, which is
+the point.
 
 ### What to know
 

@@ -49,9 +49,38 @@ def seeded(name):
     random.seed(sum(ord(c) * (i + 7) for i, c in enumerate(name)))
 
 
-def write(name, samples, amp=0.9):
-    peak = max(1e-9, max(abs(s) for s in samples))
-    scale = amp / peak
+def loud300(xs, ms=300):
+    """The RMS of the loudest 300 ms — the same ruler tools/import_sound.py
+    uses, so a recording and a synthesised sound can be set to one level.
+
+    Peak is the wrong one and it showed: normalised to the same peak, `stroke`
+    measured 3.5 dB louder than the knocks, because a knock is a moment and a
+    long decay while a scratch is energy all the way through. Loudness is
+    judged over about a fifth of a second, not over a sample.
+    """
+    w = int(SR * ms / 1000)
+    if len(xs) <= w:
+        return math.sqrt(sum(v * v for v in xs) / max(1, len(xs)))
+    acc = sum(v * v for v in xs[:w])
+    best = acc
+    for i in range(w, len(xs)):
+        acc += xs[i] * xs[i] - xs[i - w] * xs[i - w]
+        best = max(best, acc)
+    return math.sqrt(best / w)
+
+
+LEVEL = 4400.0 / 32767.0     # what the whole kit is set to, recordings included
+
+
+def write(name, samples, amp=None):
+    if amp is None:
+        scale = LEVEL / max(1e-9, loud300(samples))
+        peak = max(abs(s) for s in samples) * scale
+        if peak > 0.97:                       # a knock is mostly transient
+            scale *= 0.97 / peak
+    else:
+        peak = max(1e-9, max(abs(s) for s in samples))
+        scale = amp / peak
     os.makedirs("sounds", exist_ok=True)
     path = os.path.join("sounds", name)
     with wave.open(path, "w") as w:
