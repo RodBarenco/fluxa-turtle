@@ -823,7 +823,7 @@ pencil on paper.
 | `place.wav` | a piece set down — a wooden knock, 240 ms, peak at 79 Hz |
 | `tap.wav` | the same, lighter: a small move, peak at 147 Hz |
 | `slide.wav` | pushed across the board — a knock with a scratch dragged out of it |
-| `pencil.wav` | **tch-tch-tch**: three graphite marks, 255 ms |
+| `pencil.wav` | **tch-tch-tch**: three marks that go down and come back — 1928 Hz, 1380, 1832 |
 | `stroke.wav` | one longer line, the same voice lower — centre around 1.2 kHz |
 
 They are **synthesised**, by `tools/sounds.py`: the knocks are decaying
