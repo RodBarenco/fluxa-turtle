@@ -38,6 +38,17 @@ import wave
 SR = 22050
 
 
+def seeded(name):
+    """One seed per sound, from its own name.
+
+    A single seed at the top was not enough: the noise a sound draws depends on
+    how much noise the sounds before it drew, so synthesising the pencil or not
+    changed `stroke`. "Running this twice writes identical bytes" has to be
+    true whatever else is switched on.
+    """
+    random.seed(sum(ord(c) * (i + 7) for i, c in enumerate(name)))
+
+
 def write(name, samples, amp=0.9):
     peak = max(1e-9, max(abs(s) for s in samples))
     scale = amp / peak
@@ -163,18 +174,20 @@ def mix(a, b, wa=1.0, wb=1.0):
 
 
 def main():
-    random.seed(7)
 
     # A piece set down: heavy, short, and now a fifth lower than it was — the
     # first version was right in character and a little bright for wood.
+    seeded("place.wav")
     write("place.wav", knock(240, [(80, 1.0), (136, 0.55), (206, 0.3), (327, 0.12)],
                              click=0.5, decay=24.0))
 
     # The same gesture, smaller — for a step that is not the important one.
+    seeded("tap.wav")
     write("tap.wav", knock(150, [(145, 1.0), (244, 0.45), (368, 0.2)],
                            click=0.36, decay=38.0))
 
     # Pushed across the board: a knock with a scratch dragged out of it.
+    seeded("slide.wav")
     write("slide.wav", mix(knock(90, [(104, 1.0), (178, 0.4)], click=0.28, decay=38.0),
                            scratch(280, 420, 2100, 60, rasp=0.35, attack_ms=14.0, decay=6.0),
                            0.7, 0.85))
@@ -191,11 +204,13 @@ def main():
     # it in one take. What is kept here is the recipe for the four that ARE
     # synthesised, and `synth_pencil` for anyone who wants to try again.
     if os.environ.get("SYNTH_PENCIL"):
+        seeded("pencil.wav")
         write("pencil.wav", tch([1.0, 0.72, 1.0], [1.0, 1.28, 0.78], 185, 58, 180, 1100, 42,
                                 rasp=0.38, attack_ms=30.0, decay=2.4))
 
     # A longer line, the same voice a good deal lower: one continuous mark with
     # the hand still moving at the end.
+    seeded("stroke.wav")
     write("stroke.wav", scratch(430, 260, 1350, 46, rasp=0.5, attack_ms=22.0, decay=4.2))
 
 

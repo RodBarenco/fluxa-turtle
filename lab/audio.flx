@@ -45,7 +45,7 @@ stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
 
 dyn part = [0.0, 0.0]
-dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 print("backend: ", sound.version(), "   (a stub here means no runtime audio — nothing below proves anything)")
 
@@ -120,12 +120,12 @@ c.path_width(3)
 c.go(5, 90.0, 0.0)
 c.go(6, 90.0, 0.0)
 
-audio.Pencil()
+audio.Draw()
 c.go(7, 90.0, 0.0)
 c.go(8, 90.0, 0.0)
 
 print("band at step 6 .......  ", audio.Audio.sound_at(6), "   (expected 0 — still place)")
-print("band at step 7 .......  ", audio.Audio.sound_at(7), "   (expected 3 — pencil, from where it was written)")
+print("band at step 7 .......  ", audio.Audio.sound_at(7), "   (expected 5 — draw, from where it was written)")
 
 audio.Audio.open(snd)
 

@@ -776,7 +776,7 @@ audio.Cue(1, "sounds/place.wav")
 audio.Cue(36, "sounds/stroke.wav")
 ```
 
-### `audio.Place()` · `Tap()` · `Slide()` · `Pencil()` · `Stroke()` · `Quiet()`
+### `audio.Place()` · `Tap()` · `Slide()` · `Pencil()` · `Draw()` · `Stroke()` · `Quiet()`
 
 **What a step sounds like, from here on.** Every movement makes the noise — a
 piece being put down, a pencil mark — and it is a **band on the timeline**, like
@@ -824,13 +824,14 @@ pencil on paper.
 | `tap.wav` | the same, lighter: a small move, peak at 147 Hz |
 | `slide.wav` | pushed across the board — a knock with a scratch dragged out of it |
 | `pencil.wav` | a real pencil, **recorded** — 1080 ms of graphite on paper |
+| `draw.wav` | a real pencil again, **recorded**: one long even line, 670 ms |
 | `stroke.wav` | one longer line, the same voice lower — centre around 1.2 kHz |
 
 Four of them are **synthesised**, by `tools/sounds.py`: the knocks are decaying
 inharmonic partials over a click. Running that script writes identical bytes
 every time, so the repository holds the recipe and not only the result.
 
-**The pencil is a recording**, and that is the interesting one. Three goes at
+**The pencil and the drawn line are recordings**, and they are the interesting ones. Three goes at
 synthesising graphite got the physics right and the sound wrong — the click is
 what makes a scratch a gunshot; one filter pole is not a filter when the
 material is noise; a 62 ms mark is over before the ear has decided what it was

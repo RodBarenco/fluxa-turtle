@@ -59,8 +59,8 @@ prst dyn part   = [0.0, 0.0]
 // silent on the fourth save — and because nothing here is closed or loaded
 // twice, a soundtrack keeps playing straight through a save.
 //
-//   [engine, four files the artwork loaded, five sounds a step can make]
-prst dyn snd    = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+//   [engine, four files the artwork loaded, six sounds a step can make]
+prst dyn snd    = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 graph.set_fps(win, config.FPS())
 
@@ -84,7 +84,7 @@ leo.path_color(90, 230, 230)
 leo.path_width(1)
 leo.speed(900.0)
 leo.hide()
-audio.Stroke()  
+audio.Draw()  
 leo.go(1, 500.0, 0.0)
 
 
@@ -218,8 +218,9 @@ leo.go(1, 500.0, 0.0)
 // colour does. Knock through the outline, scribble through the shading:
 //
 //   audio.Place()      a piece set down          audio.Pencil()   a scribble
-//   audio.Tap()        a smaller move            audio.Stroke()   a longer line
-//   audio.Slide()      pushed across the board   audio.Quiet()    none
+//   audio.Tap()        a smaller move            audio.Draw()     a line being drawn
+//   audio.Slide()      pushed across the board   audio.Stroke()   a longer line
+//                                                audio.Quiet()    none
 //
 // Two step sounds are never closer together than 70 ms — a step every 11 ms is
 // not a chess move, it is a buzz.

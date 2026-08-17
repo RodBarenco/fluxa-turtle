@@ -389,8 +389,8 @@ audio.Track("music.mp3")             // plays while the artwork runs
 audio.Volume(70)                     // 0 to 100, everything at once
 ```
 
-`Place`, `Tap`, `Slide`, `Pencil`, `Stroke` and `Quiet` say **what a step sounds
-like from there on** — a band on the timeline, like a colour, so a drawing can
+`Place`, `Tap`, `Slide`, `Pencil`, `Draw`, `Stroke` and `Quiet` say **what a step
+sounds like from there on** — a band on the timeline, like a colour, so a drawing can
 knock its way through the outline and scribble through the shading. One sound at
 the start of each step, never two closer than 70 ms, and changing it does not
 reach backwards: finished steps do not repeat, so you hear the new one on what
@@ -399,10 +399,12 @@ is animated after the save (or press **R**).
 wav, mp3 and flac; four files in total. **A** turns the sound off and on while
 it runs.
 
-Five sounds ship with the tool, in `sounds/`, and none of them beeps — they are
-somewhere between a chess piece set down on a board and a pencil on paper:
-`place`, `tap`, `slide`, `pencil`, `stroke`. They are synthesised by
-`tools/sounds.py`, so the recipe is in the repository and not just the result.
+Six sounds ship with the tool, in `sounds/`, and none of them beeps — they run
+from a chess piece set down on a board to a pencil on paper: `place`, `tap`,
+`slide`, `pencil`, `draw`, `stroke`. Four are synthesised by `tools/sounds.py`,
+so the recipe is in the repository and not only the result; **`pencil` and
+`draw` are recordings of a real pencil**, brought in and levelled with
+`tools/import_sound.py`.
 
 Two things are deliberate. **A soundtrack keeps playing across a save** — live
 coding with music that restarted every time you pressed Ctrl-S would be no fun,

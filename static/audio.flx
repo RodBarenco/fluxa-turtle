@@ -53,8 +53,8 @@ Block Audio {
     // The five live in `sounds/` and have fixed slots in the carried array, so
     // switching between them mid-artwork costs nothing and they are loaded
     // only if they are asked for.
-    str arr kit[5] = ""
-    int arr kit_h[5] = 0
+    str arr kit[6] = ""
+    int arr kit_h[6] = 0
     int arr band_from[16] = 0
     int arr band_kind[16] = 0     // -1 = quiet
     int bands = 0
@@ -201,6 +201,7 @@ Block Audio {
         kit[2] = "sounds/slide.wav"
         kit[3] = "sounds/pencil.wav"
         kit[4] = "sounds/stroke.wav"
+        kit[5] = "sounds/draw.wav"
     }
 
     fn open(dyn a) nil {
@@ -243,7 +244,7 @@ Block Audio {
         // ones an artwork actually asks for are loaded, and a slot that
         // already holds a handle was loaded before the save.
         int k = 0
-        while k < 5 {
+        while k < 6 {
             guard[0] = k     // anchor FIRST
             if wants(k) == 1 {
                 int h = math.to_int(a[5 + k])
@@ -359,6 +360,7 @@ fn Tap() nil     { Audio.want_step_sound(1) }
 fn Slide() nil   { Audio.want_step_sound(2) }
 fn Pencil() nil  { Audio.want_step_sound(3) }
 fn Stroke() nil  { Audio.want_step_sound(4) }
+fn Draw() nil    { Audio.want_step_sound(5) }
 fn Quiet() nil   { Audio.want_step_sound(0 - 1) }
 
 fn Track(str path) nil        { Audio.want_track(path) }
