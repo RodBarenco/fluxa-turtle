@@ -59,11 +59,14 @@ Block Audio {
     int arr band_kind[16] = 0     // -1 = quiet
     int bands = 0
 
-    // A step every 11 ms is not a chess move, it is a buzz. A drawing traced
-    // from a photograph has more than a thousand steps and would machine-gun
-    // through them, so two step sounds are never closer together than this.
-    // It costs nothing to state and it is the difference between a rhythm and
-    // a noise.
+    // How close together two step sounds may be. A short step restarting the
+    // sound is not a problem — it is the drawing keeping up with itself, and a
+    // hand scribbling quickly does sound like that. This is only a floor:
+    // without one, a hundred steps a second is not a rhythm, it is a tone.
+    //
+    // It was briefly one gap per sound, long enough for each to finish. That
+    // is a different instrument — every long sound then swallows the steps
+    // under it — and it is not the one this tool wants.
     int gap_ms = 70
     int last_ms = 0
 

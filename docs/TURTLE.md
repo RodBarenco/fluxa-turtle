@@ -797,10 +797,10 @@ turns the step sound off from that point.
 **One sound at the start of the step, and no more** — a step is one gesture, so
 it makes one noise when it begins, however long it takes to walk.
 
-**Two are never closer together than 70 ms.** A drawing traced from a photograph
-has a thousand steps and would machine-gun through them; a step every 11 ms is
-not a chess move, it is a buzz. What you hear on a dense artwork is a rhythm at
-about fourteen a second, not one sound per step.
+**Two are never closer together than 70 ms.** That is a floor and nothing more:
+a short step restarting the sound is the drawing keeping up with itself, and a
+hand scribbling quickly does sound like that. Without any floor, a hundred steps
+a second stops being a rhythm and becomes a tone.
 
 **Changing it does not reach backwards.** Save with a different sound and the
 steps that are already finished are not replayed — they never repeat, that is
@@ -823,7 +823,7 @@ pencil on paper.
 | `place.wav` | a piece set down — a wooden knock, 240 ms, peak at 79 Hz |
 | `tap.wav` | the same, lighter: a small move, peak at 147 Hz |
 | `slide.wav` | pushed across the board — a knock with a scratch dragged out of it |
-| `pencil.wav` | **tch-tch-tch** — three marks with a shape: 65 ms at 1931 Hz, 79 ms at 1405, 46 ms at 1931 |
+| `pencil.wav` | **tch-tch-tch** — three marks with a shape: 187 ms at 926 Hz, 231 ms at 638, 140 ms at 919. 682 ms in all |
 | `stroke.wav` | one longer line, the same voice lower — centre around 1.2 kHz |
 
 They are **synthesised**, by `tools/sounds.py`: the knocks are decaying

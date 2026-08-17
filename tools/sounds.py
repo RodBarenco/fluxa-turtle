@@ -125,7 +125,8 @@ def scratch(ms, lo_hz, hi_hz, grain_hz, rasp=0.45, attack_ms=9.0, decay=9.0):
     return out
 
 
-def tch(shape, hold, ms, gap_ms, lo_hz, hi_hz, grain_hz):
+def tch(shape, hold, ms, gap_ms, lo_hz, hi_hz, grain_hz,
+        rasp=0.45, attack_ms=9.0, decay=9.0):
     """tch-tch-tch: the same scratch a few times, with a shape to it.
 
     Two factors per mark, and they are what turn three bursts into a gesture:
@@ -140,7 +141,8 @@ def tch(shape, hold, ms, gap_ms, lo_hz, hi_hz, grain_hz):
     """
     out = []
     for k, f in enumerate(shape):
-        piece = scratch(ms * hold[k], lo_hz * f, hi_hz * f, grain_hz * f)
+        piece = scratch(ms * hold[k], lo_hz * f, hi_hz * f, grain_hz * f,
+                        rasp=rasp, attack_ms=attack_ms, decay=decay)
         out.extend(piece)
         out.extend([0.0] * int(SR * gap_ms / 1000))
     while out and abs(out[-1]) < 1e-6:
@@ -173,11 +175,18 @@ def main():
                            0.7, 0.85))
 
     # Graphite: tch-tch-tch. Three marks, not one burst, and no click on any of
-    # them — the click was what made the old one sound like a shot. The middle
-    # mark drops a fourth and is held longer, and the third comes back up to the
-    # first and is cut short — so the three of them are a gesture and not a
-    # repetition.
-    write("pencil.wav", tch([1.0, 0.72, 1.0], [1.0, 1.22, 0.72], 62, 46, 430, 2100, 140))
+    # them — the click was what made the first version sound like a shot.
+    #
+    # The second version still did, for a different reason: at 62 ms a mark is
+    # over before the ear has decided what it was, and three of those in 274 ms
+    # is a burst however soft the attack. They are nearly three times longer
+    # now, a good deal deeper, and each one sustains instead of dying — a hand
+    # pressing graphite along, not tapping it.
+    #
+    # The middle mark drops a fourth and is held longer; the third comes back up
+    # to the first and is cut short.
+    write("pencil.wav", tch([1.0, 0.72, 1.0], [1.0, 1.28, 0.78], 185, 58, 180, 1100, 42,
+                            rasp=0.38, attack_ms=30.0, decay=2.4))
 
     # A longer line, the same voice a good deal lower: one continuous mark with
     # the hand still moving at the end.

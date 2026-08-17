@@ -140,7 +140,7 @@ while k <= 8 {
     runner.Runner.animate(win, canvas, sheet, part, k)
     k = k + 1
 }
-print("steps heard, 5 to 8 ..  ", audio.Audio.fires() - was, "   (expected 4 — 300 ms a step, so none is dropped)")
+print("steps heard, 5 to 8 ..  ", audio.Audio.fires() - was, "   (expected 4 — 300 ms a step, none dropped)")
 
 // The same four steps at a speed where they land 11 ms apart: the limiter has
 // to swallow most of them, because that is a buzz and not a rhythm.
@@ -165,9 +165,9 @@ while r <= 20 {
     r = r + 1
 }
 int rapid = audio.Audio.fires() - was
-print("20 steps in a blur ...  ", rapid, " heard of 20   (expected far fewer than 20:")
-print("                        each is one frame, so 20 of them span about 330 ms, and the")
-print("                        limiter lets one through every 70 ms)")
+print("20 steps in a blur ...  ", rapid, " heard of 20   (expected a handful: they span")
+print("                        about 330 ms and the floor is 70 ms. Restarting a sound on a")
+print("                        short stroke is wanted; a hundred a second is not)")
 
 // ── an export says nothing ────────────────────────────────────────
 
