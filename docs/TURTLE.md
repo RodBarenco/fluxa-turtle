@@ -858,7 +858,10 @@ thing by 35 dB was the phone being handled at the end, and the graphite was the
 quiet part in the middle.
 
 **Level is matched over the loudest 300 ms**, not by peak and not by whole-file
-RMS, and the whole kit is set the same way. A knock is a moment and a long
+RMS, and the whole kit is set the same way. The two recordings then sit
+`--trim 3` — three decibels under — on purpose: measuring the same is where
+levelling starts, not where it ends, and a scratch that goes on for a second
+sits further forward than a knock that measures the same. A knock is a moment and a long
 decay; a scratch is energy all the way through. Matched by peak, the scratch is
 much the louder of the two — which is exactly how it sounded, and what the ear
 judges is about a fifth of a second, so that is what gets measured. All six sit

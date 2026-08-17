@@ -157,6 +157,10 @@ def main():
     ap.add_argument("--from", dest="a", type=float, default=0.0, help="seconds")
     ap.add_argument("--to", dest="b", type=float, default=0.0, help="seconds; 0 = the end")
     ap.add_argument("--level", choices=("loud", "rms", "peak"), default="loud")
+    ap.add_argument("--trim", type=float, default=0.0,
+                    help="decibels BELOW the kit, on purpose. Matching the numbers is "
+                         "where levelling starts, not where it ends: a scratch that "
+                         "measures the same as a knock can still sit too far forward")
     ap.add_argument("--hp", type=float, default=0.0, help="high-pass in Hz; off by default")
     ap.add_argument("--show", action="store_true", help="print the envelope and stop")
     args = ap.parse_args()
@@ -180,7 +184,7 @@ def main():
         xs = highpass(xs, args.hp, sr)
     xs = fade(xs, sr)
 
-    want = kit_level(args.level)
+    want = kit_level(args.level) * (10.0 ** (-args.trim / 20.0))
     gain = want / max(measure(xs, sr, args.level), 1e-9)
 
     # Scaling up is where a recording gets hurt, so it is the one case that
@@ -195,9 +199,11 @@ def main():
 
     xs = [v * gain for v in xs]
     write(args.out, xs, sr)
+    note = f", {args.trim:.1f} dB under the kit on purpose" if args.trim else ""
     print(f"[import] {len(xs) / sr * 1000:.0f} ms out at {sr} Hz, gain "
           f"{20 * math.log10(max(gain, 1e-9)):+.1f} dB, loudest 300 ms "
-          f"{loud(xs, sr):.0f} against the kit's {want:.0f} -> {args.out}", file=sys.stderr)
+          f"{loud(xs, sr):.0f} against a target of {want:.0f}{note} -> {args.out}",
+          file=sys.stderr)
 
 
 if __name__ == "__main__":
