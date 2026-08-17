@@ -42,11 +42,10 @@ lab/frames/
 # --- Verification harness output -----------------------------
 lab/*.png
 
-# --- Source art that is not the project's to publish ----------
-# A scan or a photo of your own drawing: it lives here so the tools can read
-# it, and it stays out of the repository. The turtle code traced FROM it is
-# yours to commit; the drawing is yours to keep.
-tartaruga.png
+# --- Working art -----------------------------------------------
+# Where a scan or a photo of a drawing lives while the tools chew on it,
+# together with everything generated from it. What gets published is the
+# finished artwork in docs/artworks/, chosen by hand — never the source photo.
 art/
 __pycache__/
 

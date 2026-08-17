@@ -15,6 +15,17 @@ The colours are only a suggestion: change them freely.
 
 ---
 
+## Leonardo
+
+[![Leonardo](artworks/leonardo.png)](artworks/leonardo.md)
+
+A pencil drawing on paper, traced into steps and drawn back by six turtles. The
+forearm waves, and then the photograph it was traced from lands exactly on its
+own outlines — the only piece here that starts somewhere the tool cannot reach:
+**[docs/artworks/leonardo.md](artworks/leonardo.md)**.
+
+---
+
 ## One Night
 
 [![One Night](artworks/one-night.png)](artworks/one-night.md)
