@@ -1,0 +1,39 @@
+// repros/dyn_growth_with_window.flx — a dyn grown while a window is open
+//
+//   ./fluxa run repros/dyn_growth_with_window.flx      # run it eight times
+//
+// Growing a `dyn` past its end is documented and works. Doing it while a
+// graphics window exists crashes the process about half the time, with no
+// error — the shell reports a core dump.
+//
+// Measured on fluxa with raylib/6.0, miniaudio/0.11.25, in eight runs each:
+//
+//   growth alone, no libs at all ................ 8/8 ok
+//   growth with std.image and image.new() ....... 8/8 ok
+//   window open, no growth ...................... 8/8 ok
+//   window open, grown to  20 elements .......... 8/8 ok
+//   window open, grown to  40 elements .......... 7/8 ok
+//   window open, grown to  80 elements .......... 5/8 ok
+//   window open, grown to 160 elements .......... 3/8 ok
+//
+// So it is the two together, and the odds get worse with the number of times
+// the list has to grow — which reads like a reallocation freeing something the
+// collector still reaches, and the window making the collector run more often
+// or at different moments. Nothing here touches the window after it opens.
+//
+// This is the shape of the code it was found in: an artwork building a list of
+// points to hand to one call, with the stage already up.
+
+import std graph
+
+dyn win = graph.init(400, 300, "repro")
+
+dyn p = [0.0]
+int k = 1
+while k < 160 {
+    p[k] = 1.0
+    k = k + 1
+}
+
+print("survived, len = ", len(p))
+graph.close(win)

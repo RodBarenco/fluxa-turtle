@@ -282,13 +282,35 @@ distance-based speed at its midpoint.
 writes goes from 1944 lines to a few dozen.
 
 
-**Gate in — partly answered already, today.** Measured: a `dyn` grows when an
-artwork writes past its end (`len` went 1 → 4 → 240 in a loop), a `dyn` arrives
-in a Block method and `len` and indexing both work on it there, and a
-three-point `follow` emits three actions and returns the right step. What is
-NOT answered: **a 120-point harness core-dumped**, and where is not yet known —
-`follow` itself, the harness's own loop, or something under both. Isolate that
-crash first and file it; everything else in this sprint is easy and that is not.
+**Gate in — answered, and the answer moved the work.** Measured: a `dyn` grows
+when an artwork writes past its end, a `dyn` arrives in a Block method with
+`len` and indexing intact, and a three-point `follow` emits three actions and
+returns the right step. The crash that stopped the first attempt is **not**
+`follow` and not the tool: it is **growing a `dyn` while a graphics window is
+open**, and it takes the process down about half the time.
+
+Eight runs each, isolating one thing at a time:
+
+| | |
+|---|---|
+| growth alone, no libs | 8/8 ok |
+| growth with `std.image` and `image.new` | 8/8 ok |
+| a window open, no growth | 8/8 ok |
+| a window open, grown to 20 elements | 8/8 ok |
+| a window open, grown to 40 | 7/8 |
+| a window open, grown to 80 | 5/8 |
+| a window open, grown to 160 | 3/8 |
+
+`repros/dyn_growth_with_window.flx` is twelve lines and reproduces it. The
+worsening odds read like a reallocation freeing something the collector still
+reaches, with the window making the collector run more often.
+
+**So this sprint waits on the runtime.** Not on all of it: `follow` reading a
+list that was written as a literal is untouched by this, and that is most of the
+value. What waits is the case the sprint was aimed at — an artwork building a
+long list in a loop and handing it over — which is exactly the pattern the crash
+kills. Build `follow` against literals, keep the loop case behind the repro, and
+re-measure the day the runtime changes.
 
 **Gate out:** `lab/follow.flx` — the same trajectory drawn by `follow` and by
 hand-written `toward` calls, pixel-identical; the returned step against the
