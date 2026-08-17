@@ -441,6 +441,7 @@ static/runner.flx     execution
 lab/                  verification harnesses
 docs/TURTLE.md        every call the turtle has, and when each one happens
 docs/TRACE.md         tools/trace.py: an SVG or an image into turtle code
+docs/ROADMAP.md       everything left, in the order it is worth doing
 docs/                 artworks, recipes, changelog and design decisions
 ```
 
