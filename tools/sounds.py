@@ -125,17 +125,22 @@ def scratch(ms, lo_hz, hi_hz, grain_hz, rasp=0.45, attack_ms=9.0, decay=9.0):
     return out
 
 
-def tch(shape, ms, gap_ms, lo_hz, hi_hz, grain_hz):
+def tch(shape, hold, ms, gap_ms, lo_hz, hi_hz, grain_hz):
     """tch-tch-tch: the same scratch a few times, with a shape to it.
 
-    `shape` is one factor per mark, applied to the whole voice — both ends of
-    the band and the grain — so 0.72 is that mark said lower rather than just
-    duller. Three identical bursts sound like a machine; a hand goes down in
-    the middle and comes back, which is what [1.0, 0.72, 1.0] is.
+    Two factors per mark, and they are what turn three bursts into a gesture:
+
+      `shape`  the whole voice — both ends of the band and the grain — so 0.72
+               is that mark said lower, not merely duller
+      `hold`   how long it is held
+
+    A hand does not repeat itself. This one goes down and longer in the middle
+    and comes back short and level: shape [1.0, 0.72, 1.0], hold [1.0, 1.22,
+    0.72].
     """
     out = []
     for k, f in enumerate(shape):
-        piece = scratch(ms * (0.94 ** k), lo_hz * f, hi_hz * f, grain_hz * f)
+        piece = scratch(ms * hold[k], lo_hz * f, hi_hz * f, grain_hz * f)
         out.extend(piece)
         out.extend([0.0] * int(SR * gap_ms / 1000))
     while out and abs(out[-1]) < 1e-6:
@@ -169,9 +174,10 @@ def main():
 
     # Graphite: tch-tch-tch. Three marks, not one burst, and no click on any of
     # them — the click was what made the old one sound like a shot. The middle
-    # mark drops a fourth and the third comes back up to the first, so the three
-    # of them are a gesture and not a repetition.
-    write("pencil.wav", tch([1.0, 0.72, 1.0], 62, 46, 430, 2100, 140))
+    # mark drops a fourth and is held longer, and the third comes back up to the
+    # first and is cut short — so the three of them are a gesture and not a
+    # repetition.
+    write("pencil.wav", tch([1.0, 0.72, 1.0], [1.0, 1.22, 0.72], 62, 46, 430, 2100, 140))
 
     # A longer line, the same voice a good deal lower: one continuous mark with
     # the hand still moving at the end.
