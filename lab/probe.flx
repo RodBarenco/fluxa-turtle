@@ -36,7 +36,7 @@ leo.ring(2, 35, 470.0, 170.0)
 
 print("rosette via ring: actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
 
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 runner.Runner.shown(win, canvas, sheet)
 danger {
     dyn shot = graph.capture(win)

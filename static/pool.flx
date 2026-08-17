@@ -69,6 +69,11 @@ Block Pool {
     int sfiles = 0
 
     int arr sslot[32] = 0         // 0 = no sprite, otherwise the entry + 1
+
+    // The picture a turtle STAMPS ALONG HER PATH, which is a different thing
+    // from the picture she is drawn as. Same sheet, same eight files, and 0
+    // means she has not asked for one (pillars §4).
+    int arr pslot[32] = 0         // 0 = none, otherwise the entry + 1
     int arr ssx[32]   = 0         // a region inside that file, in its own pixels
     int arr ssy[32]   = 0
     int arr ssw[32]   = 0         // 0 = the whole file
@@ -111,6 +116,7 @@ Block Pool {
         pw[id]     = 2
         pen[id]    = 1
         pstyle[id] = 0
+        pslot[id] = 0
         pdash[id]  = 10
         pgap[id]   = 8
         popa[id]   = 100
@@ -220,6 +226,33 @@ Block Pool {
         sfscale[sfiles] = sc
         sfiles = sfiles + 1
         return sfiles - 1
+    }
+
+    fn set_path_sprite(int i, int slot) nil {
+        if slot < 0 { return }
+        pslot[i] = slot + 1
+    }
+
+    fn get_pslot(int i) int { return pslot[i] }
+
+    // One picture, centred on a point and turned. This is `draw_sprite` with
+    // the turtle taken out of it: the painter stamps a path with it, and it
+    // takes a sheet entry rather than a turtle (adr 0020).
+    fn stamp(dyn win, dyn sheet, int entry, int cx, int cy, float deg) nil {
+        if entry < 0 { return }
+        if entry >= sfiles { return }
+        int w = sfw[entry]
+        int h = sfh[entry]
+        if w < 1 { return }
+        if h < 1 { return }
+        graph.draw_sprite(win, sheet, 0, soffy[entry], w, h,
+                          cx - w / 2, cy - h / 2, 0.0 - deg, 255, 255, 255, 255)
+    }
+
+    fn stamp_w(int entry) int {
+        if entry < 0 { return 0 }
+        if entry >= sfiles { return 0 }
+        return sfw[entry]
     }
 
     fn set_sprite(int i, int slot, int sx, int sy, int sw, int sh) nil {

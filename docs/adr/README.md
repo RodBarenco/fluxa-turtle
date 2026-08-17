@@ -25,3 +25,4 @@ because it came out of a runtime constraint measured in practice.
 | [0017](0017-going-back-is-the-step-run-backwards.md) | Going back is the step run backwards |
 | [0018](0018-a-stroke-can-be-drawn-in-layers.md) | A stroke can be drawn in layers, and the rhythm belongs to the path |
 | [0019](0019-sound-crosses-the-save-and-a-rebuild-is-silent.md) | Sound crosses the save, and a rebuild is silent |
+| [0020](0020-the-sheet-is-passed-to-whoever-draws.md) | The sheet is passed to whoever draws |

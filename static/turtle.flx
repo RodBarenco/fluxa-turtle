@@ -142,6 +142,27 @@ Block Turtle {
         timeline.Timeline.style(id, 6, 0, 8, 20, 0.0)
     }
 
+    // A path made of pictures (pillars §4): footprints, leaves, symbols, a
+    // fragment of a drawing — stamped along the stroke instead of a line drawn
+    // along it, each one turned the way she is walking.
+    //
+    //     leo.path_image("leaf.png", 0.5)
+    //     leo.path_dash(0, 26)          // and how far apart they sit
+    //
+    // The picture goes into the same 1024x1024 sheet the turtles' own bodies
+    // use, so the eight files are shared between them (adr 0013). Draw the art
+    // facing RIGHT, as everywhere else here.
+    //
+    // This one is a DECLARATION, not an appearance event: it says which picture
+    // this turtle stamps, the way `image` says which picture she is. What is on
+    // the timeline is the style — so a `path_solid()` later stops the stamping
+    // from that step, and asking for the style again resumes it.
+    fn path_image(str path, float scale) nil {
+        pool.Pool.set_path_sprite(id, pool.Pool.use_file(path, scale))
+        timeline.Timeline.style(id, 5, 11, 0, 0, 0.0)
+        timeline.Timeline.style(id, 6, 0, 0, 26, 0.0)
+    }
+
     fn path_dash(int dash, int gap) nil { timeline.Timeline.style(id, 6, 0, dash, gap, 0.0) }
 
     // Clears the path already drawn by THIS turtle, on the given step. Her

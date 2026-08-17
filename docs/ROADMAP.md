@@ -42,13 +42,16 @@ the sprint.
 
 ## Where the project stands
 
-**The pillars are done except one.** §1 environment, §2 turtles, §3 appearance,
+**The pillars are done.** §4's last item, a path made of pictures, shipped in
+0.18.0 as `path_image`. What is left below is all expansions.
+
+Previously: §1 environment, §2 turtles, §3 appearance,
 §5 movement, §6 persistence and live coding, §7 replay, §8 controlled export,
 §9 the four modes of use, §10 identity — all built and verified.
 
 | Pillar | State |
 |---|---|
-| §4 `Turtle.pathTexture` | **the last gap** — a path made of pictures, not lines |
+| §4 `Turtle.pathTexture` | **done** in 0.18.0 — `path_image(path, scale)` |
 | §1 animated / video background | partial: colour and image, no animation |
 | §8 export options | partial: MP4, PNG, step range, fps, holds — no output size, codec, transparency, file name |
 
@@ -82,7 +85,7 @@ Measure it against `lab/limits.flx`, which is exactly this worst case.
 
 ---
 
-## Sprint 6 — `pathTexture` · the last pillar gap
+## Sprint 6 — `pathTexture` — DONE (project 0.18.0)
 
 **Deliver:** `leo.path_image("leaf.png", 0.4)` — the stroke stamped with a
 picture instead of drawn as a line. Footprints, leaves, stars, symbols,

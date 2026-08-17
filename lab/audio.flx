@@ -109,12 +109,12 @@ print("hash now stored .......  ", math.to_int(snd[5]) != 12345, "   (expected t
 
 // ── the rebuild is silent ─────────────────────────────────────────
 
-runner.Runner.rebuild(win, canvas, 4)
+runner.Runner.rebuild(win, canvas, sheet, 4)
 print("cues after a rebuild .  ", audio.Audio.fires(), "   (expected 0 — a redraw must not make noise)")
 
 // ── and the animation is not ──────────────────────────────────────
 
-runner.Runner.rebuild(win, canvas, 0)
+runner.Runner.rebuild(win, canvas, sheet, 0)
 int s = 1
 while s <= 4 {
     runner.Runner.animate(win, canvas, sheet, part, s)
@@ -153,11 +153,11 @@ print("band at step 7 .......  ", audio.Audio.sound_at(7), "   (expected 5 — d
 audio.Audio.open(snd)
 
 int was = audio.Audio.fires()
-runner.Runner.rebuild(win, canvas, 8)
+runner.Runner.rebuild(win, canvas, sheet, 8)
 print("steps heard on rebuild  ", audio.Audio.fires() - was, "   (expected 0 — a redraw is still silent)")
 
 was = audio.Audio.fires()
-runner.Runner.rebuild(win, canvas, 4)
+runner.Runner.rebuild(win, canvas, sheet, 4)
 int k = 5
 while k <= 8 {
     runner.Runner.animate(win, canvas, sheet, part, k)
@@ -181,7 +181,7 @@ while q <= 20 {
     q = q + 1
 }
 was = audio.Audio.fires()
-runner.Runner.rebuild(win, canvas, 0)
+runner.Runner.rebuild(win, canvas, sheet, 0)
 int r = 1
 while r <= 20 {
     runner.Runner.animate(win, canvas, sheet, part, r)
@@ -214,7 +214,7 @@ e.path_color(255, 200, 60)
 e.path_width(3)
 e.go(1, 200.0, 0.0)
 
-runner.Runner.rebuild(win, canvas, 0)
+runner.Runner.rebuild(win, canvas, sheet, 0)
 int hb = audio.Audio.fires()
 runner.Runner.animate(win, canvas, sheet, part, 1)
 print("")
@@ -234,7 +234,7 @@ print("after 120 ms of frames  ", audio.Audio.heard(), "   (expected 0 — faded
 
 int before = audio.Audio.fires()
 audio.Audio.mute(1)
-runner.Runner.rebuild(win, canvas, 0)
+runner.Runner.rebuild(win, canvas, sheet, 0)
 int t = 1
 while t <= 4 {
     runner.Runner.animate(win, canvas, sheet, part, t)

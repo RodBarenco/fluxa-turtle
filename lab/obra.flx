@@ -49,7 +49,7 @@ while s <= 36 {
 ana.go_silent(1, 260.0, 0.0)
 ana.ring(2, 12, 300.0, 150.0)
 
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 runner.Runner.shown(win, canvas, sheet)
 danger {
     dyn shot = graph.capture(win)

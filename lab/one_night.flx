@@ -2599,7 +2599,7 @@ finL.pivot(598, 3.3, 356, 430)
 finR.pivot(599, -1.7, 467, 470)
 finL.pivot(599, 1.7, 356, 430)
 
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 runner.Runner.shown(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())

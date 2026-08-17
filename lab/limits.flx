@@ -95,7 +95,7 @@ print("empty step 3000 ......  ", timeline.Timeline.action_of(7, 3000), "   (exp
 // is the worst case the caps allow and it is meant to be slow: it is the
 // number that says what a runaway artwork would cost.
 int t1 = time.now_ms()
-runner.Runner.rebuild(win, canvas, config.MAX_STEPS())
+runner.Runner.rebuild(win, canvas, sheet, config.MAX_STEPS())
 print("rebuild of ", config.MAX_STEPS(), " steps   ", time.elapsed_ms(t1), " ms")
 
 runner.Runner.shown(win, canvas, sheet)

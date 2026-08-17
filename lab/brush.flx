@@ -124,7 +124,7 @@ while i <= 34 {
 }
 
 int t0 = time.now_ms()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 int all8 = time.elapsed_ms(t0)
 runner.Runner.shown(win, canvas, sheet)
 
@@ -137,6 +137,78 @@ danger {
     image.discard(shot)
 }
 if err != nil { print("capture: ", err[0]) }
+
+// ── a path made of pictures ───────────────────────────────────────
+//
+// The last thing pillars §4 asks for. The picture is drawn here rather than
+// shipped: a leaf, facing right, so it turns the way the stroke goes.
+
+// std.image has no way to set a pixel, so art is made the way lab/sprite.flx
+// makes it: drawn on the window, captured, and cut out with a blit into a small
+// image. Cleared to the stage's own colour rather than to black, because a
+// capture has no alpha and the corners of the cell come along with the leaf.
+
+graph.begin_frame(win)
+graph.clear(win, 18, 18, 26)
+graph.draw_triangle(win, 0, 7, 13, 0, 26, 7, 120, 200, 120)
+graph.draw_triangle(win, 0, 7, 13, 14, 26, 7, 96, 176, 104)
+graph.draw_line(win, 1, 7, 25, 7, 60, 120, 60)
+graph.end_frame(win)
+
+danger {
+    dyn shot_leaf = graph.capture(win)
+    dyn leaf = image.new(26, 15)
+    image.blit(leaf, shot_leaf, 0, 0)
+    image.save(leaf, "lab/_leaf.png")
+    image.discard(leaf)
+    image.discard(shot_leaf)
+}
+if err != nil { print("leaf: ", err[0]) }
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+Block s0 typeof turtle.Turtle
+s0.spawn(80.0, 300.0)
+s0.hide()
+s0.speed(6000.0)
+s0.path_image("lab/_leaf.png", 1.0)
+s0.path_dash(0, 34)
+
+int sw = 0
+while sw <= 30 {
+    float sx = 80.0 + math.to_float(sw) * 21.0
+    s0.toward(1 + sw, sx, 300.0 + 40.0 * math.sin(math.to_float(sw) * 0.38))
+    sw = sw + 1
+}
+
+// And one straight run of a known length, so the spacing can be counted rather
+// than admired: 680 px at one stamp every 34 is 21 of them, the first at the
+// start point.
+Block s1 typeof turtle.Turtle
+s1.spawn(60.0, 520.0)
+s1.hide()
+s1.speed(6000.0)
+s1.path_image("lab/_leaf.png", 1.0)
+s1.path_dash(0, 34)
+s1.toward(1, 740.0, 520.0)
+
+dyn leaves = pool.Pool.atlas()
+runner.Runner.rebuild(win, canvas, leaves, timeline.Timeline.max_step())
+runner.Runner.shown(win, canvas, leaves)
+print("")
+print("a stamped path: ", timeline.Timeline.count(), " segments, one picture every 34 px")
+print("the straight run: 680 px at 34 apart — 20 stamps, first at x=60, last at 706,")
+print("                  every gap exactly 34.0. Twenty and not twenty-one because")
+print("                  the mark at the very end of the segment belongs to the next")
+print("                  one, the same rule every dash follows.")
+danger {
+    dyn st = graph.capture(win)
+    image.save(st, "lab/brush_stamped.png")
+    image.discard(st)
+}
+if err != nil { print("capture: ", err[0]) }
+image.discard(leaves)
 
 // ── what each one costs ───────────────────────────────────────────
 //
@@ -165,22 +237,28 @@ print("")
 print("600 segments, one look at a time:")
 
 int s0 = time.now_ms()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 print("  solid ......  ", time.elapsed_ms(s0), " ms")
 
 m.path_brush()
 int s1 = time.now_ms()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 print("  brush ......  ", time.elapsed_ms(s1), " ms")
 
 m.path_spray()
 int s2 = time.now_ms()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 print("  spray ......  ", time.elapsed_ms(s2), " ms")
+
+m.path_image("lab/_leaf.png", 1.0)
+m.path_dash(0, 34)
+int s2b = time.now_ms()
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+print("  stamped ....  ", time.elapsed_ms(s2b), " ms")
 
 m.path_stars()
 int s3 = time.now_ms()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 print("  stars ......  ", time.elapsed_ms(s3), " ms")
 
 // From here on the artwork contains a layered style, and a layered style is
@@ -189,12 +267,12 @@ print("  stars ......  ", time.elapsed_ms(s3), " ms")
 // order of this list matters.
 m.path_marker()
 int s4 = time.now_ms()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 print("  marker .....  ", time.elapsed_ms(s4), " ms   (two passes from here on)")
 
 m.path_glow()
 int s5 = time.now_ms()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 print("  glow .......  ", time.elapsed_ms(s5), " ms")
 
 // ── the spray is not random ───────────────────────────────────────
@@ -213,7 +291,7 @@ p.toward(1, 700.0, 300.0)
 p.toward(2, 400.0, 120.0)
 p.toward(3, 100.0, 300.0)
 
-runner.Runner.rebuild(win, canvas, 3)
+runner.Runner.rebuild(win, canvas, sheet, 3)
 runner.Runner.shown(win, canvas, sheet)
 danger {
     dyn one = graph.capture(win)
@@ -222,7 +300,7 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-runner.Runner.rebuild(win, canvas, 3)
+runner.Runner.rebuild(win, canvas, sheet, 3)
 runner.Runner.shown(win, canvas, sheet)
 danger {
     dyn two = graph.capture(win)

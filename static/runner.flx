@@ -98,7 +98,7 @@ Block Runner {
             again = 0
             int limit = timeline.Timeline.max_step()
 
-            rebuild(win, canvas, cur)
+            rebuild(win, canvas, sheet, cur)
 
             // One loop for the whole live stage. It used to be two — animate
             // every step, then sit idle — which left no room for a pause: the
@@ -153,8 +153,8 @@ Block Runner {
                                 int f = cur + 1
                                 animate(win, canvas, sheet, part, f)
                                 if arrived == 1 { cur = f }
-                                if arrived == 1 && has_clear(f) == 1 { rebuild(win, canvas, cur) }
-                                if arrived == 1 && timeline.Timeline.moves_at(f) == 1 { rebuild(win, canvas, cur) }
+                                if arrived == 1 && has_clear(f) == 1 { rebuild(win, canvas, sheet, cur) }
+                                if arrived == 1 && timeline.Timeline.moves_at(f) == 1 { rebuild(win, canvas, sheet, cur) }
                             }
                         }
 
@@ -192,9 +192,9 @@ Block Runner {
                         // A save is the only other way out of that animation.
                         if arrived == 0 && back == 0 { stop = 1 }
                         if arrived == 1 { cur = nxt }
-                        if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, cur) }
+                        if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, sheet, cur) }
                         if arrived == 1 && timeline.Timeline.moves_at(nxt) == 1 {
-                            rebuild(win, canvas, cur)
+                            rebuild(win, canvas, sheet, cur)
                             frame(win, canvas, sheet)
                             panel.Panel.draw(win)
                             graph.end_frame(win)
@@ -241,16 +241,16 @@ Block Runner {
         graph.set_fps(win, 0)
 
         // the state at the start of the exported range
-        rebuild(win, canvas, a - 1)
+        rebuild(win, canvas, sheet, a - 1)
 
         hold(win, canvas, sheet, export.Exporter.get_hold_start())
 
         int s = a
         while s <= b {
             animate(win, canvas, sheet, part_none, s)
-            if has_clear(s) == 1 { rebuild(win, canvas, s) }
+            if has_clear(s) == 1 { rebuild(win, canvas, sheet, s) }
             if timeline.Timeline.moves_at(s) == 1 {
-                rebuild(win, canvas, s)
+                rebuild(win, canvas, sheet, s)
                 shown(win, canvas, sheet)
                 export.Exporter.save(win)
             }
@@ -408,7 +408,7 @@ Block Runner {
         painter.Painter.reset()
     }
 
-    fn rebuild(dyn win, dyn canvas, int upto) nil {
+    fn rebuild(dyn win, dyn canvas, dyn sheet, int upto) nil {
         ready(upto)
 
         // The background image lives here, as a local, for exactly one frame.
@@ -431,7 +431,7 @@ Block Runner {
         if layers == 1 { painter.Painter.set_layer(1) }
         int s = 1
         while s <= upto {
-            instant(win, s)
+            instant(win, sheet, s)
             s = s + 1
         }
 
@@ -440,7 +440,7 @@ Block Runner {
             ready(upto)
             int s2 = 1
             while s2 <= upto {
-                instant(win, s2)
+                instant(win, sheet, s2)
                 s2 = s2 + 1
             }
             painter.Painter.set_layer(0)
@@ -494,7 +494,7 @@ Block Runner {
         graph.begin_frame(win)
         stage.Stage.clear(win)
         graph.draw_image(win, canvas, 0, 0)
-        painter.Painter.draw(win)
+        painter.Painter.draw(win, sheet)
         pool.Pool.draw(win, sheet)
     }
 
@@ -538,7 +538,7 @@ Block Runner {
     }
 
     // Runs a step without animating, drawing straight into the frame to be baked.
-    fn instant(dyn win, int s) nil {
+    fn instant(dyn win, dyn sheet, int s) nil {
         timeline.Timeline.apply_at(s)
         int nt = pool.Pool.count()
         int t = 0
@@ -554,7 +554,7 @@ Block Runner {
                     pool.Pool.set_pos(t, aim_x, aim_y)
 
                     if draws(k) == 1 && pool.Pool.get_pen(t) == 1 && s > pool.Pool.get_clear(t) && pool.Pool.erased(t, s) == 0 {
-                        painter.Painter.replay(win, t, x1, y1, aim_x, aim_y)
+                        painter.Painter.replay(win, sheet, t, x1, y1, aim_x, aim_y)
                     }
                 }
             }
@@ -681,7 +681,7 @@ Block Runner {
             graph.begin_frame(win)
             stage.Stage.clear(win)
             graph.draw_image(win, canvas, 0, 0)
-            painter.Painter.draw(win)
+            painter.Painter.draw(win, sheet)
 
             i = 0
             while i < an {
@@ -694,7 +694,7 @@ Block Runner {
                 float cy = asy[i] + (aty[i] - asy[i]) * p
                 pool.Pool.set_pos(aid[i], cx, cy)
 
-                if adraw[i] == 1 { painter.Painter.stroke(win, aid[i], asx[i], asy[i], cx, cy) }
+                if adraw[i] == 1 { painter.Painter.stroke(win, sheet, aid[i], asx[i], asy[i], cx, cy) }
                 i = i + 1
             }
 
@@ -774,7 +774,7 @@ Block Runner {
     fn rewind(dyn win, dyn canvas, dyn sheet, int s) nil {
         if s < 1 { return }
 
-        rebuild(win, canvas, s - 1)
+        rebuild(win, canvas, sheet, s - 1)
 
         // Taken before `arm`, because arming is what turns her.
         int nt = pool.Pool.count()
@@ -807,7 +807,7 @@ Block Runner {
             graph.begin_frame(win)
             stage.Stage.clear(win)
             graph.draw_image(win, canvas, 0, 0)
-            painter.Painter.draw(win)
+            painter.Painter.draw(win, sheet)
 
             int i = 0
             while i < an {
@@ -821,7 +821,7 @@ Block Runner {
                 float cy = asy[i] + (aty[i] - asy[i]) * p
                 pool.Pool.set_pos(aid[i], cx, cy)
 
-                if adraw[i] == 1 { painter.Painter.stroke(win, aid[i], asx[i], asy[i], cx, cy) }
+                if adraw[i] == 1 { painter.Painter.stroke(win, sheet, aid[i], asx[i], asy[i], cx, cy) }
                 i = i + 1
             }
 

@@ -128,7 +128,7 @@ if err != nil { print("capture: ", err[0]) }
 // until the next rebuild, and then it turns the entire figure. Rebuilding here
 // and comparing is what makes that visible.
 
-runner.Runner.rebuild(win, canvas, 3)
+runner.Runner.rebuild(win, canvas, sheet, 3)
 runner.Runner.shown(win, canvas, sheet)
 danger {
     dyn again = graph.capture(win)

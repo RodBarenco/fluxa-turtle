@@ -104,7 +104,7 @@ int d1 = d.star(1, 480.0, 480.0, 60.0, 24.0, 6)
 int d2 = d.circle(d1, 660.0, 480.0, 60.0)
 d.erase(1, d1 - 1)
 
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 runner.Runner.shown(win, canvas, sheet)
 
 print("")

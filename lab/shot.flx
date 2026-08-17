@@ -79,7 +79,7 @@ graph.begin_frame(win)
 stage.Stage.clear(win)
 int s = 1
 while s <= timeline.Timeline.max_step() {
-    runner.Runner.instant(win, s)
+    runner.Runner.instant(win, sheet, s)
     s = s + 1
 }
 graph.end_frame(win)

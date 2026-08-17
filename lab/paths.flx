@@ -105,7 +105,7 @@ a.go(4, 180.0, 90.0)
 
 pool.Pool.home_all()
 painter.Painter.reset()
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 runner.Runner.shown(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())

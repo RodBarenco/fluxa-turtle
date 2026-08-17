@@ -3,6 +3,34 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.0] — 2026-08-17
+
+### Added
+
+- **`path_image(path, scale)`** — a path made of pictures, and the last item in
+  pillars §1–§10 that was not built. Footprints, leaves, symbols, a fragment of
+  a drawing, stamped along the stroke and each one turned the way she walks.
+
+  ```fluxa
+  leo.path_image("leaf.png", 0.5)
+  leo.path_dash(0, 34)              // one every 34 px
+  ```
+
+  For this style the rhythm is the **gap** alone, because a stamp's size comes
+  from its scale rather than from a dash length. Measured on a straight 680 px
+  run: twenty stamps, the first exactly on the start point, every gap 34.0. It
+  costs 57 ms over 600 segments against 52 for a plain stroke.
+
+### Changed
+
+- **The sprite sheet is passed to whoever draws.** `Painter.paint`, `stroke`,
+  `replay`, `draw` and `Runner.rebuild`, `instant`, `frame` all take it now, so
+  `Runner.rebuild(win, canvas, sheet, upto)` is the new shape — every harness
+  changed with it. The alternative was a queue the runner drained afterwards,
+  which buys an ordering question and a second kind of painter state; the
+  language's own rule decides it, since a function sees only its parameters
+  ([adr 0020](adr/0020-the-sheet-is-passed-to-whoever-draws.md)).
+
 ## [0.17.0] — 2026-08-17
 
 ### Added

@@ -306,6 +306,7 @@ leo.path_marker()      // a felt marker: a halo with a core
 leo.path_brush()       // the width breathes along the stroke
 leo.path_spray()       // dots scattered around the line
 leo.path_triangles()   // shapes repeated along it, pointing where she walks
+leo.path_image("leaf.png", 0.5)   // or a picture, stamped and turned the same way
 ```
 
 Plus `path_squares`, `path_stars`, and the four that were always there —

@@ -203,6 +203,7 @@ appearance change that applies from the next step this turtle declares.
 | `path_triangles()` | triangles repeated along the path, pointing the way she walks |
 | `path_squares()` | the same with squares |
 | `path_stars()` | the same with five-pointed stars |
+| `path_image(path, scale)` | a **picture** stamped along the path, turned the way she walks |
 
 ```fluxa
 leo.path_glow()
@@ -230,6 +231,43 @@ worth knowing before painting three thousand segments with it.
 
 `path_spray` is scattered from the coordinates and not from a random number: a
 rebuild, a replay and an export all produce the same speckle.
+
+### `path_image(path, scale)` — declaration
+
+A path made of pictures: footprints, leaves, symbols, a fragment of a drawing —
+stamped along the stroke instead of a line drawn along it, each one turned the
+way she is walking.
+
+```fluxa
+leo.path_image("leaf.png", 0.5)
+leo.path_dash(0, 34)              // and one every 34 px
+```
+
+| | |
+|---|---|
+| `path` | `str` — the file, relative to where you run `fluxa` |
+| `scale` | `float` — 1.0 is the file's own size |
+
+Draw the art **facing right**, as everywhere else here. The picture goes into
+the same 1024×1024 sheet the turtles' own bodies use, so the **eight files are
+shared** between pictures a turtle *is* and pictures a turtle *stamps*
+([adr 0013](adr/0013-one-sheet-for-every-sprite.md)).
+
+For this one style the rhythm is only the **gap** — `path_dash(0, 34)` is one
+picture every 34 px — because a stamp's size comes from its own scale, not from
+a dash length. Measured on a straight 680 px run at 34: twenty stamps, the first
+exactly on the start point, every gap 34.0. Twenty and not twenty-one because
+the mark at the very end of a segment belongs to the next one, which is the rule
+every dash follows.
+
+It is a **declaration** — it says which picture this turtle stamps, the way
+`image` says which picture she *is* — and it switches the style on at the same
+time. A `path_solid()` later stops the stamping from that step; asking for a
+style again resumes it.
+
+**What it costs:** 57 ms over 600 segments against 52 for a plain stroke,
+measured — cheaper than a marker, dearer than nothing, and still only at the
+rebuild.
 
 ### `path_dash(dash, gap)` — appearance
 

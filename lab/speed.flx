@@ -67,7 +67,7 @@ print("--- step | expected | measured (seconds) ---")
 
 pool.Pool.home_all()
 painter.Painter.reset()
-runner.Runner.rebuild(win, canvas, 0)
+runner.Runner.rebuild(win, canvas, sheet, 0)
 
 int t1 = time.now_ms()
 runner.Runner.animate(win, canvas, sheet, part, 1)

@@ -128,7 +128,7 @@ f.go(1, 100.0, 0.0)
 dyn sheet = pool.Pool.atlas()
 print("sprite files .........  ", pool.Pool.sprites(), "   (expected 3: one at 1.0, the same at 0.5, and the sheet)")
 
-runner.Runner.rebuild(win, canvas, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
 runner.Runner.shown(win, canvas, sheet)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count())

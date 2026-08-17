@@ -53,7 +53,7 @@ graph.begin_frame(win)
 stage.Stage.clear(win)
 int k = 1
 while k <= 3000 {
-    runner.Runner.instant(win, k)
+    runner.Runner.instant(win, sheet, k)
     k = k + 1
 }
 graph.end_frame(win)
