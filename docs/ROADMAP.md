@@ -138,8 +138,23 @@ of the window with `graph.capture` + `image.blit`
 ([adr 0003](adr/0003-path-baked-into-a-texture.md)). `graph.capture` returns the
 window. A world larger than the window cannot be baked that way.
 
-**Decide first:** whether `std.image` can be drawn into off-screen — a surface
-that is not the window. That single question decides everything:
+**Found while wiring the sound, and it changes this sprint:** `std.graph`
+already has a 2D camera —
+
+```
+graph.begin_cam2d(win, x, y, rot, zoom)   graph.screen_to_world(win, sx, sy)
+graph.end_cam2d(win)                      graph.world_to_screen(win, wx, wy)
+```
+
+That is pan and zoom over *what is drawn*, which makes "look closer at the
+artwork" a small feature: draw the baked canvas inside a camera and the whole
+thing pans and zooms. What it does **not** solve is a world larger than the
+window, because the bake only ever captured what the window could see. So this
+sprint splits in two, and the first half is now easy.
+
+**Decide first (for the second half):** whether `std.image` can be drawn into
+off-screen — a surface that is not the window. That single question decides
+everything:
 
 - **if yes:** the bake becomes a world-sized image, the camera is an offset and
   a scale applied when it is drawn to the window, and layers are several such
@@ -179,18 +194,21 @@ and two runs byte-identical.
 
 ---
 
-## Sprint 11 — Audio · **waiting on a runtime**
+## Sprint 11 — Audio — DONE (project 0.17.0)
 
-Measured today, with `std.sound = "1.0"` added to `fluxa.toml`:
+The runtime was swapped and now answers `miniaudio/0.11.25`. Built and shipped:
+`audio.Track`, `audio.Cue`, `audio.Volume`, the **A** key, and five synthesised
+sounds in `sounds/`. See
+[adr 0019](adr/0019-sound-crosses-the-save-and-a-rebuild-is-silent.md) and
+`lab/audio.flx`.
 
-```
-fluxa-sound/1.0 (stub — no audio device)
-```
+**What is still open here:** audio in the exported video. `std.video` writes
+H.264 with no audio track, and a controlled render does not run at watching
+speed, so a soundtrack over an export has to be muxed by timestamp — the same
+answer adr 0010 gives for WebM. That belongs to Sprint 10.
 
-The binary in this repository has no miniaudio compiled in. Everything below
-waits for a build that does — and the day it arrives, the first thing to run is
-that one line, because a stub answers every call successfully and plays nothing,
-exactly like the graphics stub does.
+The rest of this section is kept because it is what was known before, and it was
+all confirmed by the build:
 
 **Good news from the API**: `sound.init()`, `sound.load(eng, path)` and the rest
 return **`int` handles, not `dyn`**. A Block can hold an int. So the sound engine

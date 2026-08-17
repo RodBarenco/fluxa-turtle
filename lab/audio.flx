@@ -1,0 +1,127 @@
+// lab/audio.flx — sound on the timeline.
+// Run from the project root:  ./fluxa run lab/audio.flx
+//
+// A PNG cannot check a sound, so this checks the two things that decide whether
+// the design is right, and both of them are counters the module keeps:
+//
+//   1. **A rebuild is silent.** Saving replays the whole artwork instantly to
+//      redraw it; if cues fired from that replay, one save on step 400 would
+//      fire four hundred sounds. Rebuild here, then count: it has to be zero.
+//   2. **The track is pressed once.** `open` runs on every save, and the track
+//      has to survive it — the count of "pressed play" must stay 1 no matter
+//      how many times the artwork is re-opened.
+//
+// Plus the plain ones: the engine exists, the files load, a missing file is
+// silent rather than fatal, and the export mutes everything.
+//
+// It makes noise. Two short tones, and a hum under them.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import std sound
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "audio")
+dyn canvas = image.new(800, 600)
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+
+dyn part = [0.0, 0.0]
+dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0]
+
+print("backend: ", sound.version(), "   (a stub here means no runtime audio — nothing below proves anything)")
+
+// ── what the artwork declares ─────────────────────────────────────
+
+audio.Track("tools/hum.wav")
+audio.Cue(2, "tools/beep.wav")
+audio.Cue(4, "tools/beep.wav")
+audio.Cue(3, "tools/not_here.wav")     // missing on purpose
+audio.Volume(45)
+
+Block a typeof turtle.Turtle
+a.spawn(120.0, 300.0)
+a.hide()
+a.speed(600.0)
+a.path_color(120, 208, 214)
+a.path_width(3)
+a.go(1, 130.0, 0.0)
+a.go(2, 130.0, 0.0)
+a.go(3, 130.0, 0.0)
+a.go(4, 130.0, 0.0)
+
+print("declared .............  ", audio.Audio.count(), " files, ", audio.Audio.cue_count(),
+      " cues   (expected 3 files — the missing one still takes a slot — and 3 cues)")
+
+// ── opening ───────────────────────────────────────────────────────
+
+audio.Audio.open(snd)
+print("engine ...............  ", audio.Audio.live(), "   (expected > 0)")
+print("carried in snd[0] ....  ", snd[0], "   (this is what survives a save)")
+print("track pressed play ...  ", audio.Audio.starts(), "   (expected 1)")
+
+// Opening again is what a save does. The track is already playing, so there is
+// nothing to press — this is the whole reason `is_playing` is in there.
+audio.Audio.open(snd)
+audio.Audio.open(snd)
+print("after two more opens .  ", audio.Audio.starts(), "   (expected 1 still — the music did not restart)")
+
+// ── the rebuild is silent ─────────────────────────────────────────
+
+runner.Runner.rebuild(win, canvas, 4)
+print("cues after a rebuild .  ", audio.Audio.fires(), "   (expected 0 — a redraw must not make noise)")
+
+// ── and the animation is not ──────────────────────────────────────
+
+runner.Runner.rebuild(win, canvas, 0)
+int s = 1
+while s <= 4 {
+    runner.Runner.animate(win, canvas, sheet, part, s)
+    s = s + 1
+}
+print("cues after four steps   ", audio.Audio.fires(),
+      "   (expected 2 — steps 2 and 4; step 3's file does not exist)")
+
+// ── an export says nothing ────────────────────────────────────────
+
+int before = audio.Audio.fires()
+audio.Audio.mute(1)
+runner.Runner.rebuild(win, canvas, 0)
+int t = 1
+while t <= 4 {
+    runner.Runner.animate(win, canvas, sheet, part, t)
+    t = t + 1
+}
+audio.Audio.mute(0)
+print("cues while muted .....  ", audio.Audio.fires() - before, "   (expected 0)")
+
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/audio.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+time.sleep(400)
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)

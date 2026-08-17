@@ -1,0 +1,246 @@
+// static/audio.flx — sound on the timeline
+//
+// Two things an artwork can ask for:
+//
+//     audio.Track("sea.mp3")           // plays while the artwork runs
+//     audio.Cue(120, "splash.wav")     // fires when step 120 is ANIMATED
+//     audio.Volume(70)                 // 0 to 100, everything at once
+//
+// Declaration and execution are separated the way they are everywhere else in
+// this project: the calls above only write down what was asked for, and the
+// engine, the files and the playing happen inside the run.
+//
+// ── two facts that shaped this file, both measured ────────────────
+//
+// **An engine survives a save; a Block field does not.** `sound.init()` hands
+// out four engines and no more — measured, the fifth call answers *too many
+// engines (max 4)*. A Block field is re-declared on every reload, so a module
+// that called `init` when its field was zero would burn one engine per save and
+// go silent on the fourth. The handle therefore lives in a `prst dyn` in
+// main.flx, the same mechanism the canvas and the in-flight progress use
+// (adr 0014), and it is opened once for the whole session.
+//
+// The loaded sounds ride along in that same array, which is what lets **music
+// keep playing across a save**: nothing is closed, nothing is loaded twice, and
+// `Track` only presses play when the track is not already playing. Live coding
+// with a soundtrack that restarted on every save would be unusable.
+//
+// **A rebuild must be silent.** Saving replays the whole artwork instantly to
+// redraw it, so a cue that fired from the replay would fire four hundred times
+// on one save. Cues are fired from `animate` only — never from `instant` —
+// which is the same line the panel draws for itself with `mute`.
+
+Block Audio {
+    int eng   = 0            // resolved from the carried array, 0 = no audio
+    int vol   = 100
+    int muted = 0            // 1 while exporting — not the listener's choice
+    int off   = 0            // 1 when the listener pressed A
+
+    // Four files, which is a soundtrack and three effects. The limit is the
+    // size of the `prst dyn` in main.flx, and it is declared there.
+    str arr path[4] = ""
+    int arr hnd[4]  = 0
+    int files = 0
+
+    int track = 0 - 1        // slot of the background track, -1 = none
+
+    int arr cue_step[64] = 0
+    int arr cue_slot[64] = 0
+    int cues = 0
+
+    // What a harness listens with. Sound is the one thing in this project a
+    // PNG cannot check, so the module counts what it did: how many cues it
+    // played, and how many times it pressed play on the track. The second one
+    // is the whole point of `is_playing` — across a save it must stay 1.
+    int fired   = 0
+    int started = 0
+
+    int arr guard[1] = 0     // hot-loop anchor
+
+    // ── declaration ───────────────────────────────────────────────
+
+    fn slot_of(str p) int {
+        int i = 0
+        while i < files {
+            guard[0] = i     // anchor FIRST
+            if path[i] == p { return i }
+            i = i + 1
+        }
+        if files >= 4 {
+            print("[audio] four sound files is the limit — ", p, " was ignored")
+            return 0 - 1
+        }
+        path[files] = p
+        files = files + 1
+        return files - 1
+    }
+
+    fn want_track(str p) nil {
+        int s = slot_of(p)
+        if s >= 0 { track = s }
+    }
+
+    fn want_cue(int step, str p) nil {
+        if cues >= 64 {
+            print("[audio] sixty-four cues is the limit — the one on step ", step, " was ignored")
+            return
+        }
+        int s = slot_of(p)
+        if s < 0 { return }
+        cue_step[cues] = step
+        cue_slot[cues] = s
+        cues = cues + 1
+    }
+
+    fn want_volume(int pct) nil {
+        vol = pct
+        if vol < 0 { vol = 0 }
+        if vol > 100 { vol = 100 }
+    }
+
+    // Two ways to be quiet, and they are not the same thing: an export mutes
+    // itself for a while and gives the sound back, while A is a decision that
+    // outlasts it. Keeping them apart is what stops an export from turning the
+    // sound back on for somebody who asked for silence.
+    fn silent() int {
+        if off == 1 { return 1 }
+        if muted == 1 { return 1 }
+        return 0
+    }
+
+    fn toggle() nil {
+        off = 1 - off
+        if off == 1 { print("[turtle] sound off — A to bring it back") }
+        if off == 0 { print("[turtle] sound on") }
+        apply()
+    }
+
+    fn is_off() int { return off }
+
+    // The track follows whatever the two flags now say.
+    fn apply() nil {
+        if eng <= 0 { return }
+        if track < 0 { return }
+        if hnd[track] <= 0 { return }
+        if silent() == 1 {
+            sound.pause(eng, hnd[track])
+            return
+        }
+        bool on = sound.is_playing(eng, hnd[track])
+        if on == false { sound.resume(eng, hnd[track]) }
+    }
+
+    fn fires()  int { return fired }
+    fn starts() int { return started }
+    fn count() int { return files }
+    fn cue_count() int { return cues }
+    fn live() int { return eng }
+
+    // ── execution ─────────────────────────────────────────────────
+    //
+    // `a` is main.flx's `prst dyn snd`:  [engine, h0, h1, h2, h3]
+
+    fn open(dyn a) nil {
+        int e = math.to_int(a[0])
+        if e <= 0 {
+            danger { e = sound.init() }
+            if err != nil {
+                print("[audio] no engine: ", err[0])
+                e = 0
+            }
+            a[0] = 1.0 * math.to_float(e)
+        }
+        eng = e
+        if eng <= 0 { return }
+
+        int i = 0
+        while i < files {
+            guard[0] = i     // anchor FIRST
+            int h = math.to_int(a[1 + i])
+            if h == 0 {
+                // A file that is not there is not a reason to stop drawing: it
+                // stays silent and says why, the same courtesy the background
+                // image gets. The slot is then marked -1 — tried and failed —
+                // because `open` runs on every save and reporting the same
+                // missing file once per keystroke is not a courtesy.
+                danger { h = sound.load(eng, path[i]) }
+                if err != nil {
+                    print("[audio] ", path[i], ": ", err[0])
+                    h = 0 - 1
+                }
+                a[1 + i] = 1.0 * math.to_float(h)
+            }
+            hnd[i] = h
+            if h > 0 { sound.volume(eng, h, math.to_float(vol) / 100.0) }
+            i = i + 1
+        }
+
+        start_track()
+    }
+
+    // The soundtrack. Pressing play on a save would start it over, which is
+    // what `is_playing` is for: it survives the reload along with its handle,
+    // so on a save there is simply nothing to do.
+    fn start_track() nil {
+        if eng <= 0 { return }
+        if silent() == 1 { return }
+        if track < 0 { return }
+        if hnd[track] <= 0 { return }
+        bool on = sound.is_playing(eng, hnd[track])
+        if on == false {
+            sound.play(eng, hnd[track])
+            started = started + 1
+        }
+    }
+
+    // Every cue on this step. Called from `animate`, and from nowhere else —
+    // `instant` replays the artwork to redraw it and must stay silent.
+    fn fire(int step) nil {
+        if eng <= 0 { return }
+        if silent() == 1 { return }
+        int i = 0
+        while i < cues {
+            guard[0] = i     // anchor FIRST
+            if cue_step[i] == step {
+                int s = cue_slot[i]
+                if s >= 0 {
+                    if hnd[s] > 0 {
+                        sound.play(eng, hnd[s])
+                        fired = fired + 1
+                    }
+                }
+            }
+            i = i + 1
+        }
+    }
+
+    // Silence for the length of a controlled render: an export runs at whatever
+    // speed the machine manages, so the sound it made would not match anything
+    // (adr 0006). The track is stopped and started again afterwards.
+    fn mute(int m) nil {
+        muted = m
+        apply()
+    }
+
+    // What the panel says about sound.
+    fn says() str {
+        if files == 0 { return "" }
+        if eng <= 0 { return "audio: no engine" }
+        str a1 = strings.concat("audio: ", strings.from_int(files))
+        str a2 = strings.concat(a1, " files . ")
+        str a3 = strings.concat(a2, strings.from_int(cues))
+        str out = strings.concat(a3, " cues")
+        free(a1)
+        free(a2)
+        free(a3)
+        return out
+    }
+}
+
+// ── what the artwork writes ───────────────────────────────────────
+//
+// At the bottom, because a module function only sees a Block declared above it.
+
+fn Track(str path) nil        { Audio.want_track(path) }
+fn Cue(int step, str path) nil { Audio.want_cue(step, path) }
+fn Volume(int pct) nil        { Audio.want_volume(pct) }

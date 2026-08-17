@@ -27,6 +27,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static audio
 import static panel
 import static runner
 
@@ -34,6 +35,7 @@ prst dyn win    = graph.init(800, 600, "Leonardo")
 prst dyn canvas = image.new(800, 600)
 prst int done   = 0
 prst dyn part   = [0.0, 0.0]
+prst dyn snd    = [0.0, 0.0, 0.0, 0.0, 0.0]
 
 graph.set_fps(win, 60)
 stage.Stage.background(3, 8, 13)
@@ -1941,4 +1943,4 @@ while hold < 206 {
 //
 // export.Video(1, 0, 90)
 
-done = runner.Runner.play(win, canvas, part, done)
+done = runner.Runner.play(win, canvas, part, snd, done)

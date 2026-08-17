@@ -689,6 +689,7 @@ composition. With the window focused:
 | Key | What it does |
 |---|---|
 | **P** | The panel, over the stage. Off by default. |
+| **A** | Sound off / on. |
 | **SPACE** | Pause / carry on. |
 | **→** | One step forward, animated. |
 | **←** | One step back, animated in reverse. |
@@ -749,6 +750,68 @@ Pausing is a state of the window, not of the artwork: it touches neither the
 file, nor the progress that crosses a save, nor the export. **Saving while
 paused carries on** — the new steps are read and animated, which is what you
 saved for. Press SPACE again if you wanted to stay stopped.
+
+---
+
+# Sound
+
+Sound is the stage's, not a turtle's, so it is written the way the background
+and the video are — one line, in `main.flx`:
+
+### `audio.Track(path)`
+
+Plays while the artwork runs, and **keeps playing across a save**. That is the
+whole reason it exists as its own call: the engine and the loaded files survive
+the reload, and `Track` presses play only when nothing is already playing. Live
+coding with music that restarted on every Ctrl-S would be no fun.
+
+### `audio.Cue(step, path)`
+
+Fires when that step is **animated** — not when it is redrawn. Saving replays
+the whole artwork instantly to bring it back, and a cue that fired from the
+replay would fire four hundred times on one save.
+
+```fluxa
+audio.Cue(1, "sounds/place.wav")
+audio.Cue(36, "sounds/stroke.wav")
+```
+
+### `audio.Volume(pct)`
+
+0 to 100, everything at once.
+
+### The five that ship
+
+In `sounds/`, and none of them beeps: a beep announces an event, and a step is
+a thing being *done*. They sit between a chess piece set down on a board and a
+pencil on paper.
+
+| | |
+|---|---|
+| `place.wav` | a piece set down — a low wooden knock, 220 ms, peak at 95 Hz |
+| `tap.wav` | the same, lighter and higher: a small move |
+| `slide.wav` | a piece pushed across the board — a knock with a rasp dragged out of it |
+| `pencil.wav` | a short scribble, graphite on paper |
+| `stroke.wav` | a longer line being drawn |
+
+They are **synthesised**, by `tools/sounds.py`, from decaying inharmonic
+partials over a click (the knocks) and filtered noise with a grainy envelope
+(the graphite). Running that script writes identical bytes every time, so the
+recipe is in the repository and not only the result.
+
+### What to know
+
+| | |
+|---|---|
+| formats | wav, mp3, flac |
+| how many | four files in one artwork |
+| a missing file | says why, once, and stays silent — the drawing carries on |
+| an export | silent, always: a controlled render is not played at watching speed |
+| the **A** key | sound off and on, while it runs |
+
+If the runtime was built without audio, `sound.version()` answers
+`fluxa-sound/1.0 (stub — no audio device)`, every call succeeds and nothing is
+heard. The artwork still draws.
 
 ---
 

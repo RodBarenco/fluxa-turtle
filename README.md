@@ -115,7 +115,15 @@ is worth having, but only to turn an export into a format `std.video` does not
 write.
 
 The libs this project uses are already declared in `fluxa.toml`: `std.graph`,
-`std.image`, `std.math`, `std.time`, `std.strings`, `std.fs` and `std.video`.
+`std.image`, `std.math`, `std.time`, `std.strings`, `std.fs`, `std.sound` and
+`std.video`.
+
+Sound has two backends the same way graphics does, so it is worth the same
+question — `print(sound.version())` answers `miniaudio/...` when the runtime can
+make a sound and `fluxa-sound/1.0 (stub — no audio device)` when it cannot. The
+stub accepts every call and plays nothing. Build the runtime with
+`FLUXA_SOUND_MINIAUDIO=1` for the real one; without it the artwork still draws,
+in silence.
 
 ### 4. Syntax highlighting
 
@@ -353,6 +361,8 @@ With the window focused:
 
 | Key | What it does |
 |---|---|
+| **A** | Sound off, and A again to bring it back. |
+| **A** | Sound off, and A again to bring it back. Off does not survive a save; the soundtrack does. |
 | **P** | The panel. Which step the artwork is on, how many were declared, how many actions and how many were ignored, and one line per turtle with her colour, position, heading and whether the pen is down. Off by default, and never in an export. |
 | **SPACE** | Pause, and SPACE again to carry on. Paused, the drawing stays exactly where it stopped — including in the middle of a movement. |
 | **→** | One step forward, animated. Pressed while it is still drawing, it means "finish this step and stop there". |
@@ -366,6 +376,32 @@ Pause and walk one step at a time is the honest way to answer "why did it draw
 *that*": the panel tells you where the turtle is and where she is pointing, `→`
 shows you the very next action she was given, and `←` shows you the last one
 again in reverse, slowly enough to watch.
+
+---
+
+## Sound
+
+```fluxa
+audio.Cue(1, "sounds/place.wav")     // fires when step 1 is animated
+audio.Track("music.mp3")             // plays while the artwork runs
+audio.Volume(70)                     // 0 to 100, everything at once
+```
+
+wav, mp3 and flac; four files in total. **A** turns the sound off and on while
+it runs.
+
+Five sounds ship with the tool, in `sounds/`, and none of them beeps — they are
+somewhere between a chess piece set down on a board and a pencil on paper:
+`place`, `tap`, `slide`, `pencil`, `stroke`. They are synthesised by
+`tools/sounds.py`, so the recipe is in the repository and not just the result.
+
+Two things are deliberate. **A soundtrack keeps playing across a save** — live
+coding with music that restarted every time you pressed Ctrl-S would be no fun,
+so the engine and its loaded files survive the reload and `Track` only presses
+play when nothing is playing. And **a rebuild is silent**: redrawing the artwork
+after a save would otherwise fire every cue in it at once, so cues fire only
+from a step being animated. An export is silent for the same reason a render is
+not a recording.
 
 ---
 

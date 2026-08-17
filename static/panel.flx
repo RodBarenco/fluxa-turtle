@@ -157,11 +157,20 @@ Block Panel {
         keys_line(win)
     }
 
+    // The keys, along the bottom. Two fixed strings and no building — which
+    // one is shown depends only on whether the sound is off, so there is
+    // nothing here for the frame loop to allocate.
+    fn keys() str {
+        if audio.Audio.is_off() == 1 {
+            return "SPACE pause    RIGHT one step    LEFT back one    R replay    F fullscreen    P panel    A sound off"
+        }
+        return "SPACE pause    RIGHT one step    LEFT back one    R replay    F fullscreen    P panel    A sound"
+    }
+
     // The keys, along the bottom. A fixed string: nothing to cache and nothing
     // to build.
     fn keys_line(dyn win) nil {
         graph.draw_rect(win, 0, config.H() - 26, config.W(), 26, 16, 18, 26)
-        graph.draw_text(win, "SPACE pause    RIGHT one step    LEFT back one    R replay    F fullscreen    P panel",
-                        14, config.H() - 18, 10, 120, 145, 175)
+        graph.draw_text(win, keys(), 14, config.H() - 18, 10, 120, 145, 175)
     }
 }

@@ -32,6 +32,7 @@ import static timeline
 import static painter
 import static turtle
 import static export
+import static audio
 import static panel
 import static runner
 
@@ -51,6 +52,15 @@ prst int done   = 0
 // that step again (pillars §5). Two numbers, in a `prst dyn` because that is
 // what survives a reload and can still be written from inside the runner.
 prst dyn part   = [0.0, 0.0]
+
+// The sound engine, and the files it has loaded. It is a `prst dyn` for the
+// same reason `part` is: it has to survive the save. `sound.init()` hands out
+// four engines and no more, so a module that opened one per reload would go
+// silent on the fourth save — and because nothing here is closed or loaded
+// twice, a soundtrack keeps playing straight through a save.
+//
+//   [engine, and one handle per sound file — four of them]
+prst dyn snd    = [0.0, 0.0, 0.0, 0.0, 0.0]
 
 graph.set_fps(win, config.FPS())
 
@@ -177,8 +187,40 @@ leo.go(1, 500.0, 0.0)
 // export.Frames(1, 36, 60)
 
 
+// ═══════════════════ STAGE 7 — sound ═══════════════════
+//
+// A soundtrack that plays while the artwork runs, and effects that fire on the
+// step you name. Uncomment and save:
+//
+//   Track   starts once and keeps playing across every save — live coding with
+//           music that restarted each time you pressed Ctrl-S would be no fun
+//   Cue     fires when that step is ANIMATED, so a save that redraws the
+//           artwork does not replay four hundred sounds at once
+//   Volume  everything at once, 0 to 100
+//
+// wav, mp3 and flac. Four files in total. A file that is not there is not an
+// error: it stays silent and says why. An export is silent by design — a
+// controlled render is not played at the speed it will be watched.
+//
+// Five sounds ship with the tool, in `sounds/`, and none of them beeps: they
+// are somewhere between a chess piece set down and a pencil on paper.
+//
+//   place    a piece set down — a low wooden knock
+//   tap      the same, lighter: a small move
+//   slide    a piece pushed across the board
+//   pencil   a short scribble, graphite on paper
+//   stroke   a longer line being drawn
+//
+// A is the key: it turns the sound off and on while the artwork runs.
+
+// audio.Cue(1, "sounds/place.wav")
+// audio.Cue(36, "sounds/stroke.wav")
+// audio.Track("my_music.mp3")
+// audio.Volume(70)
+
+
 // ═══════════════════════════ execution ═══════════════════════════
 
 print("[turtle] finished: ", done, " | declared: ", timeline.Timeline.max_step(), " | turtles: ", pool.Pool.count())
 
-done = runner.Runner.play(win, canvas, part, done)
+done = runner.Runner.play(win, canvas, part, snd, done)

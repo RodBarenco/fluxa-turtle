@@ -57,7 +57,7 @@ Block Runner {
     //
     //   part[0] = the step being animated, 0 when nothing is
     //   part[1] = how far through it, 0.0 to 1.0
-    fn play(dyn win, dyn canvas, dyn part, int done) int {
+    fn play(dyn win, dyn canvas, dyn part, dyn snd, int done) int {
         // Every sprite in the artwork, composed into one image, built once and
         // alive for the whole run — the body is drawn every frame and a Block
         // cannot hold a `dyn` (adr 0013). With no sprites it is a 1x1 blank.
@@ -72,6 +72,11 @@ Block Runner {
         // screen, clearing would throw it away for as long as the rebuild takes
         // — and not throwing it away is the whole point of this tool.
         if done == 0 { open(win) }
+
+        // The sound engine, opened once for the session and carried across
+        // every save in `snd` — a Block field would burn one of the four
+        // engines per reload (static/audio.flx says how that was measured).
+        audio.Audio.open(snd)
 
         // Whatever the artwork file declared — export.Video or export.Frames —
         // is generated here, before the stage comes up. Outside the replay loop
@@ -218,6 +223,7 @@ Block Runner {
 
         exporting = 1
         panel.Panel.mute(1)
+        audio.Audio.mute(1)
         sim_dt = export.Exporter.dt()
         export.Exporter.begin()
 
@@ -245,6 +251,7 @@ Block Runner {
 
         exporting = 0
         panel.Panel.mute(0)
+        audio.Audio.mute(0)
         graph.set_fps(win, config.FPS())
         export.Exporter.finish()
     }
@@ -310,6 +317,7 @@ Block Runner {
             if now { print("[turtle] fullscreen — F to come back") }
         }
         if graph.key_pressed(win, "P") { panel.Panel.toggle() }
+        if graph.key_pressed(win, "A") { audio.Audio.toggle() }
         if graph.key_pressed(win, "R") { replay = 1 }
         if graph.key_pressed(win, "SPACE") {
             paused = 1 - paused
@@ -601,6 +609,11 @@ Block Runner {
 
     fn animate(dyn win, dyn canvas, dyn sheet, dyn part, int s) nil {
         arm(s)
+
+        // Sound belongs to the step being WATCHED. `instant` replays the whole
+        // artwork on every save and stays silent, which is the only reason a
+        // cue does not fire four hundred times when you press Ctrl-S.
+        audio.Audio.fire(s)
 
         if an == 0 {
             arrived = 1

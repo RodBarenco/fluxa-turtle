@@ -3,6 +3,42 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.17.0] — 2026-08-17
+
+### Added
+
+- **Sound** (expansions §11), now that the runtime can make one —
+  `sound.version()` answers `miniaudio/0.11.25`:
+
+  ```fluxa
+  audio.Cue(1, "sounds/place.wav")   // fires when step 1 is animated
+  audio.Track("music.mp3")           // plays while the artwork runs
+  audio.Volume(70)
+  ```
+
+  **A soundtrack keeps playing across a save**, and **a rebuild is silent** —
+  the two facts the design is built on, both measured first
+  ([adr 0019](adr/0019-sound-crosses-the-save-and-a-rebuild-is-silent.md)). The
+  engine and its loaded files ride in a `prst dyn` in `main.flx` because
+  `sound.init()` gives out four engines and no more, and a Block field would
+  burn one per save.
+
+- **The A key** turns the sound off and on while the artwork runs. The
+  listener's choice and the export's mute are separate flags, so finishing an
+  export does not turn the sound back on for somebody who asked for silence.
+
+- **Five sounds ship with the tool**, in `sounds/`, and none of them beeps: they
+  sit between a chess piece set down on a board and a pencil on paper — `place`,
+  `tap`, `slide`, `pencil`, `stroke`. They are synthesised by `tools/sounds.py`
+  from decaying inharmonic partials over a click and from filtered noise with a
+  grainy envelope, so the repository holds the recipe and every machine gets the
+  same bytes. Measured: `place` peaks at 95 Hz, `tap` at 171 Hz.
+
+- `lab/audio.flx` — sound is the one thing here a PNG cannot check, so the
+  module counts what it did and the harness asserts it: zero cues after a
+  rebuild, exactly one press of the track after three opens, two cues after four
+  animated steps, and nothing at all while muted.
+
 ## [0.16.0] — 2026-08-16
 
 ### Added
