@@ -823,21 +823,32 @@ pencil on paper.
 | `place.wav` | a piece set down — a wooden knock, 240 ms, peak at 79 Hz |
 | `tap.wav` | the same, lighter: a small move, peak at 147 Hz |
 | `slide.wav` | pushed across the board — a knock with a scratch dragged out of it |
-| `pencil.wav` | **tch-tch-tch** — three marks with a shape: 187 ms at 926 Hz, 231 ms at 638, 140 ms at 919. 682 ms in all |
+| `pencil.wav` | a real pencil, **recorded** — 1080 ms of graphite on paper |
 | `stroke.wav` | one longer line, the same voice lower — centre around 1.2 kHz |
 
-They are **synthesised**, by `tools/sounds.py`: the knocks are decaying
-inharmonic partials over a click, and the graphite is band-limited noise with a
-grainy envelope. Running that script writes identical bytes every time, so the
-repository holds the recipe and not only the result.
+Four of them are **synthesised**, by `tools/sounds.py`: the knocks are decaying
+inharmonic partials over a click. Running that script writes identical bytes
+every time, so the repository holds the recipe and not only the result.
 
-Two things in there were learned by getting them wrong, and both are in the
-file as comments. **The click is what makes a scratch a gunshot** — noise that
-reaches full amplitude in one sample *is* a gunshot — so the graphite ramps in
-over 19 ms instead of 1 ms. And **one filter pole is not a filter** when the
-material is noise: at 6 dB per octave, a "2.6 kHz" lowpass still let the octaves
-above it put the spectral centre at 4.8 kHz, and the pencil came out brighter
-than the beep it replaced. Four poles is 24 dB per octave and audibly a band.
+**The pencil is a recording**, and that is the interesting one. Three goes at
+synthesising graphite got the physics right and the sound wrong — the click is
+what makes a scratch a gunshot; one filter pole is not a filter when the
+material is noise; a 62 ms mark is over before the ear has decided what it was
+— and a phone in front of a sheet of paper settled it in one take.
+
+Bringing a recording in is what `tools/import_sound.py` is for:
+
+```bash
+python3 tools/import_sound.py note.ogg -o sounds/pencil.wav --from 0.19 --to 1.27
+```
+
+It decodes anything ffmpeg reads (`std.sound` does not read ogg), trims to the
+seconds you name, and — the part that matters — **matches the level of the
+sounds already there**, by RMS rather than by peak, because two sounds with the
+same peak and different density do not sound equally loud. Run it with `--show`
+first: in the voice note this pencil came from, the loudest thing by 35 dB was
+the phone being handled at the end, and the graphite itself was the quiet part
+in the middle.
 
 ### What to know
 

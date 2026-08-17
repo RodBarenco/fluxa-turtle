@@ -47,6 +47,7 @@ lab/*.png
 # together with everything generated from it. What gets published is the
 # finished artwork in docs/artworks/, chosen by hand — never the source photo.
 art/
+*.ogg
 __pycache__/
 
 # --- System --------------------------------------------------

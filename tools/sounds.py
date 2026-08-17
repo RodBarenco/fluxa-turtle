@@ -11,8 +11,13 @@ is.
     place    a piece set down — a low wooden knock
     tap      the same, lighter and higher: a small move
     slide    a piece pushed across the board
-    pencil   a short scribble, graphite on paper
     stroke   a longer line being drawn
+
+`pencil.wav` is not made here. It is a recording of a real pencil, brought in
+with `tools/import_sound.py` — three goes at synthesising graphite got the
+physics right and the sound wrong, and a phone in front of a sheet of paper
+settled it in one take. Set SYNTH_PENCIL=1 to write the synthesised one anyway
+and hear the difference.
 
 They are synthesised rather than recorded, so they are tiny, they are in the
 repository, and they are the same on every machine — the file is the recipe.
@@ -174,19 +179,20 @@ def main():
                            scratch(280, 420, 2100, 60, rasp=0.35, attack_ms=14.0, decay=6.0),
                            0.7, 0.85))
 
-    # Graphite: tch-tch-tch. Three marks, not one burst, and no click on any of
-    # them — the click was what made the first version sound like a shot.
+    # pencil.wav is NOT written here any more, and this script must not write
+    # it: it is a recording of a real pencil, brought in with
     #
-    # The second version still did, for a different reason: at 62 ms a mark is
-    # over before the ear has decided what it was, and three of those in 274 ms
-    # is a burst however soft the attack. They are nearly three times longer
-    # now, a good deal deeper, and each one sustains instead of dying — a hand
-    # pressing graphite along, not tapping it.
+    #   python3 tools/import_sound.py art/pencil_recording.ogg \
+    #           -o sounds/pencil.wav --from 0.19 --to 1.27
     #
-    # The middle mark drops a fourth and is held longer; the third comes back up
-    # to the first and is cut short.
-    write("pencil.wav", tch([1.0, 0.72, 1.0], [1.0, 1.28, 0.78], 185, 58, 180, 1100, 42,
-                            rasp=0.38, attack_ms=30.0, decay=2.4))
+    # Three goes at synthesising graphite got the physics right and the sound
+    # wrong — a click is a gunshot, one filter pole is not a filter, a 62 ms
+    # mark is over before the ear knows what it was — and the recording settled
+    # it in one take. What is kept here is the recipe for the four that ARE
+    # synthesised, and `synth_pencil` for anyone who wants to try again.
+    if os.environ.get("SYNTH_PENCIL"):
+        write("pencil.wav", tch([1.0, 0.72, 1.0], [1.0, 1.28, 0.78], 185, 58, 180, 1100, 42,
+                                rasp=0.38, attack_ms=30.0, decay=2.4))
 
     # A longer line, the same voice a good deal lower: one continuous mark with
     # the hand still moving at the end.
