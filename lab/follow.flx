@@ -81,6 +81,45 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
+// ── the same trajectory, read from a file ─────────────────────────
+//
+// The file holds tenths of a pixel as whole numbers, one per line, because
+// std.strings parses an int and not a float. A tenth is finer than anything
+// this tool draws and it is exactly what the tracer writes.
+//
+// Written here so the harness carries no fixture: the same six points as the
+// literal above, times ten.
+
+danger {
+    fs.write("lab/_wave.pts", "1400\n2000\n2200\n1400\n3000\n2400\n3800\n1500\n4600\n2500\n5400\n1600\n")
+}
+if err != nil { print("write: ", err[0]) }
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+Block g typeof turtle.Turtle
+g.spawn(140.0, 200.0)
+g.hide()
+g.speed(400.0)
+g.path_color(120, 208, 214)
+g.path_width(3)
+int t_read = time.now_ms()
+int from_file = g.follow_file(1, "lab/_wave.pts", 900.0)
+print("")
+print("from a file .......... -> next step ", from_file, "   (expected 7, the same as the literal)")
+print("reading it took ......  ", time.elapsed_ms(t_read), " ms   (1400 points takes 13)")
+
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn ff = graph.capture(win)
+    image.save(ff, "lab/follow_file.png")
+    image.discard(ff)
+}
+if err != nil { print("capture: ", err[0]) }
+print("follow_file.png must equal the first half of follow.png — same points, other source")
+
 // ── the same thing, written out by hand ───────────────────────────
 
 pool.Pool.reset()

@@ -3,6 +3,27 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.21.0] — 2026-08-18
+
+### Added
+
+- **`follow_file(step, path, px_s)`** — the trajectory read from a file instead
+  of written into the artwork, and **`tools/trace.py --emit points`** to write
+  those files.
+
+  Leonardo becomes **56 lines of code and six data files**, against 314 lines
+  with `--emit follow` and 1510 in the default form. All three render
+  pixel-identically, which is checked rather than assumed.
+
+  The file holds tenths of a pixel as whole numbers, one per line, with
+  `-99999` lifting the pen — tenths because `std.strings` parses an int and not
+  a float, and a tenth is finer than anything this tool draws. Reading, parsing
+  and declaring 1400 points takes **13 ms**, once per run.
+
+  This is what a traced drawing should have been from the start: the points
+  never touch the parser, so neither the hundred-point literal limit nor the AST
+  caps are part of the conversation any more.
+
 ## [0.20.0] — 2026-08-18
 
 ### Added

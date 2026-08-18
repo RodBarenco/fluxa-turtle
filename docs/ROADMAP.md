@@ -336,7 +336,7 @@ lines quoted against whatever it becomes.
 
 ---
 
-## Sprint 7c — `follow_file` · points as data, not as code
+## Sprint 7c — `follow_file` — DONE (project 0.21.0)
 
 **Deliver:** `leo.follow_file(step, "leo.pts", px_s)` — the trajectory read from
 a file instead of written into the artwork.

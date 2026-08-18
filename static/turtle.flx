@@ -464,6 +464,96 @@ Block Turtle {
         return step
     }
 
+    // ── the trajectory as data ────────────────────────────────────
+    //
+    //     int s = leo.follow_file(1, "leo.pts", 900.0)
+    //
+    // The same as `follow`, with the points read from a file instead of
+    // written into the artwork. For anything traced this is the honest shape:
+    // a literal holds about a hundred points, and a drawing has thousands, so
+    // the alternative is either a wall of numbers in the source or hundreds of
+    // chained calls — and either way the whole thing is parsed again on every
+    // save.
+    //
+    // **The file holds TENTHS OF A PIXEL, as whole numbers**, one per line:
+    //
+    //     1405        <- x = 140.5
+    //     2000        <- y = 200.0
+    //     -99999      <- lift the pen: the next point is a hop, not a stroke
+    //     2200
+    //     1400
+    //
+    // Not because tenths are elegant, but because `std.strings` can turn a
+    // string into an int and not into a float. A tenth of a pixel is finer
+    // than anything this tool can draw and it is exactly the precision
+    // `tools/trace.py` writes, so nothing is lost — and the file stays
+    // something a person can read and edit.
+    //
+    // A file that is not there says so and the artwork carries on, the same
+    // courtesy the background image and the sound files get.
+    fn follow_file(int first, str path, float px_s) int {
+        return file_walk(first, path, px_s, 3)
+    }
+
+    fn follow_file_silent(int first, str path, float px_s) int {
+        return file_walk(first, path, px_s, 4)
+    }
+
+    fn file_walk(int first, str path, float px_s, int kind) int {
+        str text = ""
+        danger { text = fs.read(path) }
+        if err != nil {
+            print("[turtle] follow_file: ", path, ": ", err[0])
+            return first
+        }
+        if text == "" {
+            print("[turtle] follow_file: ", path, " is empty")
+            return first
+        }
+
+        dyn lines = strings.split(text, "\n")
+        int have = len(lines)
+
+        int step = first
+        int i = 0
+        float px = 0.0
+        int got = 0          // 0 = waiting for x, 1 = holding x
+        int hop = 0          // 1 = the next point is a pen-up move
+        while i < have {
+            guard[0] = i     // anchor FIRST
+            str one = lines[i]
+            if one != "" {
+                float v = math.to_float(strings.to_int(one)) / 10.0
+
+                // A line saying -99999 lifts the pen for the next point. It is
+                // a coordinate no stage has, and it lets one file hold a whole
+                // turtle's worth of separate outlines instead of one file and
+                // three lines of artwork each.
+                if v < 0.0 - 9000.0 {
+                    hop = 1
+                    got = 0
+                }
+                if v >= 0.0 - 9000.0 {
+                    if got == 0 {
+                        px = v
+                        got = 1
+                    }
+                    if got == 2 {
+                        int k = kind
+                        if hop == 1 { k = 4 }
+                        timeline.Timeline.add(id, step, k, px, v, px_s)
+                        step = step + 1
+                        got = 0
+                        hop = 0
+                    }
+                    if got == 1 { got = 2 }
+                }
+            }
+            i = i + 1
+        }
+        return step
+    }
+
     fn walk_list(int first, dyn points, float px_s, int kind) int {
         int have = len(points)
         int n = have / 2

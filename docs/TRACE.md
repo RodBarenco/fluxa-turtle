@@ -142,6 +142,7 @@ come out even.
 | `--threshold N` | raster: a pixel darker than this is ink (default 128) |
 | `--blur PX` | raster: smooth this much before deciding what is ink. A pencil line photographed on paper is grainy, and without this it traces as a cloud of specks |
 | `--emit follow` | write the same artwork as `follow` lists — an order of magnitude fewer lines |
+| `--emit points` | write the trajectories as data files and the artwork as a few lines |
 | `--emit svg` | write the outlines as an SVG instead of turtle code |
 | `--invert` | raster: trace the light areas instead |
 
@@ -168,6 +169,26 @@ Each leg is its own `dyn`, and a pen-up hop is a `jump`, because of two parser
 rules worth knowing before hand-writing anything similar: a literal holds about
 a hundred points, and a literal is only legal as the initialiser of a
 declaration — never as an argument, never as a reassignment.
+
+## `--emit points`
+
+The trajectories as data, the artwork as a handful of lines:
+
+```bash
+python3 tools/trace.py drawing.svg --turtles 6 --emit points -o art/leo.flx
+[trace]   287 points -> art/leo.t0.pts
+...
+```
+
+Leonardo becomes **56 lines and six `.pts` files**, against 1510 lines in the
+default form and 314 with `--emit follow` — and all three render
+pixel-identically. Reading and declaring 1400 points takes 13 ms, once per run,
+against 9 ms to parse the same drawing as code; the difference is that the data
+never touches the parser, so the AST caps stop being part of the conversation.
+
+Each file is one number per line, in tenths of a pixel, with `-99999` for a
+pen-up hop. They are meant to be edited: change the numbers and the drawing
+changes, with no code touched at all.
 
 ## After it is traced
 

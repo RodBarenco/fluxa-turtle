@@ -556,6 +556,42 @@ ramping from 60 to 900 px/s — 485, 483, 500 and 500 ms. Four segments of wildl
 different lengths taking almost the same time is what accelerating along a path
 looks like.
 
+### `follow_file(step, path, px_s)` · `follow_file_silent(...)` — steps
+
+The same trajectory, read from a file instead of written into the artwork.
+
+```fluxa
+int s = leo.follow_file(1, "leo.pts", 900.0)
+```
+
+For anything traced this is the honest shape. A literal holds about a hundred
+points and a drawing has thousands, so the alternative is a wall of numbers in
+the source or hundreds of chained calls — and either way the whole thing is
+parsed again on every save.
+
+**The file holds tenths of a pixel, as whole numbers, one per line**, and a line
+of `-99999` lifts the pen:
+
+```
+1405        <- x = 140.5
+2000        <- y = 200.0
+-99999      <- the next point is a hop, not a stroke
+2200
+1400
+```
+
+Tenths because `std.strings` turns a string into an int and not into a float. A
+tenth of a pixel is finer than anything this tool can draw and it is exactly the
+precision `tools/trace.py` writes, so nothing is lost — and the file stays
+something a person can open and edit.
+
+**What it costs:** 1400 points read, parsed and declared in **13 ms**, once per
+run. Leonardo written this way is **56 lines and six data files** against 1510
+lines of `toward`, and the two render pixel-identically.
+
+A file that is not there says so and the artwork carries on, the same courtesy
+the background image and the sound files get.
+
 ### `follow(step, points, px_s)` · `follow_silent(...)` — steps
 
 A list of `(x, y)` points, **one step per segment**, and it returns the next
@@ -756,6 +792,7 @@ are untouched.
 | `toward(step, x, y)` · `jump(step, x, y)` | step |
 | `follow(step, points, px_s)` · `follow_silent(...)` | steps, returns the next |
 | `follow_accel(step, points, v0, v1)` · `follow_silent_accel(...)` | steps, returns the next |
+| `follow_file(step, path, px_s)` · `follow_file_silent(...)` | steps, returns the next |
 | `path_clear(step)` · `erase(from, to)` · `erase_at(step, from, to)` | step |
 | `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | step |
 

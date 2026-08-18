@@ -583,6 +583,55 @@ def emit_svg(subs, src, W, H, stroke, color, keep):
 CHUNK = 100
 
 
+def emit_points(groups, src, speed, stroke, color, keep, W, H, out_path):
+    """The artwork as a few lines of code and one data file per turtle.
+
+    The points go into `<out>.tN.pts`, one number per line, in TENTHS of a
+    pixel as whole numbers — `std.strings` parses an int and not a float, and a
+    tenth is finer than anything the tool draws. A line of `-99999` lifts the
+    pen, so one file holds all of a turtle's outlines and the artwork is one
+    call per turtle rather than three lines per outline.
+
+    Nothing here is re-parsed on every save, which is the point: the source
+    stops carrying a wall of numbers.
+    """
+    base = os.path.splitext(out_path or "art")[0]
+    code = [f"// ── traced from {os.path.basename(src)} by tools/trace.py --emit points ──",
+            f"// {len(groups)} turtles . {total_steps(groups)} steps . "
+            f"{sum(len(s.pts) for g in groups for s in g)} actions . stage {W}x{H}",
+            "//",
+            "// The trajectories are in the .pts files beside this one, a number per",
+            "// line, in tenths of a pixel; -99999 lifts the pen. Edit them with",
+            "// anything — the artwork does not change, and nothing is re-parsed when",
+            "// you save.",
+            ""]
+    for gi, g in enumerate(groups):
+        name = f"t{gi}"
+        first = g[0].pts[0]
+        col = color or (g[0].color if keep and g[0].color else PALETTE[gi % len(PALETTE)])
+        path = f"{base}.t{gi}.pts"
+        nums = []
+        for si, sb in enumerate(g):
+            if si > 0:
+                nums.append("-99999")
+            for p in sb.pts:
+                nums.append(str(int(round(p[0] * 10))))
+                nums.append(str(int(round(p[1] * 10))))
+        with open(path, "w") as fh:
+            fh.write("\n".join(nums) + "\n")
+        print(f"[trace] {sum(len(s.pts) for s in g):5d} points -> {path}", file=sys.stderr)
+
+        code.append(f"Block {name} typeof turtle.Turtle")
+        code.append(f"{name}.spawn({first[0]:.1f}, {first[1]:.1f})")
+        code.append(f"{name}.hide()")
+        code.append(f"{name}.speed({speed:.1f})")
+        code.append(f"{name}.path_width({stroke})")
+        code.append(f"{name}.path_color({col[0]}, {col[1]}, {col[2]})")
+        code.append(f'{name}.follow_file(1, "{path}", {speed:.1f})')
+        code.append("")
+    return "\n".join(code)
+
+
 def emit_follow(groups, src, speed, stroke, color, keep, W, H):
     """The same artwork as lists of points instead of one call per point."""
     n_actions = sum(len(s.pts) for g in groups for s in g)
@@ -676,8 +725,8 @@ def main():
         description="Turn an SVG or a raster image into Fluxa Turtle code.")
     ap.add_argument("input", help="an .svg, or a .png/.jpg (needs Pillow)")
     ap.add_argument("-o", "--out", help="write here instead of stdout")
-    ap.add_argument("--emit", choices=("flx", "follow", "svg"), default="flx",
-                    help="turtle code (default), the same as `follow` lists, or an SVG")
+    ap.add_argument("--emit", choices=("flx", "follow", "points", "svg"), default="flx",
+                    help="turtle code (default), `follow` lists, points in data files, or an SVG")
     ap.add_argument("--turtles", type=int, default=1,
                     help="draw with this many turtles, in parallel (max 32)")
     ap.add_argument("--stage", default="800x600", help="stage size, WxH")
@@ -746,6 +795,9 @@ def main():
     groups = split(kept, args.turtles)
     if args.emit == "svg":
         code = emit_svg(kept, args.input, W, H, args.stroke, color, args.keep_colors)
+    elif args.emit == "points":
+        code = emit_points(groups, args.input, args.speed, args.stroke, color,
+                           args.keep_colors, W, H, args.out)
     elif args.emit == "follow":
         code = emit_follow(groups, args.input, args.speed, args.stroke, color,
                            args.keep_colors, W, H)
