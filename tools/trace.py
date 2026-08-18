@@ -574,6 +574,61 @@ def emit_svg(subs, src, W, H, stroke, color, keep):
     return "\n".join(out)
 
 
+# A dyn literal holds about a hundred points: the parser guards expression
+# depth at 200 and counts a list element as a level, so 204 numbers in one
+# literal is a parse error. `follow` returns the next free step, so a longer
+# outline is chunks chained through it — and consecutive chunks join by
+# themselves, since the first `toward` of one continues from the last point of
+# the one before.
+CHUNK = 100
+
+
+def emit_follow(groups, src, speed, stroke, color, keep, W, H):
+    """The same artwork as lists of points instead of one call per point."""
+    n_actions = sum(len(s.pts) for g in groups for s in g)
+    steps = total_steps(groups)
+    out = [f"// ── traced from {os.path.basename(src)} by tools/trace.py --emit follow ──",
+           f"// {len(groups)} turtles . {steps} steps . {n_actions} actions . stage {W}x{H}",
+           "//",
+           "// Each list is one leg of the trajectory, and `follow` returns the next",
+           "// free step, so they chain. Two limits shape what this looks like, and",
+           "// both are the parser's rather than the tool's: a literal may hold about",
+           "// a hundred points (expression depth is guarded at 200 and a list element",
+           "// counts as a level), and a literal is only legal as the initialiser of a",
+           "// declaration — it cannot be an argument or a reassignment. So every leg",
+           "// is a `dyn` of its own, and a pen-up hop is a `jump` rather than a",
+           "// one-point list.",
+           ""]
+    lit = 0
+    for gi, g in enumerate(groups):
+        name = f"t{gi}"
+        first = g[0].pts[0]
+        base = color or (g[0].color if keep and g[0].color else PALETTE[gi % len(PALETTE)])
+        out.append(f"Block {name} typeof turtle.Turtle")
+        out.append(f"{name}.spawn({first[0]:.1f}, {first[1]:.1f})")
+        out.append(f"{name}.hide()")
+        out.append(f"{name}.speed({speed:.1f})")
+        out.append(f"{name}.path_width({stroke})")
+        out.append(f"{name}.path_color({base[0]}, {base[1]}, {base[2]})")
+        out.append(f"int s{gi} = 1")
+        for sb in g:
+            if keep and sb.color and sb.color != base and not color:
+                base = sb.color
+                out.append(f"{name}.path_color({base[0]}, {base[1]}, {base[2]})")
+            p0 = sb.pts[0]
+            out.append(f"{name}.jump(s{gi}, {p0[0]:.1f}, {p0[1]:.1f})")
+            out.append(f"s{gi} = s{gi} + 1")
+            rest = sb.pts[1:]
+            for c in range(0, len(rest), CHUNK):
+                part = rest[c:c + CHUNK]
+                nums = ", ".join(f"{p[0]:.1f}, {p[1]:.1f}" for p in part)
+                out.append(f"dyn L{lit} = [{nums}]")
+                out.append(f"s{gi} = {name}.follow(s{gi}, L{lit}, {speed:.1f})")
+                lit += 1
+        out.append("")
+    return "\n".join(out)
+
+
 def emit(groups, src, speed, stroke, color, keep, W, H):
     n_actions = sum(len(s.pts) for g in groups for s in g)
     steps = total_steps(groups)
@@ -621,8 +676,8 @@ def main():
         description="Turn an SVG or a raster image into Fluxa Turtle code.")
     ap.add_argument("input", help="an .svg, or a .png/.jpg (needs Pillow)")
     ap.add_argument("-o", "--out", help="write here instead of stdout")
-    ap.add_argument("--emit", choices=("flx", "svg"), default="flx",
-                    help="turtle code (default), or the outlines as an SVG")
+    ap.add_argument("--emit", choices=("flx", "follow", "svg"), default="flx",
+                    help="turtle code (default), the same as `follow` lists, or an SVG")
     ap.add_argument("--turtles", type=int, default=1,
                     help="draw with this many turtles, in parallel (max 32)")
     ap.add_argument("--stage", default="800x600", help="stage size, WxH")
@@ -691,6 +746,9 @@ def main():
     groups = split(kept, args.turtles)
     if args.emit == "svg":
         code = emit_svg(kept, args.input, W, H, args.stroke, color, args.keep_colors)
+    elif args.emit == "follow":
+        code = emit_follow(groups, args.input, args.speed, args.stroke, color,
+                           args.keep_colors, W, H)
     else:
         code = emit(groups, args.input, args.speed, args.stroke, color,
                     args.keep_colors, W, H)

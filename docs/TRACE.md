@@ -141,6 +141,7 @@ come out even.
 | `--min-points N` | drop outlines shorter than this |
 | `--threshold N` | raster: a pixel darker than this is ink (default 128) |
 | `--blur PX` | raster: smooth this much before deciding what is ink. A pencil line photographed on paper is grainy, and without this it traces as a cloud of specks |
+| `--emit follow` | write the same artwork as `follow` lists — an order of magnitude fewer lines |
 | `--emit svg` | write the outlines as an SVG instead of turtle code |
 | `--invert` | raster: trace the light areas instead |
 
@@ -150,6 +151,23 @@ better result than sampling it coarsely, because the simplification knows which
 points matter and the sampler does not.
 
 ---
+
+## `--emit follow`
+
+The same artwork, written as lists of points instead of one call per point:
+
+```bash
+python3 tools/trace.py drawing.svg --turtles 6 --emit follow -o art.flx
+```
+
+Leonardo is **1510 lines** in the default form and **314** in this one, for the
+same 387 steps and 1406 actions — and the two render pixel-identically, which
+is checked rather than assumed.
+
+Each leg is its own `dyn`, and a pen-up hop is a `jump`, because of two parser
+rules worth knowing before hand-writing anything similar: a literal holds about
+a hundred points, and a literal is only legal as the initialiser of a
+declaration — never as an argument, never as a reassignment.
 
 ## After it is traced
 

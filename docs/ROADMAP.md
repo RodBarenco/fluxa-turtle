@@ -200,7 +200,7 @@ across two runs, because the curve has to be a pure function of the fraction.
 
 ---
 
-## Sprint 7b — `follow` · a whole trajectory in one call
+## Sprint 7b — `follow` — DONE (project 0.19.0)
 
 **Deliver** (from the path proposal, renamed — see below):
 

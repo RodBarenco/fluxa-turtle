@@ -1,0 +1,171 @@
+// lab/follow.flx — a whole trajectory in one call.
+// Run from the project root:  ./fluxa run lab/follow.flx
+//
+// `follow` has to be indistinguishable from writing the same points out as
+// individual `toward` calls: same steps, same drawing, same timing. That is
+// all it is. So this draws the same two trajectories both ways and compares
+// the frames by pixel.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "follow")
+dyn canvas = image.new(800, 600)
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+dyn part = [0.0, 0.0]
+
+// ── a list written by hand ────────────────────────────────────────
+
+dyn wave = [140.0, 200.0, 220.0, 140.0, 300.0, 240.0, 380.0, 150.0, 460.0, 250.0, 540.0, 160.0]
+
+Block a typeof turtle.Turtle
+a.spawn(140.0, 200.0)
+a.hide()
+a.speed(400.0)
+a.path_color(120, 208, 214)
+a.path_width(3)
+int next = a.follow(1, wave, 900.0)
+print("six points from step 1  -> next step ", next, "   (expected 7)")
+print("actions declared .....  ", timeline.Timeline.count(), "   (expected 6)")
+
+// ── a list built in a loop, which has no size limit ───────────────
+//
+// This is the case the sprint exists for, and the one that used to take the
+// process down before the runtime was fixed on 2026-08-17.
+
+dyn spiral = [0.0]
+int k = 0
+while k < 120 {
+    float ang = math.to_float(k) * 0.24
+    float rad = 20.0 + math.to_float(k) * 1.1
+    spiral[k * 2]     = 650.0 + rad * math.cos(ang)
+    spiral[k * 2 + 1] = 420.0 - rad * math.sin(ang)
+    k = k + 1
+}
+print("built in a loop ......  ", len(spiral), " numbers   (expected 240 — a dyn grows as it is filled)")
+
+Block b typeof turtle.Turtle
+b.spawn(670.0, 420.0)
+b.hide()
+b.speed(900.0)
+b.path_color(255, 200, 60)
+b.path_width(2)
+int after = b.follow(1, spiral, 1400.0)
+print("120 points ...........  -> next step ", after, "   (expected 121)")
+
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/follow.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+// ── the same thing, written out by hand ───────────────────────────
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+
+Block c typeof turtle.Turtle
+c.spawn(140.0, 200.0)
+c.hide()
+c.speed(400.0)
+c.path_color(120, 208, 214)
+c.path_width(3)
+c.toward(1, 140.0, 200.0)
+c.toward(2, 220.0, 140.0)
+c.toward(3, 300.0, 240.0)
+c.toward(4, 380.0, 150.0)
+c.toward(5, 460.0, 250.0)
+c.toward(6, 540.0, 160.0)
+
+Block d typeof turtle.Turtle
+d.spawn(670.0, 420.0)
+d.hide()
+d.speed(900.0)
+d.path_color(255, 200, 60)
+d.path_width(2)
+int m = 0
+while m < 120 {
+    float ang2 = math.to_float(m) * 0.24
+    float rad2 = 20.0 + math.to_float(m) * 1.1
+    d.toward(1 + m, 650.0 + rad2 * math.cos(ang2), 420.0 - rad2 * math.sin(ang2))
+    m = m + 1
+}
+
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn by_hand = graph.capture(win)
+    image.save(by_hand, "lab/follow_byhand.png")
+    image.discard(by_hand)
+}
+if err != nil { print("capture: ", err[0]) }
+
+print("")
+print("follow.png and follow_byhand.png must be identical — follow is only a shorter way to say it")
+
+// ── silent leaves nothing behind ──────────────────────────────────
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn box = [200.0, 500.0, 400.0, 500.0, 400.0, 560.0, 200.0, 560.0]
+
+Block e typeof turtle.Turtle
+e.spawn(200.0, 500.0)
+e.hide()
+e.speed(4000.0)
+e.path_color(255, 120, 90)
+e.path_width(4)
+e.follow_silent(1, box, 4000.0)
+
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn quiet = graph.capture(win)
+    image.save(quiet, "lab/follow_silent.png")
+    image.discard(quiet)
+}
+if err != nil { print("capture: ", err[0]) }
+print("follow_silent.png must be an empty stage — four points walked, no ink")
+
+// ── the speed on the call is the speed of every segment ───────────
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn line = [100.0, 300.0, 500.0, 300.0]
+Block f typeof turtle.Turtle
+f.spawn(100.0, 300.0)
+f.hide()
+f.speed(50.0)                       // her own, deliberately slow
+f.path_color(150, 200, 120)
+f.follow(1, line, 400.0)            // and the call says 400
+runner.Runner.rebuild(win, canvas, sheet, 0)
+int t0 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 2)
+print("")
+print("400 px at 400 px/s ...  ", time.elapsed_ms(t0), " ms   (expected ~1000: the call's speed, not her 50)")
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)

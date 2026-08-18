@@ -500,6 +500,51 @@ sides is the circle's, in proportion to the sweep — never fewer than two.
 
 ---
 
+# A whole trajectory in one call
+
+### `follow(step, points, px_s)` · `follow_silent(...)` — steps
+
+A list of `(x, y)` points, **one step per segment**, and it returns the next
+free step.
+
+```fluxa
+dyn wave = [140.0, 200.0, 220.0, 140.0, 300.0, 240.0, 380.0, 150.0]
+int s = leo.follow(1, wave, 900.0)
+```
+
+| | |
+|---|---|
+| `step` | `int` — the step the first segment runs on |
+| `points` | `dyn` — x, y, x, y… |
+| `px_s` | `float` — this trajectory's speed; `0.0` means her own |
+
+The step model is untouched: every segment is still its own logical moment,
+still animates, still obeys `pivot`, `erase` and everything else. **What shrinks
+is the file, not the timeline** — a trajectory written as two hundred `toward`
+lines is one call and a list, and it costs exactly the same two hundred steps.
+Verified by drawing the same trajectory both ways and comparing the frames:
+pixel-identical.
+
+`follow_silent` walks the same points with the pen up.
+
+**Three ways to fill the list**, and two of them are shaped by the parser rather
+than by this tool:
+
+| | |
+|---|---|
+| a literal | up to about **a hundred points**. Expression depth is guarded at 200 and a list element counts as a level, so 204 numbers in one literal is a parse error |
+| a loop | any size — writing past the end grows the list |
+| several calls | `follow` returns the next free step, so a long trajectory is chunks chained through it |
+
+And a literal is only legal as the **initialiser of a declaration**: it cannot
+be an argument (`follow(1, [1.0, 2.0], 900.0)` does not parse) and a `dyn`
+cannot be reassigned to a new one. Declare it, then pass the name.
+
+Not called `path`, because ten calls already start with `path_` and every one of
+them is about how the trail *looks*.
+
+---
+
 # Walking to a point
 
 ### `toward(step, x, y)` — step
@@ -654,6 +699,7 @@ are untouched.
 | `circle(step, cx, cy, r)` · `ellipse(step, cx, cy, rx, ry)` | steps, returns the next |
 | `star(step, cx, cy, r, inner, points)` · `arc(step, cx, cy, r, from, to)` | steps, returns the next |
 | `toward(step, x, y)` · `jump(step, x, y)` | step |
+| `follow(step, points, px_s)` · `follow_silent(...)` | steps, returns the next |
 | `path_clear(step)` · `erase(from, to)` · `erase_at(step, from, to)` | step |
 | `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | step |
 

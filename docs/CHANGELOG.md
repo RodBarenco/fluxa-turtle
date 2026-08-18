@@ -3,6 +3,37 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.19.0] — 2026-08-18
+
+### Added
+
+- **`follow(step, points, px_s)`** and **`follow_silent`** — a whole trajectory
+  in one call, one step per segment, returning the next free step.
+
+  ```fluxa
+  dyn wave = [140.0, 200.0, 220.0, 140.0, 300.0, 240.0]
+  int s = leo.follow(1, wave, 900.0)
+  ```
+
+  The step model is untouched — what shrinks is the artwork file, not the
+  timeline. Verified by drawing the same trajectory as `follow` and as
+  hand-written `toward` calls and comparing the frames: pixel-identical, same
+  step count, and `follow_silent` leaves zero ink.
+
+  Not called `path`: ten calls already begin with `path_` and all of them are
+  about how the trail looks.
+
+- **`tools/trace.py --emit follow`** — the same artwork as lists of points.
+  Leonardo goes from **1510 lines to 314**, for the same 387 steps and 1406
+  actions, rendering pixel-identically.
+
+  Two parser rules shape what it emits, and both are worth knowing before
+  hand-writing something similar: a literal holds about a hundred points
+  (expression depth is guarded at 200, and a list element counts as a level),
+  and a literal is only legal as the initialiser of a declaration — not as an
+  argument, not as a reassignment. So every leg is its own `dyn` and a pen-up
+  hop is a `jump`.
+
 ## [0.18.0] — 2026-08-17
 
 ### Added
