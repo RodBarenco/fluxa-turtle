@@ -532,7 +532,7 @@ than by this tool:
 
 | | |
 |---|---|
-| a literal | up to about **a hundred points**. Expression depth is guarded at 200 and a list element counts as a level, so 204 numbers in one literal is a parse error |
+| a literal | up to about **a hundred points**. Expression depth is guarded at 200 and a list element counts as a level, so 204 numbers in one literal is a parse error — and that is the parser's list path, not `dyn`: `float arr p[204] = [ … ]` fails in exactly the same place |
 | a loop | any size — writing past the end grows the list |
 | several calls | `follow` returns the next free step, so a long trajectory is chunks chained through it |
 

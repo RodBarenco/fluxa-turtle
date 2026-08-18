@@ -326,6 +326,33 @@ lines quoted against whatever it becomes.
 
 ---
 
+## Sprint 7c — `follow_file` · points as data, not as code
+
+**Deliver:** `leo.follow_file(step, "leo.pts", px_s)` — the trajectory read from
+a file instead of written into the artwork.
+
+**Why it is the real answer for a traced drawing.** A literal holds about two
+hundred numbers, and that is the parser's list path rather than anything about
+`dyn`: measured, `float arr p[200] = [ … ]` parses and `p[204]` does not, in
+exactly the same place a `dyn` literal does. The scalar fill form
+(`float arr p[2000] = 0.0`) has no limit, but then every value is a line of
+assignment, which is worse than what `follow` already does.
+
+So the way out is to stop putting the points in the source at all. Leonardo
+becomes one line in the artwork and a data file beside it; nothing is re-parsed
+on every save, and the AST caps stop being part of the conversation.
+
+**Gate in:** read `STDLIB.md` on `std.fs` and `std.csv` and decide the format —
+a line per point in a text file, or CSV. Measure how long reading 1400 points
+takes, because it happens on every reload.
+
+**Gate out:** `lab/follow.flx` extended — a trajectory drawn from a file and
+from a literal, pixel-identical; the read timed; `tools/trace.py --emit points`
+writing the file and the artwork line that reads it, with Leonardo's line count
+quoted against the 314 that `--emit follow` produces.
+
+---
+
 ## Sprint 8 — Text · a turtle that writes
 
 **Deliver:** `leo.write(step, "hello", size)` — letters drawn as strokes, so
