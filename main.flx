@@ -82,7 +82,7 @@ timeline.Timeline.reset()
 Block leo typeof turtle.Turtle
 leo.spawn(150.0, 321.9)
 leo.color(90, 230, 230)
-leo.path_color(200, 30, 105)
+leo.path_color(90, 230, 230)
 leo.path_width(1)
 leo.speed(900.0)
 leo.hide()
@@ -103,11 +103,11 @@ leo.go(1, 500.0, 0.0)
 //
 // 170 is the one number worth playing with first. Try 160, 175 or 144.
 
- int s = 2
- while s <= 36 {
-    leo.go(s, 500.0, 170.0)
-    s = s + 1
-}
+//int s = 2
+//while s <= 36 {
+//   leo.go(s, 500.0, 170.0)
+//    s = s + 1
+//}
 
 
 // ═══════════════════ STAGE 3 — two at the same time ═══════════════════
