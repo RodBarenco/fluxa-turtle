@@ -12,6 +12,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -23,11 +24,16 @@ dyn win    = graph.init(800, 600, "preview")
 dyn canvas = image.new(800, 600)
 
 stage.Stage.background(16, 17, 24)
-runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
+runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0      // one cleared frame, so the window is not the desktop
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at   // no sprites here: a 1x1 blank
 
 Block leo typeof turtle.Turtle
 leo.spawn(340.0, 363.0)
@@ -71,8 +77,10 @@ bia.go_at(2, 480.0, 0.0, 700.0)
 
 pool.Pool.home_all()
 painter.Painter.reset()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 
 print("steps=", timeline.Timeline.max_step(), " actions=", timeline.Timeline.count())
 

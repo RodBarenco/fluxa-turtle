@@ -1,0 +1,100 @@
+// static/label.flx — text as a step, in a real font
+//
+// `Turtle.write` draws letters as strokes: they animate, they take path styles,
+// `erase` and `pivot` reach them. This is the other kind of text — the one the
+// graphics library draws, kerned and smooth, in the built-in font or in a TTF
+// the artwork loads.
+//
+//     leo.text(12, 60.0, 120.0, "one night", 42.0)
+//     stage.Stage.font("assets/Inter.ttf", 64)     // and optionally in this
+//
+// It is a STEP: it appears when that step runs, in the turtle's colour at that
+// moment, and it is baked into the path texture like everything else, so it
+// costs nothing per frame afterwards.
+//
+// What it is not: a path. It cannot be erased by range, pivoted or shifted,
+// and it cannot be drawn stroke by stroke. That is the trade — `write` for
+// letters that behave like drawing, `text` for letters that look like type.
+//
+// The font handle is a `dyn`, so it lives where the sprite sheet lives: made
+// once in `Runner.play` and passed to whoever draws (adr 0020). A `dyn` cannot
+// be nil and cannot be declared inside a branch, so when an artwork asks for no
+// font the runner still makes one — a 1x1 image that is never looked at.
+
+Block Label {
+    str arr txt[128]   = ""
+    float arr lx[128]  = 0.0
+    float arr ly[128]  = 0.0
+    float arr lsz[128] = 0.0
+    int arr lstep[128] = 0
+    int arr lwho[128]  = 0        // the turtle whose colour it takes
+    int n = 0
+
+    int baked = 0                 // labels up to this step are in the texture
+    int arr guard[1] = 0
+
+    fn reset() nil {
+        n = 0
+        baked = 0
+    }
+
+    fn count() int { return n }
+
+    fn add(int who, int step, float x, float y, str s, float size) nil {
+        if n >= 128 {
+            print("[turtle] text: a hundred and twenty-eight labels is the limit — this one was ignored")
+            return
+        }
+        txt[n]   = s
+        lx[n]    = x
+        ly[n]    = y
+        lsz[n]   = size
+        lstep[n] = step
+        lwho[n]  = who
+        n = n + 1
+        timeline.Timeline.claim(who, step)
+    }
+
+    fn mark(int upto) nil { baked = upto }
+
+    // The labels that belong to ONE step, drawn as the rebuild replays it.
+    //
+    // Not all of them at the end: a label takes its turtle's colour, and the
+    // colour at the end of the artwork is not the colour at step 12. Drawn
+    // here, right after that step's appearance has been applied, it gets the
+    // one it was written under.
+    fn draw_at(dyn win, dyn face, int has_face, int step) nil {
+        paint_range(win, face, has_face, step, step)
+    }
+
+    // What the bake does not have yet: drawn on top, every frame, exactly as
+    // the painter draws the segments born in this run.
+    fn draw_fresh(dyn win, dyn face, int has_face, int upto) nil {
+        paint_range(win, face, has_face, baked + 1, upto)
+    }
+
+    fn paint_range(dyn win, dyn face, int has_face, int from, int upto) nil {
+        int i = 0
+        while i < n {
+            guard[0] = i     // anchor FIRST
+            if lstep[i] >= from {
+                if lstep[i] <= upto {
+                    int t = lwho[i]
+                    int opa = pool.Pool.get_opa(t)
+                    int r = painter.Painter.mix(pool.Pool.get_pr(t), stage.Stage.r(), opa)
+                    int g = painter.Painter.mix(pool.Pool.get_pg(t), stage.Stage.g(), opa)
+                    int b = painter.Painter.mix(pool.Pool.get_pb(t), stage.Stage.b(), opa)
+                    if has_face == 1 {
+                        graph.draw_text_font(win, face, txt[i], math.to_int(lx[i]),
+                                             math.to_int(ly[i]), math.to_int(lsz[i]), r, g, b)
+                    }
+                    if has_face == 0 {
+                        graph.draw_text(win, txt[i], math.to_int(lx[i]),
+                                        math.to_int(ly[i]), math.to_int(lsz[i]), r, g, b)
+                    }
+                }
+            }
+            i = i + 1
+        }
+    }
+}

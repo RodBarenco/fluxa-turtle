@@ -402,6 +402,37 @@ about to write a sentence will see it.
 
 ---
 
+## Sprint 8b — Text as type — DONE (project 0.23.0)
+
+**Deliver:** the half of text that `write` deliberately is not — `leo.text(step,
+x, y, string, size)` drawn by the graphics library, kerned and smooth, and
+`stage.Stage.font(path, size)` to draw it in a TTF the artwork loads. One step,
+however long the string, against `write`'s six per letter.
+
+**Where:** a new `static/label.flx`, `Timeline.claim` so a label is a step
+without taking a slot in the occupancy grid, and the typeface threaded through
+every drawing path exactly as the sheet is
+([adr 0020](adr/0020-the-sheet-is-passed-to-whoever-draws.md)).
+
+**Decide first — answered while building it.** Whether a label carries its own
+colour or reads the turtle's. It reads it, at replay time: `path_color` is a
+timeline event and the pool only ever holds the latest one, so a label that
+resolved its colour when it was declared came out in the artwork's *first*
+colour and one drawn at the end of the rebuild came out in its *last*. Drawn as
+its step is replayed, it comes out in the one it was written under.
+
+**Constraints:** the hotkeys are bare letters. Nothing types on the stage yet,
+but the studio will, so `Runner.typing(1)` exists now and silences them —
+nave's shape, put in before the bug rather than after it.
+
+**Gate out:** `lab/label.flx` — five claims, four of them pictures: a label
+makes the artwork longer; at step 2 the step-3 label is not there; two labels in
+the two colours in force where they were written; a TTF loaded and drawn, and a
+missing one caught rather than fatal; the label landing live, animated from an
+empty artwork, without a rebuild.
+
+---
+
 ## Sprint 9 — Camera, layers, a scene larger than the screen
 
 **Deliver:** the expansions' "Camadas de renderização", "Sistema de câmera com

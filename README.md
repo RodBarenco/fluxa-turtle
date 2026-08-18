@@ -325,6 +325,19 @@ Letters are strokes, not a font painted on top — so text animates a letter at 
 time, takes `path_glow` like anything else, and goes into the video. About six
 steps a letter; `write_cost("...")` says how many before you commit.
 
+And when what you want is a title rather than a drawing, `text` is the other
+side of that trade — one step, however long the string, drawn as type:
+
+```fluxa
+stage.Stage.font("assets/Inter.ttf", 64)     // optional; there is a built-in one
+leo.text(2, 60.0, 120.0, "one night", 42.0)
+```
+
+It is still a step: it appears when that step runs, in her colour at that
+moment, LEFT takes it away again, and it goes into the video. It is not a path,
+so `erase` and `pivot` do not reach it — that is the whole difference between
+the two.
+
 ### Shapes you do not have to work out
 
 A figure is a batch of steps, and these declare it for you — placed by its

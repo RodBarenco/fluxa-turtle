@@ -19,6 +19,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -77,6 +78,10 @@ print("art written ..........  ", fs.exists("lab/sprite_one.png"), " ", fs.exist
 // ── the turtles ───────────────────────────────────────────────────
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 pool.Pool.reset()
 timeline.Timeline.reset()
 
@@ -127,10 +132,13 @@ f.path_color(0, 220, 140)
 f.go(1, 100.0, 0.0)
 
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 print("sprite files .........  ", pool.Pool.sprites(), "   (expected 3: one at 1.0, the same at 0.5, and the sheet)")
 
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count())
 print("expected: five arrows, each pointing the way its turtle walked, and one circle")

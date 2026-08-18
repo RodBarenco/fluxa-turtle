@@ -24,6 +24,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -38,8 +39,13 @@ pool.Pool.reset()
 timeline.Timeline.reset()
 
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 
 // Eight turtles, one look each, all drawing the same wave at the same steps.
 // Same shape, same width, same speed: the only difference on screen is the
@@ -125,9 +131,11 @@ while i <= 34 {
 }
 
 int t0 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 int all8 = time.elapsed_ms(t0)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 
 print("eight looks, ", timeline.Timeline.count(), " actions, rebuilt in ", all8, " ms")
 print("(solid, brush, marker, glow, spray, triangles, squares, stars — top to bottom)")
@@ -195,8 +203,10 @@ s1.path_dash(0, 34)
 s1.toward(1, 740.0, 520.0)
 
 dyn leaves = pool.Pool.atlas()
-runner.Runner.rebuild(win, canvas, leaves, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, leaves)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, leaves, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, leaves, face, 0, upto_all)
 print("")
 print("a stamped path: ", timeline.Timeline.count(), " segments, one picture every 34 px")
 print("the straight run: 680 px at 34 apart — 20 stamps, first at x=60, last at 706,")
@@ -238,28 +248,33 @@ print("")
 print("600 segments, one look at a time:")
 
 int s0 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 print("  solid ......  ", time.elapsed_ms(s0), " ms")
 
 m.path_brush()
 int s1 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 print("  brush ......  ", time.elapsed_ms(s1), " ms")
 
 m.path_spray()
 int s2 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 print("  spray ......  ", time.elapsed_ms(s2), " ms")
 
 m.path_image("lab/_leaf.png", 1.0)
 m.path_dash(0, 34)
 int s2b = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 print("  stamped ....  ", time.elapsed_ms(s2b), " ms")
 
 m.path_stars()
 int s3 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 print("  stars ......  ", time.elapsed_ms(s3), " ms")
 
 // From here on the artwork contains a layered style, and a layered style is
@@ -268,12 +283,14 @@ print("  stars ......  ", time.elapsed_ms(s3), " ms")
 // order of this list matters.
 m.path_marker()
 int s4 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 print("  marker .....  ", time.elapsed_ms(s4), " ms   (two passes from here on)")
 
 m.path_glow()
 int s5 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
 print("  glow .......  ", time.elapsed_ms(s5), " ms")
 
 // ── the spray is not random ───────────────────────────────────────
@@ -292,8 +309,10 @@ p.toward(1, 700.0, 300.0)
 p.toward(2, 400.0, 120.0)
 p.toward(3, 100.0, 300.0)
 
-runner.Runner.rebuild(win, canvas, sheet, 3)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn one = graph.capture(win)
     image.save(one, "lab/brush_spray1.png")
@@ -301,8 +320,10 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-runner.Runner.rebuild(win, canvas, sheet, 3)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn two = graph.capture(win)
     image.save(two, "lab/brush_spray2.png")

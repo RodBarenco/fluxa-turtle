@@ -17,6 +17,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -29,10 +30,15 @@ dyn canvas = image.new(800, 600)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at   // no sprites here: a 1x1 blank
 
 // ── whole ─────────────────────────────────────────────────────────
 Block a typeof turtle.Turtle
@@ -76,10 +82,12 @@ d.path_width(5)
 d.ring(1, 12, 55.0, 0.0)
 d.erase(1, 12)
 
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 
-print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", timeline.Timeline.max_step())
+print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", upto_all)
 print("expected: row 1 whole, row 2 with a gap in the middle, row 3 with two gaps, row 4 empty")
 
 danger {

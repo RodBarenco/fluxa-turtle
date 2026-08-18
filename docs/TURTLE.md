@@ -446,6 +446,37 @@ one before, give or take the stroke's own width.
 
 How many steps that string will cost, without declaring it.
 
+### `text(step, x, y, string, size)` — step
+
+The other kind of writing: letters as **type**. The graphics library draws them,
+kerned and smooth, in the built-in font or in whatever TTF the stage loaded.
+
+```fluxa
+leo.text(12, 60.0, 120.0, "one night", 42.0)
+```
+
+| | |
+|---|---|
+| `x`, `y` | `float` — the top left of the string |
+| `string` | `str` — anything the font has |
+| `size` | `float` — the height in pixels |
+
+**One step, however long the string** — that is the difference from `write`,
+which costs about six steps per letter. It is a real step all the same: it makes
+the artwork longer, it appears when that step runs, LEFT takes it away again,
+and it is baked into the texture, so it costs nothing per frame afterwards.
+
+It takes her `path_color` **at that step**, so a colour written after it does not
+reach back and repaint it.
+
+What it is not: a path. `erase`, `pivot`, `shift` and the path styles do not
+reach it, and it cannot be drawn stroke by stroke. That is the trade —
+[`write`](#writestep-x-y-text-size--steps) for letters that behave like drawing,
+`text` for letters that look like type
+([adr 0021](adr/0021-two-kinds-of-text-and-a-label-is-a-step.md)).
+
+A hundred and twenty-eight labels, and it says so when the next one is ignored.
+
 ---
 
 # Ready-made shapes
@@ -837,6 +868,7 @@ are untouched.
 | `follow_accel(step, points, v0, v1)` · `follow_silent_accel(...)` | steps, returns the next |
 | `follow_file(step, path, px_s)` · `follow_file_silent(...)` | steps, returns the next |
 | `write(step, x, y, text, size)` · `write_cost(text)` | steps, returns the next |
+| `text(step, x, y, string, size)` | step |
 | `path_clear(step)` · `erase(from, to)` · `erase_at(step, from, to)` | step |
 | `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | step |
 
@@ -858,6 +890,23 @@ You give the Stage a **path**, never an image: the file is decoded during the
 rebuild, once per save, and goes into the baked texture, so it costs nothing per
 frame. A file that cannot be read prints why and the drawing carries on
 ([adr 0011](adr/0011-the-artwork-file-declares.md)).
+
+### `stage.Stage.font(path, size)`
+
+The typeface [`text`](#textstep-x-y-string-size--step) is drawn in — any TTF.
+
+```fluxa
+stage.Stage.font("assets/Inter.ttf", 64)
+```
+
+Declared, never loaded here: the file is opened once when the artwork starts,
+like every other file the stage names (adr 0011). One typeface for the whole
+artwork, at one size — `text` scales it, and a second face would be a second
+handle to pass to everything that draws.
+
+Without this call, `text` uses the library's built-in font, which is always
+there. A path that cannot be read prints why and the artwork carries on in the
+built-in one.
 
 ### `export.Video(from, to, fps)` · `export.Frames(from, to, fps)`
 
@@ -881,7 +930,7 @@ once they are in the file.
 export.Exporter.setup("frames", 60)     // folder and frame rate
 export.Exporter.hold(30, 90)            // still frames at the start and the end
 export.Exporter.range(1, 5)             // only part of the artwork
-runner.Runner.export(win, canvas, sheet)
+export.Frames(1, 5, 60)                 // and the Runner delivers it
 ```
 
 That leaves a folder of numbered PNGs — what an editor, a print or a contact

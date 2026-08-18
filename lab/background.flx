@@ -16,6 +16,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -58,9 +59,14 @@ dyn canvas = image.new(800, 600)
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at   // no sprites here: a 1x1 blank
 stage.Stage.background(16, 17, 24)
-runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
+runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0      // one cleared frame, so the window is not the desktop
 
 Block leo typeof turtle.Turtle
 leo.spawn(300.0, 300.0)
@@ -75,8 +81,10 @@ leo.go(3, 200.0, 120.0)
 // Each is one line, and the file is decoded inside the rebuild.
 
 stage.Stage.tile("lab/tile.png", 1.0)
-runner.Runner.rebuild(win, canvas, sheet, 3)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn s1 = graph.capture(win)
     image.save(s1, "lab/background_tile.png")
@@ -85,8 +93,10 @@ danger {
 if err != nil { print("tile: ", err[0]) }
 
 stage.Stage.center("lab/tile.png", 3.0)
-runner.Runner.rebuild(win, canvas, sheet, 3)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn s2 = graph.capture(win)
     image.save(s2, "lab/background_center.png")
@@ -95,8 +105,10 @@ danger {
 if err != nil { print("center: ", err[0]) }
 
 stage.Stage.stretch("lab/tile.png")
-runner.Runner.rebuild(win, canvas, sheet, 3)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn s3 = graph.capture(win)
     image.save(s3, "lab/background_stretch.png")
@@ -111,8 +123,10 @@ print("mode after three changes  ", stage.Stage.has_image(), "   (expected 1, st
 // still on screen — a missing texture never costs somebody their artwork.
 
 stage.Stage.tile("lab/there_is_no_such_file.png", 1.0)
-runner.Runner.rebuild(win, canvas, sheet, 3)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 print("mode after a missing file ", stage.Stage.has_image(), "   (expected 0, and a reason above)")
 
 danger {

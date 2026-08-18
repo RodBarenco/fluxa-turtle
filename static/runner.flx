@@ -59,6 +59,22 @@ Block Runner {
     int back    = 0
     int replay  = 0
 
+    // Is something on the stage taking letters right now? The tool's hotkeys
+    // are bare letters — A, F, P, R — so anything that reads a keyboard for
+    // text has to be able to say "these are mine", or typing the word "far"
+    // goes fullscreen, hides the panel and replays the artwork.
+    //
+    // Nave solved this by asking, once per frame, whichever screen owns the
+    // text field: `if typing == 0 { hotkeys }`. Same shape here, and the
+    // owner sets it — `Runner.typing(1)` when the field takes focus, and
+    // `Runner.typing(0)` when it lets go.
+    //
+    // Nothing sets it yet: `leo.text(...)` is written in the artwork's source,
+    // not on the stage. This is the seat the studio sits in, and it is here
+    // now because the hotkeys are already written and it is one line to make
+    // them safe rather than a bug to find later.
+    int typing_on = 0
+
     // `part` is the one thing that has to cross a save besides `done`: the step
     // that was in flight and how far into it we got. A one-element-per-value
     // `prst dyn` from main.flx, because a Block field is re-declared on every
@@ -72,6 +88,26 @@ Block Runner {
         // alive for the whole run — the body is drawn every frame and a Block
         // cannot hold a `dyn` (adr 0013). With no sprites it is a 1x1 blank.
         dyn sheet = pool.Pool.atlas()
+
+        // The typeface, made once for the whole run and passed to whoever
+        // draws, exactly like the sheet (adr 0020). A `dyn` cannot be nil and
+        // cannot be declared inside a branch, so when the artwork asked for no
+        // font this is a 1x1 image that is never looked at — `has_face` is what
+        // decides, not the handle.
+        int has_face = 0
+        dyn face = image.new(1, 1)
+        if stage.Stage.wants_font() == 1 {
+            danger {
+                image.discard(face)
+                face = graph.load_font(win, stage.Stage.font_path(), stage.Stage.font_size())
+                has_face = 1
+            }
+            if err != nil {
+                print("[turtle] font ", stage.Stage.font_path(), ": ", err[0])
+                has_face = 0
+                face = image.new(1, 1)
+            }
+        }
         // Nothing has been presented yet, so the window is still showing
         // whatever was behind it — somebody's desktop, framed. It stays that way
         // until the first frame lands, which on a big artwork is a whole second
@@ -91,7 +127,7 @@ Block Runner {
         // Whatever the artwork file declared — export.Video or export.Frames —
         // is generated here, before the stage comes up. Outside the replay loop
         // on purpose: pressing R redoes the drawing, not the file on disk.
-        deliver(win, canvas, sheet)
+        deliver(win, canvas, sheet, face, has_face)
 
         int cur = done
         int again = 1
@@ -100,7 +136,7 @@ Block Runner {
             again = 0
             int limit = timeline.Timeline.max_step()
 
-            rebuild(win, canvas, sheet, cur)
+            rebuild(win, canvas, sheet, face, has_face, cur)
 
             // One loop for the whole live stage. It used to be two — animate
             // every step, then sit idle — which left no room for a pause: the
@@ -138,7 +174,7 @@ Block Runner {
 
                     // paused: nothing moves until an arrow says so
                     if stop == 0 && paused == 1 {
-                        frame(win, canvas, sheet)
+                        frame(win, canvas, sheet, face, has_face, cur)
                         panel.Panel.draw(win)
                         graph.end_frame(win)
                         hotkeys(win)
@@ -153,10 +189,10 @@ Block Runner {
                             forward = 0
                             if cur < limit {
                                 int f = cur + 1
-                                animate(win, canvas, sheet, part, f)
+                                animate(win, canvas, sheet, face, has_face, part, f)
                                 if arrived == 1 { cur = f }
-                                if arrived == 1 && has_clear(f) == 1 { rebuild(win, canvas, sheet, cur) }
-                                if arrived == 1 && timeline.Timeline.moves_at(f) == 1 { rebuild(win, canvas, sheet, cur) }
+                                if arrived == 1 && has_clear(f) == 1 { rebuild(win, canvas, sheet, face, has_face, cur) }
+                                if arrived == 1 && timeline.Timeline.moves_at(f) == 1 { rebuild(win, canvas, sheet, face, has_face, cur) }
                             }
                         }
 
@@ -166,7 +202,7 @@ Block Runner {
                         if back == 1 {
                             back = 0
                             if cur > 0 {
-                                rewind(win, canvas, sheet, cur)
+                                rewind(win, canvas, sheet, face, has_face, cur)
                                 cur = cur - 1
                                 part[0] = 0.0
                                 part[1] = 0.0
@@ -178,7 +214,7 @@ Block Runner {
                     // running: animate the next step, or hold the finished stage
                     if stop == 0 && paused == 0 && cur < limit {
                         int nxt = cur + 1
-                        animate(win, canvas, sheet, part, nxt)
+                        animate(win, canvas, sheet, face, has_face, part, nxt)
 
                         // RIGHT pressed while this step was being drawn means
                         // "one step, then stop" — and the step it means is this
@@ -194,17 +230,17 @@ Block Runner {
                         // A save is the only other way out of that animation.
                         if arrived == 0 && back == 0 { stop = 1 }
                         if arrived == 1 { cur = nxt }
-                        if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, sheet, cur) }
+                        if arrived == 1 && has_clear(nxt) == 1 { rebuild(win, canvas, sheet, face, has_face, cur) }
                         if arrived == 1 && timeline.Timeline.moves_at(nxt) == 1 {
-                            rebuild(win, canvas, sheet, cur)
-                            frame(win, canvas, sheet)
+                            rebuild(win, canvas, sheet, face, has_face, cur)
+                            frame(win, canvas, sheet, face, has_face, cur)
                             panel.Panel.draw(win)
                             graph.end_frame(win)
                         }
                     }
 
                     if stop == 0 && paused == 0 && cur >= limit {
-                        frame(win, canvas, sheet)
+                        frame(win, canvas, sheet, face, has_face, cur)
                         panel.Panel.draw(win)
                         graph.end_frame(win)
                         hotkeys(win)
@@ -215,6 +251,11 @@ Block Runner {
                 }
             }
         }
+
+        // A typeface is a GPU texture and a glyph table, and `play` is entered
+        // again on every save. One line here is the difference between that
+        // and a slow leak across an afternoon of editing.
+        if has_face == 1 { graph.unload_font(win, face) }
         return cur
     }
 
@@ -223,7 +264,7 @@ Block Runner {
     // It does not record the screen: it redoes the artwork from the beginning,
     // with time advancing 1/fps per frame, and saves each one. The settings
     // (folder, fps, step range, still frames at each end) live in the Exporter.
-    fn export(dyn win, dyn canvas, dyn sheet) nil {
+    fn export(dyn win, dyn canvas, dyn sheet, dyn face, int has_face) nil {
         // The export renders by frame index and must not disturb the progress
         // of the run that is being watched: it gets a scratch pair of its own.
         dyn part_none = [0.0, 0.0]
@@ -243,23 +284,23 @@ Block Runner {
         graph.set_fps(win, 0)
 
         // the state at the start of the exported range
-        rebuild(win, canvas, sheet, a - 1)
+        rebuild(win, canvas, sheet, face, has_face, a - 1)
 
-        hold(win, canvas, sheet, export.Exporter.get_hold_start())
+        hold(win, canvas, sheet, face, has_face, export.Exporter.get_hold_start())
 
         int s = a
         while s <= b {
-            animate(win, canvas, sheet, part_none, s)
-            if has_clear(s) == 1 { rebuild(win, canvas, sheet, s) }
+            animate(win, canvas, sheet, face, has_face, part_none, s)
+            if has_clear(s) == 1 { rebuild(win, canvas, sheet, face, has_face, s) }
             if timeline.Timeline.moves_at(s) == 1 {
-                rebuild(win, canvas, sheet, s)
-                shown(win, canvas, sheet)
+                rebuild(win, canvas, sheet, face, has_face, s)
+                shown(win, canvas, sheet, face, has_face, s)
                 export.Exporter.save(win)
             }
             s = s + 1
         }
 
-        hold(win, canvas, sheet, export.Exporter.get_hold_end())
+        hold(win, canvas, sheet, face, has_face, export.Exporter.get_hold_end())
 
         exporting = 0
         panel.Panel.mute(0)
@@ -276,7 +317,7 @@ Block Runner {
     // and says so. The line is written once and the drawing keeps growing under
     // it; making the user come back and fix the number would be the tool
     // getting in the way.
-    fn deliver(dyn win, dyn canvas, dyn sheet) nil {
+    fn deliver(dyn win, dyn canvas, dyn sheet, dyn face, int has_face) nil {
         int what = export.Exporter.wanted()
         if what == 0 { return }
 
@@ -302,13 +343,13 @@ Block Runner {
 
         print("[export] steps ", a, " to ", b, " at ", fps, " fps")
 
-        if what == 1 { movie(win, canvas, sheet, a, b, fps) }
+        if what == 1 { movie(win, canvas, sheet, face, has_face, a, b, fps) }
         if what == 2 {
             int still = fps / 2
             export.Exporter.setup_free("export", fps)
             export.Exporter.range(a, b)
             export.Exporter.hold(still, still)
-            export(win, canvas, sheet)
+            export(win, canvas, sheet, face, has_face)
         }
     }
 
@@ -323,7 +364,13 @@ Block Runner {
     // The state is not tracked in a field: a field is re-initialised on every
     // save while the window stays as it is, so it would start lying after the
     // first reload. The toggle's own return value is the only truth here.
+    fn typing(int on) nil { typing_on = on }
+    fn is_typing() int { return typing_on }
+
     fn hotkeys(dyn win) nil {
+        // Every key below is a letter someone might mean to type.
+        if typing_on == 1 { return }
+
         if graph.key_pressed(win, "F") {
             bool now = graph.fullscreen(win)
             if now { print("[turtle] fullscreen — F to come back") }
@@ -351,7 +398,7 @@ Block Runner {
     // The video cursor is opened and closed right here. A `dyn` cannot be a
     // Block FIELD, but it can be a local inside a method — the same thing
     // Painter.bake does with the capture (adr 0010).
-    fn movie(dyn win, dyn canvas, dyn sheet, int from, int to, int rate) nil {
+    fn movie(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int from, int to, int rate) nil {
         int still = rate / 2
         // A free folder, because an export/ from an earlier run is somebody's
         // frames and this one deletes what it uses.
@@ -359,7 +406,7 @@ Block Runner {
         export.Exporter.range(from, to)
         export.Exporter.hold(still, still)
 
-        export(win, canvas, sheet)
+        export(win, canvas, sheet, face, has_face)
 
         export.Exporter.video_file("artwork")
         danger {
@@ -380,11 +427,11 @@ Block Runner {
     }
 
     // Still frames: the artwork sits on screen with nothing moving.
-    fn hold(dyn win, dyn canvas, dyn sheet, int n) nil {
+    fn hold(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int n) nil {
         int i = 0
         while i < n {
             guard[0] = i         // anchor FIRST
-            shown(win, canvas, sheet)
+            shown(win, canvas, sheet, face, has_face, 0)
             export.Exporter.save(win)
             i = i + 1
         }
@@ -410,7 +457,7 @@ Block Runner {
         painter.Painter.reset()
     }
 
-    fn rebuild(dyn win, dyn canvas, dyn sheet, int upto) nil {
+    fn rebuild(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int upto) nil {
         ready(upto)
 
         // The background image lives here, as a local, for exactly one frame.
@@ -433,7 +480,7 @@ Block Runner {
         if layers == 1 { painter.Painter.set_layer(1) }
         int s = 1
         while s <= upto {
-            instant(win, sheet, s)
+            instant(win, sheet, face, has_face, s)
             s = s + 1
         }
 
@@ -442,11 +489,12 @@ Block Runner {
             ready(upto)
             int s2 = 1
             while s2 <= upto {
-                instant(win, sheet, s2)
+                instant(win, sheet, face, has_face, s2)
                 s2 = s2 + 1
             }
             painter.Painter.set_layer(0)
         }
+        label.Label.mark(upto)
         graph.end_frame(win)
         painter.Painter.bake(win, canvas)
 
@@ -492,16 +540,17 @@ Block Runner {
     // has had its chance to draw over the top (the panel). Every caller ends
     // with graph.end_frame, and `shown` is the version that does it for the
     // ones with nothing to add.
-    fn frame(dyn win, dyn canvas, dyn sheet) nil {
+    fn frame(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int upto) nil {
         graph.begin_frame(win)
         stage.Stage.clear(win)
         graph.draw_image(win, canvas, 0, 0)
         painter.Painter.draw(win, sheet)
+        label.Label.draw_fresh(win, face, has_face, upto)
         pool.Pool.draw(win, sheet)
     }
 
-    fn shown(dyn win, dyn canvas, dyn sheet) nil {
-        frame(win, canvas, sheet)
+    fn shown(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int upto) nil {
+        frame(win, canvas, sheet, face, has_face, upto)
         graph.end_frame(win)
     }
 
@@ -540,8 +589,9 @@ Block Runner {
     }
 
     // Runs a step without animating, drawing straight into the frame to be baked.
-    fn instant(dyn win, dyn sheet, int s) nil {
+    fn instant(dyn win, dyn sheet, dyn face, int has_face, int s) nil {
         timeline.Timeline.apply_at(s)
+        label.Label.draw_at(win, face, has_face, s)
         int nt = pool.Pool.count()
         int t = 0
         while t < nt {
@@ -649,7 +699,7 @@ Block Runner {
         return dmax
     }
 
-    fn animate(dyn win, dyn canvas, dyn sheet, dyn part, int s) nil {
+    fn animate(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, dyn part, int s) nil {
         arm(s)
 
         // Sound belongs to the step being WATCHED. `instant` replays the whole
@@ -714,6 +764,7 @@ Block Runner {
             stage.Stage.clear(win)
             graph.draw_image(win, canvas, 0, 0)
             painter.Painter.draw(win, sheet)
+            label.Label.draw_fresh(win, face, has_face, s)
 
             i = 0
             while i < an {
@@ -804,10 +855,10 @@ Block Runner {
     //
     // Nothing is committed at the end. The artwork is already at `s - 1`; the
     // turtles only have to land exactly on the point the rebuild gave them.
-    fn rewind(dyn win, dyn canvas, dyn sheet, int s) nil {
+    fn rewind(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int s) nil {
         if s < 1 { return }
 
-        rebuild(win, canvas, sheet, s - 1)
+        rebuild(win, canvas, sheet, face, has_face, s - 1)
 
         // Taken before `arm`, because arming is what turns her.
         int nt = pool.Pool.count()
@@ -841,6 +892,7 @@ Block Runner {
             stage.Stage.clear(win)
             graph.draw_image(win, canvas, 0, 0)
             painter.Painter.draw(win, sheet)
+            label.Label.draw_fresh(win, face, has_face, s)
 
             int i = 0
             while i < an {

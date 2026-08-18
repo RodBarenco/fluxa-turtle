@@ -22,6 +22,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -34,8 +35,13 @@ dyn canvas = image.new(800, 600)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 dyn part = [0.0, 0.0]
 
 // ── the curve, checked directly ────────────────────────────────────
@@ -66,12 +72,13 @@ a.path_width(3)
 a.go_accel(1, 400.0, 0.0, 100.0, 800.0)      // 2*400/900 = 0.889 s
 a.go_accel(2, 400.0, 0.0, 800.0, 100.0)      // the same, the other way round
 
-runner.Runner.rebuild(win, canvas, sheet, 0)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
 int t0 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 1)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
 int slow_to_fast = time.elapsed_ms(t0)
 int t1 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 2)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 2)
 int fast_to_slow = time.elapsed_ms(t1)
 
 print("")
@@ -81,7 +88,7 @@ print("400 px, 800 -> 100 ..   ", fast_to_slow, " ms   (expected the same ~889)"
 // ── rewinding one ──────────────────────────────────────────────────
 
 int t2 = time.now_ms()
-runner.Runner.rewind(win, canvas, sheet, 2)
+runner.Runner.rewind(win, canvas, sheet, face, 0, 2)
 print("rewound .............   ", time.elapsed_ms(t2), " ms   (expected ~889 too, plus a rebuild)")
 print("back at .............   ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
       "   (expected 480,150 — where step 2 set off)")
@@ -114,16 +121,18 @@ print("five points .........   -> next step ", nx, "   (expected 6)")
 //  320 px from 452.0 to 900.0  -> 0.473 s
 // Four segments of wildly different lengths, all about the same time: that is
 // what accelerating along a path looks like.
-runner.Runner.rebuild(win, canvas, sheet, 1)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 1)
 int seg = 2
 while seg <= 5 {
     int ts = time.now_ms()
-    runner.Runner.animate(win, canvas, sheet, part, seg)
+    runner.Runner.animate(win, canvas, sheet, face, 0, part, seg)
     print("  segment ", seg - 1, " .........  ", time.elapsed_ms(ts), " ms")
     seg = seg + 1
 }
 
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/accel.png")
@@ -150,12 +159,12 @@ c.go_accel(1, 300.0, 0.0, 80.0, 900.0)
 export.Exporter.setup("lab/accel_a", 12)
 export.Exporter.range(1, 1)
 export.Exporter.hold(0, 0)
-runner.Runner.export(win, canvas, sheet)
+runner.Runner.export(win, canvas, sheet, face, 0)
 
 export.Exporter.setup("lab/accel_b", 12)
 export.Exporter.range(1, 1)
 export.Exporter.hold(0, 0)
-runner.Runner.export(win, canvas, sheet)
+runner.Runner.export(win, canvas, sheet, face, 0)
 
 print("")
 print("two renders of one accelerated step written to lab/accel_a and lab/accel_b")

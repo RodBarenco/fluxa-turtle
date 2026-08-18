@@ -3,6 +3,63 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.0] — 2026-08-18
+
+### Added
+
+- **Text as type, as a step** — `text(step, x, y, string, size)` and
+  `stage.Stage.font(path, size)`.
+
+  ```fluxa
+  stage.Stage.font("assets/Inter.ttf", 64)     // optional
+  leo.text(2, 60.0, 120.0, "one night", 42.0)
+  ```
+
+  The other half of `write`: the graphics library draws these, kerned and
+  smooth, in the built-in font or in a TTF the artwork loads. **One step,
+  however long the string** — `write` costs about six per letter.
+
+  It is a real step all the same. It makes the artwork longer, so a title can be
+  the last thing an artwork does and the export will contain it; it appears when
+  that step runs and LEFT takes it away; it is baked into the path texture, so
+  it costs nothing per frame afterwards. It is not a path: `erase`, `pivot` and
+  the path styles do not reach it, which is the whole trade
+  ([adr 0021](adr/0021-two-kinds-of-text-and-a-label-is-a-step.md)).
+
+  A label takes the turtle's colour **at its own step**. That needed two things:
+  `Timeline.claim`, so a label moves her `last` forward and an appearance
+  written below it starts *after* it rather than reaching back
+  ([adr 0009](adr/0009-appearance-is-a-timeline-event.md)); and the colour read
+  during the replay rather than at declaration, because `path_color` is a
+  timeline event and the pool only ever holds the latest one.
+
+  A hundred and twenty-eight labels, and it says so when the next is ignored.
+
+- **`Runner.typing(1)`** — silences the hotkeys while something on the stage is
+  taking letters. F, P, R, A, SPACE and the arrows are bare keys, so a text
+  field that did not say so would make typing "far" go fullscreen, hide the
+  panel and replay the artwork. Nothing sets it yet — `text` is written in the
+  artwork's source — and it is here because the studio will, and this is one
+  line now against a bug to find later. Nave's shape: the shell asks, once per
+  frame, whoever owns the field.
+
+- **`lab/label.flx`** — five claims, four of them pictures: the artwork grows by
+  a label; at step 2 the step-3 label is not there; two labels in the two
+  colours in force where they were written; a TTF drawn, and a missing one
+  caught rather than fatal; and the label landing live, animated from an empty
+  artwork, with no rebuild involved.
+
+### Changed
+
+- The typeface travels like the sprite sheet — made once in `Runner.play` and
+  passed to everything that draws (`frame`, `instant`, `rebuild`, `animate`,
+  `hold`, `shown`, `export`, `movie`, `deliver`), because a Block field cannot
+  hold a `dyn` ([adr 0020](adr/0020-the-sheet-is-passed-to-whoever-draws.md)).
+  With no font asked for it is a 1×1 image nobody looks at; `has_face` decides.
+  Every harness that calls one of those passes it.
+- `graph.unload_font` before `play` returns: a typeface is a GPU texture and a
+  glyph table, and `play` is entered again on every save.
+
 ## [0.22.0] — 2026-08-18
 
 ### Added

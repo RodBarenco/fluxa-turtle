@@ -23,6 +23,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -35,10 +36,15 @@ dyn canvas = image.new(800, 600)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 pool.Pool.reset()
 timeline.Timeline.reset()
 
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 dyn part  = [0.0, 0.0]
 
 // 600 px at 300 px/s: two seconds, long enough to measure honestly
@@ -52,7 +58,7 @@ a.go(1, 600.0, 0.0)
 
 // ── the whole step ────────────────────────────────────────────────
 int t0 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 1)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
 int whole = time.elapsed_ms(t0)
 float endx = pool.Pool.get_x(0)
 print("whole step ...........  ", whole, " ms, ends at x=", math.to_int(endx), "   (expected ~2000 ms, x=700)")
@@ -65,7 +71,7 @@ part[0] = 1.0
 part[1] = 0.6
 
 int t1 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 1)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
 int rest = time.elapsed_ms(t1)
 float endx2 = pool.Pool.get_x(0)
 print("resumed at 60% .......  ", rest, " ms, ends at x=", math.to_int(endx2), "   (expected ~800 ms, x=700)")
@@ -77,11 +83,12 @@ part[0] = 9.0
 part[1] = 0.9
 
 int t2 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 1)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
 int again = time.elapsed_ms(t2)
 print("stale progress .......  ", again, " ms   (expected ~2000: it belongs to another step)")
 
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 
 danger {
     dyn shot = graph.capture(win)

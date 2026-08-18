@@ -15,6 +15,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -30,7 +31,8 @@ runner.Runner.open(win)      // one cleared frame, so the window is not the desk
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at   // no sprites here: a 1x1 blank
 
 Block leo typeof turtle.Turtle
 leo.spawn(200.0, 300.0)
@@ -56,7 +58,7 @@ export.Exporter.setup("lab/frames", 30)
 export.Exporter.hold(5, 5)
 
 int t0 = time.now_ms()
-runner.Runner.export(win, canvas, sheet)
+runner.Runner.export(win, canvas, sheet, face, 0)
 int took = time.elapsed_ms(t0)
 
 print("")

@@ -25,6 +25,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -39,8 +40,13 @@ pool.Pool.reset()
 timeline.Timeline.reset()
 
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 dyn part = [0.0, 0.0]
 
 // Three sides of a square, 400 px each at 200 px/s: two seconds a side.
@@ -59,12 +65,13 @@ a.go(3, 400.0, -90.0)
 // ── forwards ──────────────────────────────────────────────────────
 
 int f0 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 1)
-runner.Runner.animate(win, canvas, sheet, part, 2)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 2)
 int fwd2 = time.elapsed_ms(f0)
 
 // the reference: the artwork with two steps done
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn ref = graph.capture(win)
     image.save(ref, "lab/rewind_ref2.png")
@@ -73,7 +80,7 @@ danger {
 if err != nil { print("capture: ", err[0]) }
 
 int f1 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 3)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 3)
 int fwd3 = time.elapsed_ms(f1)
 print("step 3 forwards ......  ", fwd3, " ms   (expected ~2000: 400 px at 200 px/s)")
 print("she is at ............  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
@@ -82,13 +89,14 @@ print("she is at ............  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_
 // ── and back ──────────────────────────────────────────────────────
 
 int b0 = time.now_ms()
-runner.Runner.rewind(win, canvas, sheet, 3)
+runner.Runner.rewind(win, canvas, sheet, face, 0, 3)
 int bwd = time.elapsed_ms(b0)
 print("step 3 backwards .....  ", bwd, " ms   (expected ~2000 too, plus a rebuild)")
 print("she is back at .......  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
       "   (expected 600,550 — where step 3 set off from)")
 
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn back = graph.capture(win)
     image.save(back, "lab/rewind.png")
@@ -108,12 +116,13 @@ print("")
 print("heading after the rewind  ", math.to_int(pool.Pool.get_ang(0)),
       "   (expected -90: where step 2 left her, not where step 3 did)")
 
-runner.Runner.animate(win, canvas, sheet, part, 3)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 3)
 print("redone step 3 ends at ..  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
       "   (expected 200,550 — exactly where it ended the first time)")
 print("and facing ............   ", math.to_int(pool.Pool.get_ang(0)), "   (expected -180)")
 
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/rewind_redone.png")
@@ -129,8 +138,10 @@ if err != nil { print("capture: ", err[0]) }
 // until the next rebuild, and then it turns the entire figure. Rebuilding here
 // and comparing is what makes that visible.
 
-runner.Runner.rebuild(win, canvas, sheet, 3)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn again = graph.capture(win)
     image.save(again, "lab/rewind_rebuilt.png")

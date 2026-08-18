@@ -292,6 +292,22 @@ Block Timeline {
 
     fn count()     int { return n }
     fn max_step()  int { return top }
+
+    // A step that carries no movement is still a step: a label appears on one,
+    // and the artwork has to run that far for it to be seen. Same courtesy
+    // `style_at` does for a pivot.
+    // A step that is not a movement — a label. It does not take a slot in the
+    // occupancy grid, because nothing moves and two of them at one step is a
+    // legitimate thing to write. But it IS one of the turtle's steps, so it
+    // moves `last` forward: an appearance declared after it starts after it,
+    // exactly as it would after a `go`. Without that, a colour written below a
+    // label reaches back and repaints it.
+    fn claim(int t, int s) nil {
+        if s > top { top = s }
+        if t < 0 { return }
+        if t >= config.MAX_TURTLES() { return }
+        if s > last[t] { last[t] = s }
+    }
     fn conflicts() int { return ignored }
     fn styles()    int { return en }
     fn dropped()   int { return over_actions + over_styles }

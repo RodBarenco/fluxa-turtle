@@ -18,6 +18,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -29,11 +30,16 @@ dyn win    = graph.init(800, 600, "limits")
 dyn canvas = image.new(800, 600)
 
 stage.Stage.background(18, 18, 26)
-runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
+runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0      // one cleared frame, so the window is not the desktop
 pool.Pool.reset()
 timeline.Timeline.reset()
 
-dyn sheet = pool.Pool.atlas()   // no sprites here: a 1x1 blank
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at   // no sprites here: a 1x1 blank
 
 print("declared limits ......  ", config.MAX_TURTLES(), " turtles, ", config.MAX_STEPS(), " steps, ", config.MAX_ACTIONS(), " actions")
 
@@ -96,10 +102,12 @@ print("empty step 3000 ......  ", timeline.Timeline.action_of(7, 3000), "   (exp
 // is the worst case the caps allow and it is meant to be slow: it is the
 // number that says what a runaway artwork would cost.
 int t1 = time.now_ms()
-runner.Runner.rebuild(win, canvas, sheet, config.MAX_STEPS())
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, config.MAX_STEPS())
 print("rebuild of ", config.MAX_STEPS(), " steps   ", time.elapsed_ms(t1), " ms")
 
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 
 danger {
     dyn shot = graph.capture(win)

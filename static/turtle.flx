@@ -464,6 +464,24 @@ Block Turtle {
         return step
     }
 
+    // Text in a real font, as a step.
+    //
+    //     leo.text(12, 60.0, 120.0, "one night", 42.0)
+    //
+    // The other kind of writing: the graphics library draws it, kerned and
+    // smooth, in the built-in font or in whatever TTF the stage loaded with
+    // `stage.Stage.font(path, size)`. It appears when that step runs, in her
+    // colour at that moment, and is baked like everything else.
+    //
+    // It is not a path, so `erase`, `pivot` and the path styles do not reach
+    // it, and it cannot be drawn stroke by stroke. `write` is the other side of
+    // that trade: letters that behave like drawing rather than like type.
+    //
+    // One step, however long the string.
+    fn text(int step, float x, float y, str s, float size) nil {
+        label.Label.add(id, step, x, y, s, size)
+    }
+
     // ── writing ───────────────────────────────────────────────────
     //
     //     int s = leo.write(1, 120.0, 300.0, "HELLO", 40.0)

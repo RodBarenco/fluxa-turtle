@@ -29,6 +29,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -42,8 +43,13 @@ dyn canvas = image.new(800, 600)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 
 dyn part = [0.0, 0.0]
 dyn snd  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -110,15 +116,17 @@ print("hash now stored .......  ", math.to_int(snd[5]) != 12345, "   (expected t
 
 // ── the rebuild is silent ─────────────────────────────────────────
 
-runner.Runner.rebuild(win, canvas, sheet, 4)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 4)
 print("cues after a rebuild .  ", audio.Audio.fires(), "   (expected 0 — a redraw must not make noise)")
 
 // ── and the animation is not ──────────────────────────────────────
 
-runner.Runner.rebuild(win, canvas, sheet, 0)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
 int s = 1
 while s <= 4 {
-    runner.Runner.animate(win, canvas, sheet, part, s)
+    runner.Runner.animate(win, canvas, sheet, face, 0, part, s)
     s = s + 1
 }
 print("cues after four steps   ", audio.Audio.fires(),
@@ -154,14 +162,16 @@ print("band at step 7 .......  ", audio.Audio.sound_at(7), "   (expected 5 — d
 audio.Audio.open(snd)
 
 int was = audio.Audio.fires()
-runner.Runner.rebuild(win, canvas, sheet, 8)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 8)
 print("steps heard on rebuild  ", audio.Audio.fires() - was, "   (expected 0 — a redraw is still silent)")
 
 was = audio.Audio.fires()
-runner.Runner.rebuild(win, canvas, sheet, 4)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 4)
 int k = 5
 while k <= 8 {
-    runner.Runner.animate(win, canvas, sheet, part, k)
+    runner.Runner.animate(win, canvas, sheet, face, 0, part, k)
     k = k + 1
 }
 print("steps heard, 5 to 8 ..  ", audio.Audio.fires() - was, "   (expected 4 — 300 ms a step, none dropped)")
@@ -182,10 +192,11 @@ while q <= 20 {
     q = q + 1
 }
 was = audio.Audio.fires()
-runner.Runner.rebuild(win, canvas, sheet, 0)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
 int r = 1
 while r <= 20 {
-    runner.Runner.animate(win, canvas, sheet, part, r)
+    runner.Runner.animate(win, canvas, sheet, face, 0, part, r)
     r = r + 1
 }
 int rapid = audio.Audio.fires() - was
@@ -215,19 +226,21 @@ e.path_color(255, 200, 60)
 e.path_width(3)
 e.go(1, 200.0, 0.0)
 
-runner.Runner.rebuild(win, canvas, sheet, 0)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
 int hb = audio.Audio.fires()
-runner.Runner.animate(win, canvas, sheet, part, 1)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
 print("")
 print("step 1 made a sound ..  ", audio.Audio.fires() - hb, "   (expected 1)")
 print("playing after step 1 .  ", audio.Audio.heard(), "   (expected 1 — a 4470 ms sound on a 100 ms step)")
 
-int f = 0
-while f < 12 {
-    runner.Runner.shown(win, canvas, sheet)
+int fr = 0
+while fr < 12 {
+    upto_all = timeline.Timeline.max_step()
+    runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
     audio.Audio.tick()
     time.sleep(10)
-    f = f + 1
+    fr = fr + 1
 }
 print("after 120 ms of frames  ", audio.Audio.heard(), "   (expected 0 — faded out over 70 ms and stopped)")
 
@@ -235,16 +248,18 @@ print("after 120 ms of frames  ", audio.Audio.heard(), "   (expected 0 — faded
 
 int before = audio.Audio.fires()
 audio.Audio.mute(1)
-runner.Runner.rebuild(win, canvas, sheet, 0)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
 int t = 1
 while t <= 4 {
-    runner.Runner.animate(win, canvas, sheet, part, t)
+    runner.Runner.animate(win, canvas, sheet, face, 0, part, t)
     t = t + 1
 }
 audio.Audio.mute(0)
 print("cues while muted .....  ", audio.Audio.fires() - before, "   (expected 0)")
 
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/audio.png")

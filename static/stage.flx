@@ -19,6 +19,31 @@
 // drawing carries on: a missing texture never costs somebody their artwork.
 
 Block Stage {
+    // The typeface the artwork's `text` steps are drawn in — a path and a size,
+    // held here and nothing more. The handle itself is a `dyn`, so it is made
+    // once in `Runner.play` and passed to whoever draws (adr 0020), and the
+    // stage is imported long before the module that draws with it.
+    //
+    //     stage.Stage.font("assets/Inter.ttf", 64)
+    //
+    // Without it the built-in font is used, which needs no file and no handle.
+    str face = ""
+    int face_px = 48
+
+    fn font(str path, int size) nil {
+        face = path
+        face_px = size
+        if face_px < 1 { face_px = 1 }
+        if face_px > 512 { face_px = 512 }
+    }
+
+    fn font_path() str { return face }
+    fn font_size() int { return face_px }
+    fn wants_font() int {
+        if face == "" { return 0 }
+        return 1
+    }
+
     int bg_r = 18
     int bg_g = 18
     int bg_b = 26

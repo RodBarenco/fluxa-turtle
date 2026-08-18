@@ -18,6 +18,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -30,8 +31,13 @@ dyn canvas = image.new(800, 600)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 dyn part = [0.0, 0.0]
 
 // ── a list written by hand ────────────────────────────────────────
@@ -73,8 +79,10 @@ b.path_width(2)
 int after = b.follow(1, spiral, 1400.0)
 print("120 points ...........  -> next step ", after, "   (expected 121)")
 
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/follow.png")
@@ -111,8 +119,10 @@ print("")
 print("from a file .......... -> next step ", from_file, "   (expected 7, the same as the literal)")
 print("reading it took ......  ", time.elapsed_ms(t_read), " ms   (1400 points takes 13)")
 
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn ff = graph.capture(win)
     image.save(ff, "lab/follow_file.png")
@@ -153,8 +163,10 @@ while m < 120 {
     m = m + 1
 }
 
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn by_hand = graph.capture(win)
     image.save(by_hand, "lab/follow_byhand.png")
@@ -179,8 +191,10 @@ e.path_color(255, 120, 90)
 e.path_width(4)
 e.follow_silent(1, box, 4000.0)
 
-runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn quiet = graph.capture(win)
     image.save(quiet, "lab/follow_silent.png")
@@ -200,9 +214,10 @@ f.hide()
 f.speed(50.0)                       // her own, deliberately slow
 f.path_color(150, 200, 120)
 f.follow(1, line, 400.0)            // and the call says 400
-runner.Runner.rebuild(win, canvas, sheet, 0)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
 int t0 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, part, 2)
+runner.Runner.animate(win, canvas, sheet, face, 0, part, 2)
 print("")
 print("400 px at 400 px/s ...  ", time.elapsed_ms(t0), " ms   (expected ~1000: the call's speed, not her 50)")
 

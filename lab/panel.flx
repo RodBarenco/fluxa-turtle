@@ -19,6 +19,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static label
 import static font
 import static turtle
 import static export
@@ -31,10 +32,15 @@ dyn canvas = image.new(800, 600)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
+// Hoisted: a method call used as an argument to another one fails inside a
+// loop (repros/method_call_as_argument_in_loop.flx), and hoisting is better
+// code regardless.
+int upto_all = 0
 pool.Pool.reset()
 timeline.Timeline.reset()
 
 dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)     // no typeface asked for: a stand-in, never looked at
 dyn part  = [0.0, 0.0]
 
 Block leo typeof turtle.Turtle
@@ -58,12 +64,14 @@ panel.Panel.toggle()
 print("after P ...............  ", panel.Panel.visible(), "   (expected 1)")
 
 // walk to step 8, then draw the stage with the panel over it
-runner.Runner.rebuild(win, canvas, sheet, 8)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 8)
 panel.Panel.at(8, timeline.Timeline.max_step(), 1)
-runner.Runner.frame(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.frame(win, canvas, sheet, face, 0, upto_all)
 panel.Panel.draw(win)
 graph.end_frame(win)
-print("panel says step .......  ", panel.Panel.step(), " of ", timeline.Timeline.max_step())
+print("panel says step .......  ", panel.Panel.step(), " of ", upto_all)
 
 danger {
     dyn s1 = graph.capture(win)
@@ -73,9 +81,11 @@ danger {
 if err != nil { print("capture: ", err[0]) }
 
 // step back: the rebuild is the whole implementation of going backwards
-runner.Runner.rebuild(win, canvas, sheet, 5)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 5)
 panel.Panel.at(5, timeline.Timeline.max_step(), 1)
-runner.Runner.frame(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.frame(win, canvas, sheet, face, 0, upto_all)
 panel.Panel.draw(win)
 graph.end_frame(win)
 print("after three steps back   ", panel.Panel.step(), "   (expected 5)")
@@ -89,8 +99,10 @@ if err != nil { print("capture: ", err[0]) }
 
 // and with the panel off, the artwork has to be untouched
 panel.Panel.toggle()
-runner.Runner.rebuild(win, canvas, sheet, 8)
-runner.Runner.shown(win, canvas, sheet)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, 8)
+upto_all = timeline.Timeline.max_step()
+runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
 danger {
     dyn s3 = graph.capture(win)
     image.save(s3, "lab/panel_off.png")

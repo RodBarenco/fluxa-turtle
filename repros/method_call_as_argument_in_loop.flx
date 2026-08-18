@@ -1,0 +1,98 @@
+// repros/method_call_as_argument_in_loop.flx
+//
+//   ./fluxa run repros/method_call_as_argument_in_loop.flx
+//
+// A Block method call used as an ARGUMENT to another Block method call fails
+// when the outer call is inside a `while` loop — and the error names one of the
+// outer call's other arguments as undefined:
+//
+//   [fluxa] Runtime error (line 246): undefined variable: win
+//
+// The same call one line above the loop is fine, and the same call inside the
+// loop with a literal in place of the inner call is fine. Nothing is entered:
+// a print at the top of the callee never runs, so it fails while the arguments
+// are being evaluated.
+//
+// Measured, one thing changed at a time, each case in a file of its own so
+// nothing earlier can be blamed for it:
+//
+//   rebuild(win, canvas, sheet, face, 0, Timeline.max_step())  outside a loop   ok
+//   shown(win, canvas, sheet, face, 0, Timeline.max_step())    outside a loop   ok
+//   shown(win, canvas, sheet, face, 0, 1)                      inside a loop    ok
+//   rebuild(win, canvas, sheet, face, 0, Timeline.max_step())  inside a loop    FAILS
+//   shown(win, canvas, sheet, face, 0, Timeline.max_step())    inside a loop    FAILS
+//
+// Two things about the failure itself:
+//
+//   - THE LINE NUMBER IS NOT THE CALL. It says 294, which in this program is a
+//     line inside `Runner.export` — a function nothing here calls. The name it
+//     reports, `win`, is an argument of the call that does fail.
+//   - Execution does not carry on. The `print` on the line after the loop never
+//     runs, unlike the loop-cancelling this runtime does elsewhere. In the
+//     three-case file below that is easy to misread, because the error goes to
+//     stderr unbuffered and the prints are buffered: the error appears one
+//     block too early.
+//
+// It did not reproduce with two Blocks written in one file, with or without dyn
+// arguments and with or without a loop, so something about the module boundary
+// or the size of the program is part of it. This harness uses the project's own
+// modules because that is where it does reproduce.
+//
+// The workaround is one line and is better code anyway: hoist the inner call
+// into a local before the loop.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static label
+import static font
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win    = graph.init(400, 300, "repro")
+dyn canvas = image.new(400, 300)
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+
+Block a typeof turtle.Turtle
+a.spawn(50.0, 50.0)
+a.hide()
+a.go(1, 100.0, 0.0)
+
+// Fine.
+runner.Runner.rebuild(win, canvas, sheet, face, 0, timeline.Timeline.max_step())
+print("outside a loop: ok")
+
+// Fine: the last argument is a literal.
+int k = 0
+while k < 2 {
+    runner.Runner.shown(win, canvas, sheet, face, 0, 1)
+    k = k + 1
+}
+print("a literal argument inside a loop: ok")
+
+// This one dies.
+int j = 0
+while j < 2 {
+    runner.Runner.shown(win, canvas, sheet, face, 0, timeline.Timeline.max_step())
+    j = j + 1
+}
+print("a method call as an argument inside a loop: ok — the bug is fixed")
+
+graph.close(win)

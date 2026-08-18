@@ -1,0 +1,116 @@
+// lab/label.flx — text as a step, in a real font
+//
+// Four claims:
+//   1. a label is a STEP — it makes the artwork longer, and it appears when
+//      that step runs, not before;
+//   2. it takes the turtle's colour AT that step, not the one the artwork
+//      ends on;
+//   3. a TTF is used when the artwork asks for one, and a path that is not
+//      there falls back to the built-in font instead of killing the run;
+//   4. the hotkeys can be silenced while something takes letters.
+//
+//   ./fluxa run lab/label.flx
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static label
+import static font
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "label")
+dyn canvas = image.new(800, 600)
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+
+Block a typeof turtle.Turtle
+a.spawn(80.0, 420.0)
+a.hide()
+a.speed(900.0)
+a.path_color(120, 208, 214)
+a.path_width(3)
+a.go(1, 300.0, 0.0)
+a.text(2, 80.0, 200.0, "one night", 48.0)
+a.path_color(255, 200, 60)
+a.text(3, 80.0, 260.0, "and the light she steers by", 24.0)
+a.go(4, 200.0, 40.0)
+
+print("labels: ", label.Label.count(), "   (expected 2)")
+print("steps:  ", timeline.Timeline.max_step(), "   (expected 4 — two moves and two labels)")
+
+// ── 1 & 2: the whole artwork ──────────────────────────────────────
+int has_face = 0
+dyn face = image.new(1, 1)
+int upto = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, has_face, upto)
+runner.Runner.shown(win, canvas, sheet, face, has_face, upto)
+danger { dyn q = graph.capture(win)  image.save(q, "lab/label-all.png")  image.discard(q) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 1: at step 2 the second label has not happened yet ────────────
+runner.Runner.rebuild(win, canvas, sheet, face, has_face, 2)
+runner.Runner.shown(win, canvas, sheet, face, has_face, 2)
+danger { dyn q2 = graph.capture(win)  image.save(q2, "lab/label-step2.png")  image.discard(q2) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 3: a TTF, and a path that is not there ────────────────────────
+stage.Stage.font("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", 48)
+print("wants a font: ", stage.Stage.wants_font(), "   (expected 1)")
+danger {
+    image.discard(face)
+    face = graph.load_font(win, stage.Stage.font_path(), stage.Stage.font_size())
+    has_face = 1
+}
+if err != nil { print("load_font: ", err[0], " — falling back") }
+print("loaded: ", has_face, "   (expected 1)")
+
+label.Label.mark(0)
+runner.Runner.rebuild(win, canvas, sheet, face, has_face, upto)
+runner.Runner.shown(win, canvas, sheet, face, has_face, upto)
+danger { dyn q3 = graph.capture(win)  image.save(q3, "lab/label-ttf.png")  image.discard(q3) }
+if err != nil { print("capture: ", err[0]) }
+
+int missing = 0
+danger { dyn bad = graph.load_font(win, "assets/there-is-no-such-font.ttf", 32)  graph.unload_font(win, bad) }
+if err != nil { missing = 1 }
+print("a missing font is caught, not fatal: ", missing, "   (expected 1)")
+
+// ── 5: live, without a rebuild — the label lands as its step runs ──
+//
+// The rebuild path is one thing; the frame loop is another. Animating the
+// steps one at a time from an empty artwork is what the stage actually does,
+// and the label has to arrive on step 2 there too — drawn fresh, over the
+// bake, until the next rebuild swallows it.
+dyn part = [0.0, 0.0]
+label.Label.mark(0)
+runner.Runner.rebuild(win, canvas, sheet, face, has_face, 0)
+runner.Runner.animate(win, canvas, sheet, face, has_face, part, 1)
+runner.Runner.animate(win, canvas, sheet, face, has_face, part, 2)
+runner.Runner.shown(win, canvas, sheet, face, has_face, 2)
+danger { dyn q4 = graph.capture(win)  image.save(q4, "lab/label-live.png")  image.discard(q4) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 4: the hotkeys step aside while something takes letters ───────
+runner.Runner.typing(1)
+print("typing: ", runner.Runner.is_typing(), "   (expected 1 — A, F, P, R are the field's now)")
+runner.Runner.typing(0)
+print("typing: ", runner.Runner.is_typing(), "   (expected 0)")
+
+graph.close(win)
+print("wrote lab/label-all.png, lab/label-step2.png, lab/label-ttf.png, lab/label-live.png")

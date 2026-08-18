@@ -360,22 +360,22 @@ stage.Stage.background(30, 26, 22)
 > goes before the execution line, at the end of `main.flx`
 
 ```fluxa
-exporter.Exporter.setup("export", 60)
-exporter.Exporter.hold(30, 90)
-runner.Runner.export(win, canvas, bg)
+export.Exporter.setup("export", 60)
+export.Exporter.hold(30, 90)
+export.Frames(1, 0, 60)                 // and the Runner delivers it
 ```
 
 Only part of the artwork:
 
 ```fluxa
-exporter.Exporter.range(4, 9)
+export.Exporter.range(4, 9)
 ```
 
 Lighter, for testing:
 
 ```fluxa
-exporter.Exporter.setup("export", 24)
-exporter.Exporter.hold(6, 12)
+export.Exporter.setup("export", 24)
+export.Exporter.hold(6, 12)
 ```
 
 After running, the `ffmpeg` command is printed in the terminal, ready to paste.
