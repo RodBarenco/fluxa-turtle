@@ -1,0 +1,98 @@
+// lab/text.flx — a turtle that writes.
+// Run from the project root:  ./fluxa run lab/text.flx
+//
+// Letters are strokes here, not a font painted onto the frame, so the things
+// worth checking are the things that would betray a font drawn by hand:
+//
+//   1. the returned step against the arithmetic — a letter costs one step per
+//      point of its strokes, and `write_cost` says how many before you commit;
+//   2. the ink where the size says it should be. "HI" at 60 px, written with
+//      its baseline at (60, 160), has to occupy exactly 60 px of height and
+//      end where the letter advance puts it;
+//   3. three sizes of the same word, each one exactly proportional.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static font
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "text")
+dyn canvas = image.new(800, 600)
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+
+// ── the font itself ───────────────────────────────────────────────
+
+font.Font.load("fonts/stroke.font")
+print("glyphs .............. ", font.Font.how_many(), "   (expected 44)")
+print("points .............. ", font.Font.count(), "   (expected 277)")
+print("index of 'A' ........ ", font.Font.index_of("A"), "   (expected 0)")
+print("index of ' ' ........ ", font.Font.index_of(" "), "   (expected 36)")
+print("index of a tilde .... ", font.Font.index_of("~"), "   (expected -1 — not in the alphabet)")
+
+// ── what a word costs ─────────────────────────────────────────────
+
+Block a typeof turtle.Turtle
+a.spawn(0.0, 0.0)
+a.hide()
+a.speed(6000.0)
+a.path_color(120, 208, 214)
+a.path_width(2)
+
+print("")
+print("cost of 'HI' ........ ", a.write_cost("HI"), "   (H is 6 points, I is 6)")
+print("cost of 'TURTLE INK' ", a.write_cost("TURTLE INK"), "   (ten letters, the number to quote)")
+
+int after = a.write(1, 60.0, 160.0, "HI", 60.0)
+print("'HI' from step 1 .... -> next step ", after, "   (expected 13: 12 points)")
+print("actions declared .... ", timeline.Timeline.count(), "   (expected 12)")
+
+// ── three sizes, and the ink where the size says ──────────────────
+//
+// unit = size / 10. A letter is 6 units wide and 10 tall, and the pen moves
+// 8 units to the next one. So "HI" at 60 px, baseline at (60, 160):
+//
+//   ink from x = 60 to x = 60 + 8*6 + 5*6 = 138 — five and not six, because
+//        the I is drawn from 1 to 5 on the grid and only the widest glyphs
+//        reach the full six
+//   ink from y = 160 - 60 = 100 down to y = 160
+
+int s2 = a.write(after, 60.0, 300.0, "HI", 30.0)
+int s3 = a.write(s2, 60.0, 400.0, "HI", 15.0)
+print("three sizes ......... -> next step ", s3, "   (expected 37: three lots of 12)")
+
+runner.Runner.rebuild(win, canvas, sheet, timeline.Timeline.max_step())
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/text.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+print("")
+print("text.png: 'HI' three times — 60 px tall, ink from (60,100) to (138,160),")
+print("          then half of that, then a quarter. Measured from the PNG:")
+print("          (58,99,138,160), (58,269,99,300), (58,384,79,400) — the two")
+print("          pixels over on each side are the stroke's own width.")
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)

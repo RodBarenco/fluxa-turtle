@@ -3,6 +3,34 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.22.0] — 2026-08-18
+
+### Added
+
+- **A turtle that writes** — `write(step, x, y, text, size)` and
+  `write_cost(text)`.
+
+  ```fluxa
+  int s = leo.write(1, 60.0, 160.0, "FLUXA TURTLE", 60.0)
+  ```
+
+  Letters are **strokes**, so text is part of the artwork: it animates a letter
+  at a time, takes any path style, and `erase`, `pivot` and the export reach it.
+  `graph.draw_text` would be flat on the frame and invisible to the bake.
+
+  Uppercase, digits, space and `. , ! ? - : '` — 44 glyphs, 277 points.
+  Lowercase is written as capitals rather than dropped. A letter costs about six
+  steps, so `TURTLE INK` is 48; `write_cost` says so before anything is
+  declared.
+
+  Scaling is exact, measured at 60, 30 and 15 px: the same word's ink lands at
+  (60,100)–(138,160), (60,270)–(99,300) and (60,385)–(79,400).
+
+- **`static/font.flx`** and **`tools/font.py`** — a plotter font on a grid six
+  wide and ten tall, kept in `fonts/stroke.font` as data rather than code, for
+  the same reason a traced trajectory is: a literal holds about two hundred
+  numbers and the font is over five hundred.
+
 ## [0.21.0] — 2026-08-18
 
 ### Added

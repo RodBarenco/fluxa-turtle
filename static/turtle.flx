@@ -464,6 +464,74 @@ Block Turtle {
         return step
     }
 
+    // ── writing ───────────────────────────────────────────────────
+    //
+    //     int s = leo.write(1, 120.0, 300.0, "HELLO", 40.0)
+    //
+    // Letters drawn as strokes, so text is part of the artwork rather than
+    // painted over it: it animates a letter at a time, takes `path_glow` or a
+    // stamped path like anything else, and `erase`, `pivot` and the export
+    // reach it. `graph.draw_text` would be flat on the frame and invisible to
+    // the bake.
+    //
+    // `x, y` is the bottom left of the first letter and `size` is the cap
+    // height in pixels. Uppercase, digits, space and `. , ! ? - : '` — anything
+    // else is skipped, and lowercase is written as capitals rather than
+    // dropped.
+    //
+    // It costs steps: a letter is one step per point of its strokes, roughly
+    // six, so a ten-letter word is about sixty steps and a sentence is several
+    // hundred. The return value is the next free step, as with the shapes, so
+    // nothing has to be counted by hand.
+    fn write(int step, float x, float y, str text, float size) int {
+        font.Font.load("fonts/stroke.font")
+        float unit = size / 10.0
+        int at = step
+        float pen = x
+        int i = 0
+        int have = len(text)
+        str up = strings.upper(text)
+
+        while i < have {
+            guard[0] = i     // anchor FIRST
+            str ch = strings.slice(up, i, i + 1)
+            int g = font.Font.index_of(ch)
+            if g >= 0 {
+                int pts = font.Font.points_of(g)
+                int k = 0
+                while k < pts {
+                    guard[0] = k     // anchor FIRST
+                    float gx = pen + math.to_float(font.Font.x_at(g, k)) * unit
+                    float gy = y - math.to_float(font.Font.y_at(g, k)) * unit
+                    int kind = 3
+                    if font.Font.up_at(g, k) == 1 { kind = 4 }
+                    timeline.Timeline.add(id, at, kind, gx, gy, 0.0)
+                    at = at + 1
+                    k = k + 1
+                }
+            }
+            pen = pen + 8.0 * unit
+            i = i + 1
+        }
+        return at
+    }
+
+    // How many steps a string will cost, without declaring it. For anyone
+    // laying out an artwork by hand before writing it.
+    fn write_cost(str text) int {
+        font.Font.load("fonts/stroke.font")
+        int total = 0
+        int i = 0
+        str up = strings.upper(text)
+        while i < len(up) {
+            guard[0] = i     // anchor FIRST
+            int g = font.Font.index_of(strings.slice(up, i, i + 1))
+            if g >= 0 { total = total + font.Font.points_of(g) }
+            i = i + 1
+        }
+        return total
+    }
+
     // ── the trajectory as data ────────────────────────────────────
     //
     //     int s = leo.follow_file(1, "leo.pts", 900.0)

@@ -315,6 +315,16 @@ Plus `path_squares`, `path_stars`, and the four that were always there —
 frame, because the path is baked; a marker or a glow does make the rebuild
 (once per save) about twice as slow, which the guide measures.
 
+### And she can write
+
+```fluxa
+leo.write(1, 60.0, 160.0, "FLUXA TURTLE", 60.0)
+```
+
+Letters are strokes, not a font painted on top — so text animates a letter at a
+time, takes `path_glow` like anything else, and goes into the video. About six
+steps a letter; `write_cost("...")` says how many before you commit.
+
 ### Shapes you do not have to work out
 
 A figure is a batch of steps, and these declare it for you — placed by its

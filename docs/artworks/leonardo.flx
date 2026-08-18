@@ -25,6 +25,7 @@ import static stage
 import static pool
 import static timeline
 import static painter
+import static font
 import static turtle
 import static export
 import static audio

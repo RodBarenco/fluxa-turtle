@@ -363,7 +363,7 @@ quoted against the 314 that `--emit follow` produces.
 
 ---
 
-## Sprint 8 — Text · a turtle that writes
+## Sprint 8 — Text — DONE (project 0.22.0)
 
 **Deliver:** `leo.write(step, "hello", size)` — letters drawn as strokes, so
 text animates, takes any path style, can be erased, pivoted, and exported like
@@ -388,9 +388,12 @@ and the glyph table must be a Block field, so a literal-sized array per glyph.
 against hand arithmetic, and the ink bounding box against the size asked for.
 
 
-**Gate in:** decide where the glyphs come from — a stroke font typed by hand,
-or one traced with `tools/trace.py` from an image of a character set. Trace one
-letter both ways and compare the step cost before committing to either.
+**Gate in — answered by the other two sprints.** Neither of the options the
+gate posed survived contact: a font typed into the source hits the
+two-hundred-number literal ceiling long before Z, and a traced one would be
+outlines rather than strokes, which is heavier per letter and stops being a
+path a hand takes. It is a plotter font kept in a data file — the shape
+`follow_file` had just made obvious.
 
 **Gate out:** `lab/text.flx` — one string at three sizes, the returned step
 against hand arithmetic, the ink's bounding box against the size asked for, and

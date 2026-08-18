@@ -1,0 +1,129 @@
+// static/font.flx — the letters, as strokes
+//
+// A plotter font: every glyph is a few polylines on a grid six wide and ten
+// tall, drawn with one pen. Not outlines — a letter here is the path a hand
+// takes, which is what makes it a turtle's kind of letter. It animates, it
+// takes any path style, and `erase` and `pivot` reach it like any other stroke.
+// `graph.draw_text` would be a different thing entirely: flat on the frame,
+// outside the artwork, invisible to the bake.
+//
+// The shapes live in `fonts/stroke.font` rather than in this file, for the same
+// reason a traced trajectory does: a literal holds about two hundred numbers
+// and this font is over five hundred. Data never reaches the parser.
+//
+//   -1     start a glyph; the next number is its index in ALPHABET
+//   -2     lift the pen: a new stroke inside the same glyph
+//   x y    a point on the grid
+//
+// `tools/font.py` writes it and holds the same ALPHABET, in the same order.
+
+Block Font {
+    str alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?-:'"
+
+    int arr px[2048]  = 0
+    int arr py[2048]  = 0
+    int arr up[2048]  = 0        // 1 = this point starts a new stroke
+    int n = 0
+
+    int arr gfrom[64] = 0        // where each glyph's points begin
+    int arr gcount[64] = 0
+    int glyphs = 0
+    int ready = 0
+
+    int arr guard[1] = 0         // hot-loop anchor
+
+    fn count() int { return n }
+    fn loaded() int { return ready }
+    fn how_many() int { return glyphs }
+
+    // Where a character sits in the alphabet, or -1. One call and no table:
+    // the alphabet IS the index.
+    fn index_of(str ch) int { return strings.find(alphabet, ch) }
+
+    fn points_of(int g) int {
+        if g < 0 { return 0 }
+        if g >= glyphs { return 0 }
+        return gcount[g]
+    }
+
+    fn x_at(int g, int i) int { return px[gfrom[g] + i] }
+    fn y_at(int g, int i) int { return py[gfrom[g] + i] }
+    fn up_at(int g, int i) int { return up[gfrom[g] + i] }
+
+    // Read once. Called by whoever is about to write; the second call is free.
+    fn load(str path) nil {
+        if ready == 1 { return }
+
+        str text = ""
+        danger { text = fs.read(path) }
+        if err != nil {
+            print("[turtle] font: ", path, ": ", err[0])
+            ready = 1                     // do not try again every letter
+            return
+        }
+
+        dyn lines = strings.split(text, "\n")
+        int have = len(lines)
+
+        int i = 0
+        int g = 0 - 1
+        int want_index = 0
+        int next_is_up = 0
+        int got_x = 0
+        int hx = 0
+
+        while i < have {
+            guard[0] = i     // anchor FIRST
+            str one = lines[i]
+            if one != "" {
+                int v = strings.to_int(one)
+
+                // The index of a glyph is consumed HERE and must not fall
+                // through into the coordinate branch below. There is no
+                // `else if` in this language, so sequential ifs need a
+                // sentinel — without one the index was read a second time as
+                // an x coordinate and every letter after it came out sheared.
+                int handled = 0
+                if want_index == 1 {
+                    g = v
+                    gfrom[g] = n
+                    gcount[g] = 0
+                    if g + 1 > glyphs { glyphs = g + 1 }
+                    want_index = 0
+                    next_is_up = 1
+                    got_x = 0
+                    handled = 1
+                }
+                if handled == 0 {
+                    if v == 0 - 1 {
+                        want_index = 1
+                    }
+                    if v == 0 - 2 {
+                        next_is_up = 1
+                        got_x = 0
+                    }
+                    if v > 0 - 1 {
+                        if got_x == 0 {
+                            hx = v
+                            got_x = 1
+                        }
+                        if got_x == 2 {
+                            if n < 2048 {
+                                px[n] = hx
+                                py[n] = v
+                                up[n] = next_is_up
+                                n = n + 1
+                                gcount[g] = gcount[g] + 1
+                            }
+                            next_is_up = 0
+                            got_x = 0
+                        }
+                        if got_x == 1 { got_x = 2 }
+                    }
+                }
+            }
+            i = i + 1
+        }
+        ready = 1
+    }
+}

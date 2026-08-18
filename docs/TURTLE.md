@@ -405,6 +405,49 @@ leo.spiral(1, 60, 12.0, 14.0, 90.0)   // a square spiral
 
 ---
 
+# Writing
+
+### `write(step, x, y, text, size)` — steps
+
+Letters drawn as **strokes**, so text is part of the artwork rather than painted
+over it: it animates a letter at a time, takes `path_glow` or a stamped path
+like anything else, and `erase`, `pivot` and the export reach it.
+`graph.draw_text` would be a different thing — flat on the frame, outside the
+drawing, invisible to the bake.
+
+```fluxa
+int s = leo.write(1, 60.0, 160.0, "FLUXA TURTLE", 60.0)
+```
+
+| | |
+|---|---|
+| `x`, `y` | `float` — the bottom left of the first letter |
+| `text` | `str` — uppercase, digits, space and `. , ! ? - : '` |
+| `size` | `float` — the cap height, in pixels |
+
+Lowercase is written as capitals rather than dropped; a character with no glyph
+is skipped. Returns the next free step.
+
+**It costs steps**, and that is the number to know before writing a sentence: a
+letter is one step per point of its strokes, about six, so `HI` is 12 steps and
+`TURTLE INK` is 48. `write_cost(text)` answers without declaring anything.
+
+The letters live in `fonts/stroke.font`, written by `tools/font.py` — a plotter
+font on a grid six wide and ten tall, one number per line, `-1` starting a glyph
+and `-2` lifting the pen. It is data and not code for the reason
+[`follow_file`](#follow_filestep-path-px_s--follow_file_silent--steps) is: a
+literal holds about two hundred numbers and this font is over five hundred.
+
+Scaling is exact — measured at 60, 30 and 15 px, the same word's ink lands at
+(60,100)–(138,160), (60,270)–(99,300) and (60,385)–(79,400), each half of the
+one before, give or take the stroke's own width.
+
+### `write_cost(text)` — declaration
+
+How many steps that string will cost, without declaring it.
+
+---
+
 # Ready-made shapes
 
 A figure is a batch of steps like any other — these declare it for you. You give
@@ -793,6 +836,7 @@ are untouched.
 | `follow(step, points, px_s)` · `follow_silent(...)` | steps, returns the next |
 | `follow_accel(step, points, v0, v1)` · `follow_silent_accel(...)` | steps, returns the next |
 | `follow_file(step, path, px_s)` · `follow_file_silent(...)` | steps, returns the next |
+| `write(step, x, y, text, size)` · `write_cost(text)` | steps, returns the next |
 | `path_clear(step)` · `erase(from, to)` · `erase_at(step, from, to)` | step |
 | `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | step |
 
