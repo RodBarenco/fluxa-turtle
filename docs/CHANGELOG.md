@@ -43,6 +43,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   line now against a bug to find later. Nave's shape: the shell asks, once per
   frame, whoever owns the field.
 
+- **`lab/target.flx`** — the gate of the camera sprint, answered by measurement
+  ([adr 0022](adr/0022-the-bake-can-be-larger-than-the-window.md)). `std.image`
+  cannot be drawn into; `std.graph` can, with `graph.render_target`. A
+  2000×1500 surface keeps what is drawn into it across frames, an offset when it
+  is drawn is exactly a camera, an uncleared one is transparent so layers
+  composite, and it costs **0.5 ms a frame** — less than the 800×600
+  `draw_image` the tool does today. `graph.capture` inside one still returns the
+  window, so a world-sized still needs tiling.
+
 - **`lab/label.flx`** — five claims, four of them pictures: the artwork grows by
   a label; at step 2 the step-3 label is not there; two labels in the two
   colours in force where they were written; a TTF drawn, and a missing one

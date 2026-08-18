@@ -1,0 +1,178 @@
+// lab/target.flx — the gate of sprint 9: can this tool draw off-screen?
+//
+// adr 0003 bakes the path into a texture the size of the WINDOW, with
+// `graph.capture` + `image.blit`. A world larger than the window cannot be
+// baked that way, because a capture is what the window can see. The roadmap's
+// gate asks the question against `std.image` — which turns out to be the wrong
+// library to ask: it is a buffer library with no drawing in it at all.
+//
+// `std.graph` has the thing itself. This harness measures whether it does what
+// a world-sized bake needs:
+//
+//   1. a surface larger than the window exists at all;
+//   2. drawing lands in it, and lands at the right place;
+//   3. it KEEPS what was drawn across frames — that is what makes it a bake;
+//   4. an offset when it is drawn to the window is a camera;
+//   5. what `graph.capture` sees while one is bound (the export's question);
+//   6. what it costs per frame against the blit the tool does today.
+//
+//   ./fluxa run lab/target.flx
+
+import std graph
+import std image
+import std math
+import std time
+
+dyn win = graph.init(800, 600, "target")
+
+// ── 1: a surface larger than the window ───────────────────────────
+int made = 0
+danger {
+    dyn probe = graph.render_target(win, 2000, 1500)
+    made = 1
+    graph.release_render_target(win, probe)
+}
+if err != nil { print("render_target: ", err[0]) }
+print("a 2000x1500 surface .....  ", made, "   (expected 1)")
+
+dyn world = graph.render_target(win, 2000, 1500)
+
+// ── 2 & 3: drawing lands in it, and stays there ───────────────────
+//
+// Two frames, and the second draws NOTHING into the surface: whatever shows up
+// was kept from the first. A texture that is cleared per frame is not a bake.
+graph.begin_frame(win)
+graph.begin_render_target(win, world)
+graph.clear(win, 10, 12, 18)
+graph.draw_rect(win, 0, 0, 400, 300, 220, 60, 60)          // top left of the WORLD
+graph.draw_rect(win, 1600, 1200, 400, 300, 60, 220, 120)   // bottom right
+graph.draw_circle(win, 1000, 750, 120, 255, 200, 60)       // the middle
+graph.end_render_target(win)
+graph.end_frame(win)
+
+graph.begin_frame(win)
+graph.clear(win, 0, 0, 0)
+graph.draw_render_target(win, world, 0, 0)                 // the world's top left
+graph.end_frame(win)
+danger { dyn a = graph.capture(win)  image.save(a, "lab/target-origin.png")  image.discard(a) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 4: an offset is a camera ──────────────────────────────────────
+graph.begin_frame(win)
+graph.clear(win, 0, 0, 0)
+graph.draw_render_target(win, world, -1200, -900)          // look at the far corner
+graph.end_frame(win)
+danger { dyn b = graph.capture(win)  image.save(b, "lab/target-far.png")  image.discard(b) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 5: what a capture sees while the surface is bound ─────────────
+int cw = 0
+int ch = 0
+graph.begin_frame(win)
+graph.begin_render_target(win, world)
+danger {
+    dyn c = graph.capture(win)
+    cw = image.width(c)
+    ch = image.height(c)
+    image.discard(c)
+}
+if err != nil { print("capture inside a target: ", err[0]) }
+graph.end_render_target(win)
+graph.end_frame(win)
+print("capture inside a target .  ", cw, " x ", ch, "   (2000x1500 means the world can be exported; 800x600 means it cannot)")
+
+// ── 6: what it costs per frame ────────────────────────────────────
+//
+// No frame cap: with one, every number below is 16.7 ms times the frame count
+// and says nothing about the drawing.
+graph.set_fps(win, 0)
+dyn flat = image.new(800, 600)
+int t0 = time.now_ms()
+int i = 0
+while i < 120 {
+    graph.begin_frame(win)
+    graph.clear(win, 0, 0, 0)
+    graph.draw_image(win, flat, 0, 0)
+    graph.end_frame(win)
+    i = i + 1
+}
+int blit_ms = time.elapsed_ms(t0)
+
+t0 = time.now_ms()
+i = 0
+while i < 120 {
+    graph.begin_frame(win)
+    graph.clear(win, 0, 0, 0)
+    graph.draw_render_target(win, world, -600 - i, -450)
+    graph.end_frame(win)
+    i = i + 1
+}
+int rt_ms = time.elapsed_ms(t0)
+print("120 frames, image blit ..  ", blit_ms, " ms")
+print("120 frames, 2000x1500 rt.  ", rt_ms, " ms   (the camera moves every frame)")
+
+// ── the same surface, drawn into twice more ───────────────────────
+// A bake grows one stroke at a time: this is what a step does to it.
+t0 = time.now_ms()
+i = 0
+while i < 100 {
+    graph.begin_frame(win)
+    graph.begin_render_target(win, world)
+    graph.draw_line(win, 100 + i * 18, 400, 100 + i * 18, 1100, 3, 120, 208, 214)
+    graph.end_render_target(win)
+    graph.draw_render_target(win, world, 0, -300)
+    graph.end_frame(win)
+    i = i + 1
+}
+print("100 strokes into the world ", time.elapsed_ms(t0), " ms   (against ~160 ms for one full rebuild today)")
+
+graph.begin_frame(win)
+graph.clear(win, 0, 0, 0)
+graph.draw_render_target(win, world, 0, -300)
+graph.end_frame(win)
+danger { dyn d = graph.capture(win)  image.save(d, "lab/target-strokes.png")  image.discard(d) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 7: layers ─────────────────────────────────────────────────────
+//
+// Compositing needs a surface that is EMPTY where nothing was drawn. If a
+// render target comes up opaque black, a stack of them is not layers — it is
+// only the top one. Never cleared, one circle drawn into it, over a red frame:
+// what surrounds the circle answers it.
+dyn layer = graph.render_target(win, 800, 600)
+graph.begin_frame(win)
+graph.begin_render_target(win, layer)
+graph.draw_circle(win, 400, 300, 120, 255, 200, 60)
+graph.end_render_target(win)
+graph.clear(win, 200, 40, 40)
+graph.draw_render_target(win, layer, 0, 0)
+graph.end_frame(win)
+danger { dyn e = graph.capture(win)  image.save(e, "lab/target-layer.png")  image.discard(e) }
+if err != nil { print("capture: ", err[0]) }
+
+// Four of them, drawn every frame — what a layered artwork would cost.
+dyn l2 = graph.render_target(win, 800, 600)
+dyn l3 = graph.render_target(win, 800, 600)
+dyn l4 = graph.render_target(win, 800, 600)
+int t1 = time.now_ms()
+i = 0
+while i < 120 {
+    graph.begin_frame(win)
+    graph.clear(win, 0, 0, 0)
+    graph.draw_render_target(win, layer, 0, 0)
+    graph.draw_render_target(win, l2, 0, 0)
+    graph.draw_render_target(win, l3, 0, 0)
+    graph.draw_render_target(win, l4, 0, 0)
+    graph.end_frame(win)
+    i = i + 1
+}
+print("120 frames, four layers .  ", time.elapsed_ms(t1), " ms")
+graph.release_render_target(win, l2)
+graph.release_render_target(win, l3)
+graph.release_render_target(win, l4)
+graph.release_render_target(win, layer)
+
+image.discard(flat)
+graph.release_render_target(win, world)
+graph.close(win)
+print("wrote lab/target-origin.png, lab/target-far.png, lab/target-strokes.png, lab/target-layer.png")

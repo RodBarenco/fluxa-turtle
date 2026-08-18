@@ -433,6 +433,40 @@ empty artwork, without a rebuild.
 
 ---
 
+## Sprint 8c — Text, the rest — NOT STARTED
+
+**Deliver:** the two calls 8b deliberately left out.
+
+- **`text_color(r, g, b)`** — a colour for type, of her own, instead of taking
+  `path_color`. Today a label wears whatever the stroke wears at that step,
+  which is right for a caption on a drawing and wrong for a title over one.
+  Appearance, so it is a timeline event like every other look
+  ([adr 0009](adr/0009-appearance-is-a-timeline-event.md)) and the same
+  question 8b answered applies: it takes effect from the step after the last
+  one declared.
+- **`text_draw(step, x, y, string, size)`** — the same type, revealed **over n
+  steps** rather than landing whole. The letters are the library's, so this is
+  not `write`: nothing is traced, the glyphs are drawn and the reveal is what
+  is animated — a letter per step is the obvious cut, and clipping a whole
+  string by width is the other.
+
+**Decide first:** what a partly-revealed label IS to the bake. `write` had it
+easy — a stroke is committed when its step closes. A label is drawn whole into
+the texture, so a reveal is either n labels (one per prefix, each replacing the
+last, which the rebuild handles for free) or one label with a width the replay
+computes. The first costs steps and nothing else; the second costs a clip that
+`graph.draw_text_font` may not offer.
+
+**Constraints:** it has to survive going back, so whatever the reveal is has to
+be a pure function of the step — the same rule the export lives by
+([adr 0006](adr/0006-deterministic-render-by-frame-index.md)).
+
+**Gate out:** `lab/label.flx` extended — a title in its own colour under a
+stroke in another; a reveal captured at three points along it; and the same
+three captures after `←` back to them, pixel-identical.
+
+---
+
 ## Sprint 9 — Camera, layers, a scene larger than the screen
 
 **Deliver:** the expansions' "Camadas de renderização", "Sistema de câmera com
@@ -478,12 +512,20 @@ and only then plan the sprint.
 places, and checks each capture against the region it should show.
 
 
-**Gate in — and this one is a hard gate.** Answer, by experiment and in an
-ADR: can `std.image` be drawn into off-screen? Everything about this sprint
-follows from that one fact, and no part of it should be designed before the
-answer is written down. `graph.begin_cam2d` already gives pan and zoom over what
-is drawn, so the half of the sprint that is "look closer at the artwork" can
-ship on its own while the answer is being found.
+**Gate in — ANSWERED, [adr 0022](adr/0022-the-bake-can-be-larger-than-the-window.md).**
+`std.image` cannot be drawn into and never could — it is a buffer library with
+no primitives in it. **`std.graph` can**: `graph.render_target(win, w, h)`, up
+to 16384 px a side. `lab/target.flx` measures the seven things that decide the
+sprint — a 2000×1500 surface exists; drawing lands where it is put; **it keeps
+what was drawn across frames**, which is what makes it a bake; an offset when it
+is drawn to the window is exactly a camera; an uncleared surface is transparent,
+so layers composite; the big surface costs **0.5 ms a frame**, *less* than
+today's 800×600 `draw_image`, and four layers cost 0.83 ms; and a stroke into
+the world costs half a millisecond against ~160 ms for a full rebuild.
+
+So the "if yes" branch is the real one. One thing does not follow:
+`graph.capture` inside a render target still returns the **window**, so a
+world-sized still has to be taken in tiles.
 
 **Gate out:** a harness that draws a scene larger than the window, points the
 camera at three places, and checks each capture against the region it should
