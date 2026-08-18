@@ -133,7 +133,7 @@ costs.
 
 ---
 
-## Sprint 7 — Movement with a shape · acceleration and duration
+## Sprint 7 — Movement with a shape — DONE (project 0.20.0), less `go_for`
 
 **Deliver:** `go_accel(step, dist, turn, start_px_s, end_px_s)` and
 `go_silent_accel(...)` — a movement that begins at one speed and ends at
@@ -186,7 +186,17 @@ equation, that the total time is the same whichever end is faster, and that a
 rewind of an accelerated step takes as long as the step did.
 
 
-**Gate in:** one measurement and one decision. Measure whether a per-segment
+**Still open here:** `go_for(step, dist, turn, seconds)`, a step declared by how
+long it should take. `arm` already computes a duration, so it is a small thing
+waiting for somebody to want it.
+
+**Gate in — answered by building it:** the second speed lives on the action, one
+more array of 65536 floats. The staircase question the gate posed turned out to
+be moot: `go_accel` needs the field for a single segment anyway, so once it
+exists a path can give every segment its own pair and be continuous by
+construction rather than approximately smooth.
+
+*(original gate in)* one measurement and one decision. Measure whether a per-segment
 constant speed reads as a staircase at the segment lengths this tool produces —
 if it does not, the second speed field is not needed at all. Then decide where a
 second speed lives if it is: another `MAX_ACTIONS` array (~512 KB) or a small

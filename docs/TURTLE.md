@@ -331,6 +331,39 @@ on the next.
 
 Both at once: no trail, own speed.
 
+### `go_accel(step, dist, turn, start_px_s, end_px_s)` — step
+
+The same walk, beginning at one speed and ending at another.
+
+```fluxa
+leo.go_accel(1, 400.0, 0.0, 100.0, 800.0)   // sets off and gathers pace
+leo.go_accel(2, 400.0, 0.0, 800.0, 60.0)    // and arrives gently
+```
+
+Every other movement here is linear, which is what makes an artwork look
+mechanical. Two speeds are a curve said in the unit you already have — the same
+reason `circle(cx, cy, r)` beat working out a polar loop.
+
+**It takes distance over the AVERAGE of the two speeds**, `2d / (v0 + v1)`, not
+over the one it ends at. So 400 px from 100 to 800 px/s takes 0.89 s, and
+swapping the two numbers takes exactly as long — measured, 908 ms and 917 ms
+against the 889 the arithmetic predicts, the difference being the frame the
+window was in the middle of.
+
+Along the way it follows `v0·t + ½at²`, which in fractions of the time and the
+distance is `p(u) = u(2v0 + (v1 − v0)u) / (v0 + v1)` — measured at a quarter, a
+half and three quarters: 0.1042, 0.3056, 0.6042. It is a function of the
+fraction and of nothing else, so an accelerated artwork still exports
+byte-identically twice ([adr 0006](adr/0006-deterministic-render-by-frame-index.md)),
+and rewinding one retraces the same curve backwards in the same time.
+
+Both speeds have to be above zero: a movement that starts and ends at zero never
+arrives.
+
+### `go_silent_accel(step, dist, turn, start_px_s, end_px_s)` — step
+
+The same, with no trail.
+
 ---
 
 # Walking in batches
@@ -501,6 +534,27 @@ sides is the circle's, in proportion to the sweep — never fewer than two.
 ---
 
 # A whole trajectory in one call
+
+### `follow_accel(step, points, start_px_s, end_px_s)` · `follow_silent_accel(...)` — steps
+
+A whole trajectory that gathers pace, or loses it.
+
+```fluxa
+int s = leo.follow_accel(1, coast, 60.0, 900.0)
+```
+
+The speed of each segment comes from **how far along the path it starts**, not
+from its position in the list. Points out of a tracer are unevenly spaced, so a
+progression by index would race through the dense parts and crawl through the
+sparse ones — the same drawing would accelerate differently depending on how
+finely it happened to be sampled.
+
+Each segment carries its own pair of speeds, so the ramp is continuous rather
+than a staircase: the speed at the end of one segment is the speed at the start
+of the next, by construction. Measured on a path of 40, 80, 160 and 320 px
+ramping from 60 to 900 px/s — 485, 483, 500 and 500 ms. Four segments of wildly
+different lengths taking almost the same time is what accelerating along a path
+looks like.
 
 ### `follow(step, points, px_s)` · `follow_silent(...)` — steps
 
@@ -693,6 +747,7 @@ are untouched.
 | `path_triangles()` · `path_squares()` · `path_stars()` | appearance |
 | `path_on()` · `path_off()` | appearance |
 | `go(step, dist, turn)` · `go_silent(...)` · `go_at(..., px_s)` · `go_silent_at(...)` | step |
+| `go_accel(step, dist, turn, v0, v1)` · `go_silent_accel(...)` | step |
 | `ring(first, count, dist, turn)` · `ring_silent(...)` · `spiral(..., grow, turn)` | steps |
 | `polygon(step, cx, cy, r, sides)` · `triangle(step, cx, cy, r)` | steps, returns the next |
 | `square(step, cx, cy, side)` · `rect(step, cx, cy, w, h)` | steps, returns the next |
@@ -700,6 +755,7 @@ are untouched.
 | `star(step, cx, cy, r, inner, points)` · `arc(step, cx, cy, r, from, to)` | steps, returns the next |
 | `toward(step, x, y)` · `jump(step, x, y)` | step |
 | `follow(step, points, px_s)` · `follow_silent(...)` | steps, returns the next |
+| `follow_accel(step, points, v0, v1)` · `follow_silent_accel(...)` | steps, returns the next |
 | `path_clear(step)` · `erase(from, to)` · `erase_at(step, from, to)` | step |
 | `pivot(step, deg, cx, cy)` · `shift(step, dx, dy)` | step |
 

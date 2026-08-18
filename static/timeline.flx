@@ -28,6 +28,7 @@ Block Timeline {
     float arr dist[65536] = 0.0
     float arr turn[65536] = 0.0
     float arr spd[65536]  = 0.0      // 0 = use the turtle's own speed
+    float arr spd2[65536]  = 0.0    // the speed it ENDS at, 0 = no acceleration
 
     // The occupancy grid: one row per turtle, MAX_STEPS + 1 columns, because
     // steps are numbered from 1 and column 0 is never used. 32 × 6001 = 192032,
@@ -99,6 +100,20 @@ Block Timeline {
         }
     }
 
+    // The speed a movement ENDS at, when it is one that accelerates. Zero
+    // means "the same all the way", which is every action the tool had until
+    // now — so the array costs 65536 floats, about 512 KB, and changes nothing
+    // that does not ask for it. Measured against the 33 MB the occupancy grid
+    // already spends, it is not a decision worth agonising over: the
+    // alternative was a side table and a lookup for a value that belongs to
+    // the action anyway.
+    fn add_accel(int t, int s, int k, float d, float tu, float v0, float v1) nil {
+        add(t, s, k, d, tu, v0)
+        if n > 0 { spd2[n - 1] = v1 }
+    }
+
+    fn get_v1(int i) float { return spd2[i] }
+
     fn add(int t, int s, int k, float d, float tu, float sp) nil {
         if s < 1 { return }
         if s > config.MAX_STEPS() { return }
@@ -125,6 +140,7 @@ Block Timeline {
         dist[n]  = d
         turn[n]  = tu
         spd[n]   = sp
+        spd2[n]  = 0.0
         n = n + 1
         if s > top { top = s }
         if s > last[t] { last[t] = s }

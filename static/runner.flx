@@ -27,6 +27,8 @@ Block Runner {
     float arr atx[32]   = 0.0    // where it is heading
     float arr aty[32]   = 0.0
     float arr adur[32]  = 0.0    // duration, in seconds
+    float arr av0[32]   = 0.0    // the speed it sets off at
+    float arr av1[32]   = 0.0    // and the one it arrives at; 0 = no acceleration
     int arr adraw[32]   = 0      // 1 = leaves a trail
     int an = 0
 
@@ -592,9 +594,21 @@ Block Runner {
                     // the speed declared on the action beats the turtle's own
                     float v = timeline.Timeline.get_speed(i)
                     if v <= 0.0 { v = pool.Pool.get_spd(t) }
+
+                    // A movement that accelerates takes distance over its
+                    // AVERAGE speed — 2d / (v0 + v1) — not over the one it ends
+                    // at. Getting that wrong makes every accelerated step
+                    // arrive early or late, and it is the whole reason this is
+                    // computed here rather than guessed at per frame.
+                    float v1 = timeline.Timeline.get_v1(i)
+                    float vm = v
+                    if v1 > 0.0 { vm = (v + v1) * 0.5 }
+
                     float dur = 0.0
-                    if v > 0.0 { dur = math.hypot(aim_x - x1, aim_y - y1) / v }
+                    if vm > 0.0 { dur = math.hypot(aim_x - x1, aim_y - y1) / vm }
                     adur[an] = dur
+                    av0[an]  = v
+                    av1[an]  = v1
 
                     adraw[an] = 0
                     if draws(k) == 1 && pool.Pool.get_pen(t) == 1 { adraw[an] = 1 }
@@ -604,6 +618,24 @@ Block Runner {
             }
             t = t + 1
         }
+    }
+
+    // How far along the movement is, as a fraction of its distance, after a
+    // fraction `u` of its time.
+    //
+    // Constant speed is `u` itself. A linear ramp from v0 to v1 is
+    // s(t) = v0·t + ½·a·t² with a = (v1 - v0)/T, and dividing by the distance
+    // d = T·(v0 + v1)/2 turns it into this, in normalised time:
+    //
+    //     p(u) = u · (2·v0 + (v1 - v0)·u) / (v0 + v1)
+    //
+    // It is a pure function of the fraction, which is what an export needs: the
+    // video renders by frame index and two renders have to be identical
+    // (adr 0006). Nothing here reads a clock.
+    fn along(float u, float v0, float v1) float {
+        if v1 <= 0.0 { return u }
+        if v0 + v1 <= 0.0 { return u }
+        return u * (2.0 * v0 + (v1 - v0) * u) / (v0 + v1)
     }
 
     // How long the armed step lasts: as long as its slowest turtle.
@@ -686,9 +718,10 @@ Block Runner {
             i = 0
             while i < an {
                 guard[0] = i     // anchor FIRST
-                float p = 1.0
-                if adur[i] > 0.0 { p = el / adur[i] }
-                if p > 1.0 { p = 1.0 }
+                float u = 1.0
+                if adur[i] > 0.0 { u = el / adur[i] }
+                if u > 1.0 { u = 1.0 }
+                float p = along(u, av0[i], av1[i])
 
                 float cx = asx[i] + (atx[i] - asx[i]) * p
                 float cy = asy[i] + (aty[i] - asy[i]) * p
@@ -812,10 +845,11 @@ Block Runner {
             int i = 0
             while i < an {
                 guard[0] = i     // anchor FIRST
-                float p = 0.0
-                if adur[i] > 0.0 { p = 1.0 - el / adur[i] }
-                if p < 0.0 { p = 0.0 }
-                if p > 1.0 { p = 1.0 }
+                float u = 1.0
+                if adur[i] > 0.0 { u = 1.0 - el / adur[i] }
+                if u < 0.0 { u = 0.0 }
+                if u > 1.0 { u = 1.0 }
+                float p = along(u, av0[i], av1[i])
 
                 float cx = asx[i] + (atx[i] - asx[i]) * p
                 float cy = asy[i] + (aty[i] - asy[i]) * p

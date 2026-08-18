@@ -292,6 +292,7 @@ So a colour written between step 36 and step 37 leaves the first thirty-six as
 they are and paints what comes after. Move it above them and it affects them.
 
 ```fluxa
+leo.go_accel(2, 400.0, 0.0, 100.0, 800.0)   // and speed up along the way
 leo.toward(5, 400.0, 300.0)      // be at this point, rather than turn-and-walk
 leo.erase(1, 8)                  // take those eight steps of hers back out
 leo.pivot(300, 12.0, 467, 470)   // turn what she has drawn, without redrawing it

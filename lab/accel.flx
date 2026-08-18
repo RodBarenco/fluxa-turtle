@@ -1,0 +1,165 @@
+// lab/accel.flx — movement with a shape.
+// Run from the project root:  ./fluxa run lab/accel.flx
+//
+// Four claims, and none of them can be judged by eye:
+//
+//   1. an accelerating step takes distance over the AVERAGE of its two speeds,
+//      2d / (v0 + v1) — not over the one it ends at;
+//   2. it takes the same time whichever end is the fast one;
+//   3. the position along the way follows v0·t + ½at², which is checked
+//      against the curve the runner actually uses;
+//   4. rewinding one takes as long as it did.
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static pool
+import static timeline
+import static painter
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "accel")
+dyn canvas = image.new(800, 600)
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+dyn part = [0.0, 0.0]
+
+// ── the curve, checked directly ────────────────────────────────────
+//
+// `along` is what animate and rewind both walk. At a quarter, a half and three
+// quarters of the TIME, a ramp from 100 to 800 px/s should have covered these
+// fractions of the distance:
+//
+//   p(u) = u(2·v0 + (v1 - v0)u) / (v0 + v1)
+//   p(0.25) = 0.25(200 + 175)/900 = 0.1042
+//   p(0.50) = 0.50(200 + 350)/900 = 0.3056
+//   p(0.75) = 0.75(200 + 525)/900 = 0.6042
+
+print("quarter of the time ..  ", runner.Runner.along(0.25, 100.0, 800.0), "   (expected 0.1042)")
+print("half ................   ", runner.Runner.along(0.50, 100.0, 800.0), "   (expected 0.3056)")
+print("three quarters ......   ", runner.Runner.along(0.75, 100.0, 800.0), "   (expected 0.6042)")
+print("all of it ...........   ", runner.Runner.along(1.00, 100.0, 800.0), "   (expected 1)")
+print("no acceleration .....   ", runner.Runner.along(0.37, 400.0, 0.0), "   (expected 0.37 — straight through)")
+
+// ── the duration ───────────────────────────────────────────────────
+
+Block a typeof turtle.Turtle
+a.spawn(80.0, 150.0)
+a.hide()
+a.speed(300.0)
+a.path_color(120, 208, 214)
+a.path_width(3)
+a.go_accel(1, 400.0, 0.0, 100.0, 800.0)      // 2*400/900 = 0.889 s
+a.go_accel(2, 400.0, 0.0, 800.0, 100.0)      // the same, the other way round
+
+runner.Runner.rebuild(win, canvas, sheet, 0)
+int t0 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 1)
+int slow_to_fast = time.elapsed_ms(t0)
+int t1 = time.now_ms()
+runner.Runner.animate(win, canvas, sheet, part, 2)
+int fast_to_slow = time.elapsed_ms(t1)
+
+print("")
+print("400 px, 100 -> 800 ..   ", slow_to_fast, " ms   (expected ~889: 2d / (v0 + v1))")
+print("400 px, 800 -> 100 ..   ", fast_to_slow, " ms   (expected the same ~889)")
+
+// ── rewinding one ──────────────────────────────────────────────────
+
+int t2 = time.now_ms()
+runner.Runner.rewind(win, canvas, sheet, 2)
+print("rewound .............   ", time.elapsed_ms(t2), " ms   (expected ~889 too, plus a rebuild)")
+print("back at .............   ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
+      "   (expected 480,150 — where step 2 set off)")
+
+// ── a whole path that gathers pace ─────────────────────────────────
+//
+// Segments of deliberately different lengths: if the ramp were by index rather
+// than by distance, the short ones would be given as much of the acceleration
+// as the long ones.
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn coast = [80.0, 380.0, 120.0, 380.0, 200.0, 380.0, 360.0, 380.0, 680.0, 380.0]
+
+Block b typeof turtle.Turtle
+b.spawn(80.0, 380.0)
+b.hide()
+b.speed(100.0)
+b.path_color(255, 200, 60)
+b.path_width(3)
+int nx = b.follow_accel(1, coast, 60.0, 900.0)
+print("")
+print("five points .........   -> next step ", nx, "   (expected 6)")
+
+// 40, 80, 160 and 320 px of a 600 px path. The speed at the start of each is
+// 60 + 840 * (walked / 600), so each segment takes 2*len / (a + b):
+//   40 px from  60.0 to 116.0  -> 0.455 s
+//   80 px from 116.0 to 228.0  -> 0.465 s
+//  160 px from 228.0 to 452.0  -> 0.470 s
+//  320 px from 452.0 to 900.0  -> 0.473 s
+// Four segments of wildly different lengths, all about the same time: that is
+// what accelerating along a path looks like.
+runner.Runner.rebuild(win, canvas, sheet, 1)
+int seg = 2
+while seg <= 5 {
+    int ts = time.now_ms()
+    runner.Runner.animate(win, canvas, sheet, part, seg)
+    print("  segment ", seg - 1, " .........  ", time.elapsed_ms(ts), " ms")
+    seg = seg + 1
+}
+
+runner.Runner.shown(win, canvas, sheet)
+danger {
+    dyn shot = graph.capture(win)
+    image.save(shot, "lab/accel.png")
+    image.discard(shot)
+}
+if err != nil { print("capture: ", err[0]) }
+
+// ── an accelerated export is still deterministic ───────────────────
+//
+// The curve is a function of the fraction and nothing else — no clock — which
+// is what lets the video render by frame index and come out the same twice
+// (adr 0006). Rendered here twice into two folders, to be compared by script.
+
+pool.Pool.reset()
+timeline.Timeline.reset()
+Block c typeof turtle.Turtle
+c.spawn(100.0, 520.0)
+c.hide()
+c.speed(300.0)
+c.path_color(150, 200, 255)
+c.path_width(3)
+c.go_accel(1, 300.0, 0.0, 80.0, 900.0)
+
+export.Exporter.setup("lab/accel_a", 12)
+export.Exporter.range(1, 1)
+export.Exporter.hold(0, 0)
+runner.Runner.export(win, canvas, sheet)
+
+export.Exporter.setup("lab/accel_b", 12)
+export.Exporter.range(1, 1)
+export.Exporter.hold(0, 0)
+runner.Runner.export(win, canvas, sheet)
+
+print("")
+print("two renders of one accelerated step written to lab/accel_a and lab/accel_b")
+print("(they must be byte-identical — checked by script)")
+
+image.discard(sheet)
+image.discard(canvas)
+graph.close(win)

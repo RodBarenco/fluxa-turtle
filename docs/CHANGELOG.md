@@ -3,6 +3,38 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.20.0] — 2026-08-18
+
+### Added
+
+- **Movement with a shape** — `go_accel`, `go_silent_accel`, `follow_accel`,
+  `follow_silent_accel`. A walk that begins at one speed and ends at another,
+  because everything here was linear and that is what makes an artwork look
+  mechanical.
+
+  ```fluxa
+  leo.go_accel(1, 400.0, 0.0, 100.0, 800.0)
+  int s = leo.follow_accel(1, coast, 60.0, 900.0)
+  ```
+
+  Two speeds rather than a named easing or an acceleration in px/s²: it is the
+  same curve said in the unit the artist already has.
+
+  **A step takes distance over the average of its two speeds**, `2d / (v0 + v1)`
+  — measured at 908 ms and 917 ms for 400 px between 100 and 800 px/s in both
+  directions, against the 889 the arithmetic predicts. Along the way it follows
+  `v0·t + ½at²`, checked at a quarter, a half and three quarters of the time:
+  0.1042, 0.3056, 0.6042. Being a function of the fraction and of nothing else,
+  an accelerated export is still byte-identical across two renders — verified.
+
+  Over a path, the speed of each segment comes from **how far along it starts**,
+  never from its index, because points out of a tracer are unevenly spaced.
+  Measured on segments of 40, 80, 160 and 320 px: 485, 483, 500 and 500 ms.
+
+  The action carries a second speed for this — one more array of 65536 floats,
+  about 512 KB, zero meaning "the same all the way". The alternative was a side
+  table for a value that belongs to the action anyway.
+
 ## [0.19.0] — 2026-08-18
 
 ### Added
