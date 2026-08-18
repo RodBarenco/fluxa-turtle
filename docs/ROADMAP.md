@@ -83,6 +83,10 @@ what a step-by-step walk buys is the appearance events, which apply per step. A
 sparse walk over "steps that have anything at all" is the shape of the answer.
 Measure it against `lab/limits.flx`, which is exactly this worst case.
 
+That is **Sprint 15**, along with the two things that make the wait invisible
+rather than shorter: draw the step somebody is looking at *first*, and keep the
+step before it on a second surface, built a slice per idle frame.
+
 ---
 
 ## Sprint 6 — `pathTexture` — DONE (project 0.18.0)
@@ -743,6 +747,73 @@ versions kept side by side so the difference is visible.
 
 ---
 
+## Sprint 15 — The rebuild that does not make you wait — NOT STARTED
+
+**The problem is written at the top of this document** and it is the one thing
+between this tool and the studio: the rebuild walks every step from 1 to where
+the artwork is, asking all 32 turtles what they do on each, so 50000 steps
+measure **7.1 s** — on every save, and on every `←`.
+
+**Deliver, and these are three separate ideas that happen to share a sprint:**
+
+1. **Sparse walk.** Stop walking the steps and walk the **actions**, which the
+   timeline already holds in declaration order. What the step-by-step walk buys
+   is the appearance events, and those are a second sorted list — so it is a
+   merge of two ordered walks, not a scan of an empty space. An artwork of 900
+   actions over 50000 steps should cost 900, not 50000.
+
+2. **The end first.** The state somebody is waiting for is the one at the step
+   they are on, and today it is the last thing the rebuild produces. Draw it
+   **first** — the artwork appears at once — and let everything the person did
+   not ask for happen after. On a save that is the whole difference between a
+   tool that stutters and one that does not.
+
+3. **The step before, built in the background.** Going back is a rebuild to
+   `s - 1` plus the step run in reverse
+   ([adr 0017](adr/0017-going-back-is-the-step-run-backwards.md)), and the
+   rebuild is what makes `←` cost more than the step it undoes. A **second
+   surface holding the artwork at `s - 1`**, kept up to date while the stage has
+   nothing else to do, turns that into a blit. 0022 already measured every piece
+   of it: a second render target costs 0.5 ms a frame to hold, and **100 strokes
+   drawn into a surface across 100 frames cost 41 ms** — a rebuild sliced across
+   the idle frames of one second, with the person seeing none of it.
+
+**"In the background" means across frames, not on a thread.** Nothing in this
+runtime is concurrent, and a render target keeps what is drawn into it (0022),
+so the shape is a cursor: draw `n` actions per idle frame into the shadow
+surface, remember where you stopped, and stop touching it the moment something
+real happens. That is the same mechanism as the export's frame-by-frame walk,
+pointed at a surface instead of a file.
+
+**Where:** `static/runner.flx` (`instant`, `rebuild`, and a slice function),
+`static/timeline.flx` (a walk over actions and events rather than steps, and
+the "which action is next after this one" the walk needs).
+
+**Decide first, and it is the whole sprint:** what an appearance event does to
+the sparse walk. A `path_color` applies from a step, not to an action, so the
+merge has to be exact or a stroke comes out in the wrong colour — which is the
+bug 8b just spent a sprint on, at a different level. And erases, clears,
+`pivot` and `shift` repaint what is already down (adr 0012), so the walk has to
+know which of them are "the whole artwork again" and which are not.
+
+**Constraints:** the result has to be **pixel-identical** to today's rebuild.
+That is not a nice-to-have, it is the only way to know a sparse walk is right —
+every harness in `lab/` already compares captures, and this sprint is the reason
+they exist.
+
+**Gate in:** measure, on `lab/limits.flx` (which is exactly the worst case),
+how much of the 7.1 s is the step loop itself and how much is the drawing. If it
+is the drawing, a sparse walk buys nothing and the sprint is item 2 and 3 only.
+
+**Gate out:** `lab/limits.flx` and `lab/stress.flx` — the 50000-step rebuild
+under a second; every harness's captures pixel-identical to what they are today;
+`←` on a 5000-step artwork timed against the step's own duration and shown to be
+smaller than it; and a save landing in the middle of a background slice leaving
+the artwork correct, because that is the one thing that cannot be tested by
+looking at it.
+
+---
+
 ## Order, and why
 
 1. **Sprint 6** — the last pillar item, and small now that rotation exists.
@@ -761,7 +832,11 @@ versions kept side by side so the difference is visible.
    the project.
 7. **Sprint 9** — the camera is the largest and it should wait until the
    off-screen question is answered on paper.
-8. **Sprints 13 and 14** — when there is an artwork that wants them.
+8. **Sprint 15** — the day an artwork gets long enough to feel it, which is the
+   day the studio starts. Nothing above depends on it and it depends on
+   nothing; it is here because a rebuild that takes seven seconds is a tool
+   nobody draws with.
+9. **Sprints 13 and 14** — when there is an artwork that wants them.
 
 Sprint 11 (audio) is done.
 
