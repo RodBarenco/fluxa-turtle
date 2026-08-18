@@ -12,8 +12,8 @@ import std strings
 import std time
 import std fs
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -55,7 +55,7 @@ danger {
 if err != nil { print("generating texture: ", err[0]) }
 print("texture written to lab/tile.png  ", fs.exists("lab/tile.png"), "   (expected true)")
 
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 pool.Pool.reset()
 timeline.Timeline.reset()
@@ -83,9 +83,9 @@ leo.go(3, 200.0, 120.0)
 
 stage.Stage.tile("lab/tile.png", 1.0)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+runner.Runner.rebuild(win, world, sheet, face, 0, 3)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn s1 = graph.capture(win)
     image.save(s1, "lab/background_tile.png")
@@ -95,9 +95,9 @@ if err != nil { print("tile: ", err[0]) }
 
 stage.Stage.center("lab/tile.png", 3.0)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+runner.Runner.rebuild(win, world, sheet, face, 0, 3)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn s2 = graph.capture(win)
     image.save(s2, "lab/background_center.png")
@@ -107,9 +107,9 @@ if err != nil { print("center: ", err[0]) }
 
 stage.Stage.stretch("lab/tile.png")
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+runner.Runner.rebuild(win, world, sheet, face, 0, 3)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn s3 = graph.capture(win)
     image.save(s3, "lab/background_stretch.png")
@@ -125,9 +125,9 @@ print("mode after three changes  ", stage.Stage.has_image(), "   (expected 1, st
 
 stage.Stage.tile("lab/there_is_no_such_file.png", 1.0)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+runner.Runner.rebuild(win, world, sheet, face, 0, 3)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 print("mode after a missing file ", stage.Stage.has_image(), "   (expected 0, and a reason above)")
 
 danger {
@@ -137,6 +137,6 @@ danger {
 }
 if err != nil { print("missing: ", err[0]) }
 
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)
 print("ok")

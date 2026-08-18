@@ -19,8 +19,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -33,7 +33,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "label")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
@@ -59,14 +59,14 @@ print("steps:  ", timeline.Timeline.max_step(), "   (expected 4 — two moves an
 int has_face = 0
 dyn face = image.new(1, 1)
 int upto = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, has_face, upto)
-runner.Runner.shown(win, canvas, sheet, face, has_face, upto)
+runner.Runner.rebuild(win, world, sheet, face, has_face, upto)
+runner.Runner.shown(win, world, sheet, face, has_face, upto)
 danger { dyn q = graph.capture(win)  image.save(q, "lab/label-all.png")  image.discard(q) }
 if err != nil { print("capture: ", err[0]) }
 
 // ── 1: at step 2 the second label has not happened yet ────────────
-runner.Runner.rebuild(win, canvas, sheet, face, has_face, 2)
-runner.Runner.shown(win, canvas, sheet, face, has_face, 2)
+runner.Runner.rebuild(win, world, sheet, face, has_face, 2)
+runner.Runner.shown(win, world, sheet, face, has_face, 2)
 danger { dyn q2 = graph.capture(win)  image.save(q2, "lab/label-step2.png")  image.discard(q2) }
 if err != nil { print("capture: ", err[0]) }
 
@@ -82,8 +82,8 @@ if err != nil { print("load_font: ", err[0], " — falling back") }
 print("loaded: ", has_face, "   (expected 1)")
 
 label.Label.mark(0)
-runner.Runner.rebuild(win, canvas, sheet, face, has_face, upto)
-runner.Runner.shown(win, canvas, sheet, face, has_face, upto)
+runner.Runner.rebuild(win, world, sheet, face, has_face, upto)
+runner.Runner.shown(win, world, sheet, face, has_face, upto)
 danger { dyn q3 = graph.capture(win)  image.save(q3, "lab/label-ttf.png")  image.discard(q3) }
 if err != nil { print("capture: ", err[0]) }
 
@@ -100,10 +100,10 @@ print("a missing font is caught, not fatal: ", missing, "   (expected 1)")
 // bake, until the next rebuild swallows it.
 dyn part = [0.0, 0.0]
 label.Label.mark(0)
-runner.Runner.rebuild(win, canvas, sheet, face, has_face, 0)
-runner.Runner.animate(win, canvas, sheet, face, has_face, part, 1)
-runner.Runner.animate(win, canvas, sheet, face, has_face, part, 2)
-runner.Runner.shown(win, canvas, sheet, face, has_face, 2)
+runner.Runner.rebuild(win, world, sheet, face, has_face, 0)
+runner.Runner.animate(win, world, sheet, face, has_face, part, 1)
+runner.Runner.animate(win, world, sheet, face, has_face, part, 2)
+runner.Runner.shown(win, world, sheet, face, has_face, 2)
 danger { dyn q4 = graph.capture(win)  image.save(q4, "lab/label-live.png")  image.discard(q4) }
 if err != nil { print("capture: ", err[0]) }
 

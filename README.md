@@ -71,7 +71,7 @@ make build FLUXA_GRAPH_RAYLIB=1 FLUXA_IMAGE_RAYLIB=1
 ```
 
 The two flags are what Turtle needs: the window, the strokes and the baked
-texture come from `std.graph`, and the canvas, the capture and the PNGs from
+surface come from `std.graph`, and the sprites, the captures and the PNGs from
 `std.image` — both on Raylib. The language README is the authority on the build
 flags if they change.
 

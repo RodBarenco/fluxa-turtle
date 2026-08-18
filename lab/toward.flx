@@ -9,8 +9,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -23,7 +23,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "toward")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 pool.Pool.reset()
 timeline.Timeline.reset()
@@ -77,9 +77,9 @@ dots.jump(81, 300.0, 480.0)
 dots.toward(82, 360.0, 480.0)
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 
 print("actions=", timeline.Timeline.count(), " steps=", upto_all)
 print("the box turtle ends where she started: x=", pool.Pool.get_x(0), " y=", pool.Pool.get_y(0), "  (expected 120 160)")
@@ -92,5 +92,24 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-image.discard(canvas)
+// A step that takes NO time — a jump to where she already stands, which is how
+// a pose is held for a while: the same point repeated, one step each. It has to
+// animate like any other step, and for a long time it did not: the fraction of
+// the step in flight was written as `elapsed / duration` with a duration of
+// zero, which cancelled the step. Two hundred of those are the last thing the
+// Leonardo artwork does, and they were all being dropped in silence.
+Block still typeof turtle.Turtle
+still.spawn(600.0, 120.0)
+still.hide()
+still.speed(6000.0)
+still.path_off()
+still.jump(90, 600.0, 120.0)
+still.jump(91, 600.0, 120.0)
+
+dyn part_z = [0.0, 0.0]
+runner.Runner.animate(win, world, sheet, face, 0, part_z, 90)
+runner.Runner.animate(win, world, sheet, face, 0, part_z, 91)
+print("a step of no duration arrives: ", runner.Runner.hit(), "   (expected 1 — a division by zero here cancels it instead)")
+
+graph.release_render_target(win, world)
 graph.close(win)

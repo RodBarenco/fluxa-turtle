@@ -21,8 +21,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -35,7 +35,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "rewind")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 pool.Pool.reset()
 timeline.Timeline.reset()
@@ -66,13 +66,13 @@ a.go(3, 400.0, -90.0)
 // ── forwards ──────────────────────────────────────────────────────
 
 int f0 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 2)
+runner.Runner.animate(win, world, sheet, face, 0, part, 1)
+runner.Runner.animate(win, world, sheet, face, 0, part, 2)
 int fwd2 = time.elapsed_ms(f0)
 
 // the reference: the artwork with two steps done
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn ref = graph.capture(win)
     image.save(ref, "lab/rewind_ref2.png")
@@ -81,7 +81,7 @@ danger {
 if err != nil { print("capture: ", err[0]) }
 
 int f1 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 3)
+runner.Runner.animate(win, world, sheet, face, 0, part, 3)
 int fwd3 = time.elapsed_ms(f1)
 print("step 3 forwards ......  ", fwd3, " ms   (expected ~2000: 400 px at 200 px/s)")
 print("she is at ............  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
@@ -90,14 +90,14 @@ print("she is at ............  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_
 // ── and back ──────────────────────────────────────────────────────
 
 int b0 = time.now_ms()
-runner.Runner.rewind(win, canvas, sheet, face, 0, 3)
+runner.Runner.rewind(win, world, sheet, face, 0, 3)
 int bwd = time.elapsed_ms(b0)
 print("step 3 backwards .....  ", bwd, " ms   (expected ~2000 too, plus a rebuild)")
 print("she is back at .......  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
       "   (expected 600,550 — where step 3 set off from)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn back = graph.capture(win)
     image.save(back, "lab/rewind.png")
@@ -117,13 +117,13 @@ print("")
 print("heading after the rewind  ", math.to_int(pool.Pool.get_ang(0)),
       "   (expected -90: where step 2 left her, not where step 3 did)")
 
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 3)
+runner.Runner.animate(win, world, sheet, face, 0, part, 3)
 print("redone step 3 ends at ..  ", math.to_int(pool.Pool.get_x(0)), ",", math.to_int(pool.Pool.get_y(0)),
       "   (expected 200,550 — exactly where it ended the first time)")
 print("and facing ............   ", math.to_int(pool.Pool.get_ang(0)), "   (expected -180)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/rewind_redone.png")
@@ -140,9 +140,9 @@ if err != nil { print("capture: ", err[0]) }
 // and comparing is what makes that visible.
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+runner.Runner.rebuild(win, world, sheet, face, 0, 3)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn again = graph.capture(win)
     image.save(again, "lab/rewind_rebuilt.png")
@@ -157,5 +157,5 @@ print("rewind_redone.png must differ from it in step 3's stroke and nowhere else
 print("(two steps forwards took ", fwd2, " ms, so the clock in this harness is honest)")
 
 image.discard(sheet)
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

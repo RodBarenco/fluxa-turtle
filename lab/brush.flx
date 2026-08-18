@@ -20,8 +20,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -34,7 +34,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "brush")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 pool.Pool.reset()
 timeline.Timeline.reset()
@@ -133,10 +133,10 @@ while i <= 34 {
 
 int t0 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 int all8 = time.elapsed_ms(t0)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 
 print("eight looks, ", timeline.Timeline.count(), " actions, rebuilt in ", all8, " ms")
 print("(solid, brush, marker, glow, spray, triangles, squares, stars — top to bottom)")
@@ -205,9 +205,9 @@ s1.toward(1, 740.0, 520.0)
 
 dyn leaves = pool.Pool.atlas()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, leaves, face, 0, upto_all)
+runner.Runner.rebuild(win, world, leaves, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, leaves, face, 0, upto_all)
+runner.Runner.shown(win, world, leaves, face, 0, upto_all)
 print("")
 print("a stamped path: ", timeline.Timeline.count(), " segments, one picture every 34 px")
 print("the straight run: 680 px at 34 apart — 20 stamps, first at x=60, last at 706,")
@@ -250,32 +250,32 @@ print("600 segments, one look at a time:")
 
 int s0 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 print("  solid ......  ", time.elapsed_ms(s0), " ms")
 
 m.path_brush()
 int s1 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 print("  brush ......  ", time.elapsed_ms(s1), " ms")
 
 m.path_spray()
 int s2 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 print("  spray ......  ", time.elapsed_ms(s2), " ms")
 
 m.path_image("lab/_leaf.png", 1.0)
 m.path_dash(0, 34)
 int s2b = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 print("  stamped ....  ", time.elapsed_ms(s2b), " ms")
 
 m.path_stars()
 int s3 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 print("  stars ......  ", time.elapsed_ms(s3), " ms")
 
 // From here on the artwork contains a layered style, and a layered style is
@@ -285,13 +285,13 @@ print("  stars ......  ", time.elapsed_ms(s3), " ms")
 m.path_marker()
 int s4 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 print("  marker .....  ", time.elapsed_ms(s4), " ms   (two passes from here on)")
 
 m.path_glow()
 int s5 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 print("  glow .......  ", time.elapsed_ms(s5), " ms")
 
 // ── the spray is not random ───────────────────────────────────────
@@ -311,9 +311,9 @@ p.toward(2, 400.0, 120.0)
 p.toward(3, 100.0, 300.0)
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+runner.Runner.rebuild(win, world, sheet, face, 0, 3)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn one = graph.capture(win)
     image.save(one, "lab/brush_spray1.png")
@@ -322,9 +322,9 @@ danger {
 if err != nil { print("capture: ", err[0]) }
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 3)
+runner.Runner.rebuild(win, world, sheet, face, 0, 3)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn two = graph.capture(win)
     image.save(two, "lab/brush_spray2.png")
@@ -336,5 +336,5 @@ print("")
 print("brush_spray1.png and brush_spray2.png must be identical — same speckle twice")
 
 image.discard(sheet)
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

@@ -21,8 +21,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -35,7 +35,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "view")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
@@ -52,18 +52,18 @@ a.path_width(4)
 a.go(1, 400.0, 0.0)          // a bar from (200,300) to (600,300)
 
 int upto = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto)
 
 // ── 1: untouched ──────────────────────────────────────────────────
 print("untouched, idle .......  ", view.View.idle(), "   (expected 1 — the camera is not applied at all)")
-runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+runner.Runner.shown(win, world, sheet, face, 0, upto)
 danger { dyn q = graph.capture(win)  image.save(q, "lab/view-plain.png")  image.discard(q) }
 if err != nil { print("capture: ", err[0]) }
 
 // ── 2: home is the same thing ─────────────────────────────────────
 view.View.home()
 print("after home(), idle ....  ", view.View.idle(), "   (expected 1)")
-runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+runner.Runner.shown(win, world, sheet, face, 0, upto)
 danger { dyn q2 = graph.capture(win)  image.save(q2, "lab/view-home.png")  image.discard(q2) }
 if err != nil { print("capture: ", err[0]) }
 
@@ -74,7 +74,7 @@ if err != nil { print("capture: ", err[0]) }
 // past it: 400 px of world at 2x is 800 px of screen.
 view.View.look(200.0, 300.0, 2.0)
 print("pointed, idle .........  ", view.View.idle(), "   (expected 0)")
-runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+runner.Runner.shown(win, world, sheet, face, 0, upto)
 danger { dyn q3 = graph.capture(win)  image.save(q3, "lab/view-zoom.png")  image.discard(q3) }
 if err != nil { print("capture: ", err[0]) }
 
@@ -85,14 +85,14 @@ if err != nil { print("capture: ", err[0]) }
 // makes them readable while you are looking at a corner of the drawing.
 panel.Panel.at(1, upto, 1)
 view.View.home()
-runner.Runner.frame(win, canvas, sheet, face, 0, upto)
+runner.Runner.frame(win, world, sheet, face, 0, upto)
 panel.Panel.draw(win)
 graph.end_frame(win)
 danger { dyn p1 = graph.capture(win)  image.save(p1, "lab/view-panel-plain.png")  image.discard(p1) }
 if err != nil { print("capture: ", err[0]) }
 
 view.View.look(200.0, 300.0, 2.0)
-runner.Runner.frame(win, canvas, sheet, face, 0, upto)
+runner.Runner.frame(win, world, sheet, face, 0, upto)
 panel.Panel.draw(win)
 graph.end_frame(win)
 danger { dyn p2 = graph.capture(win)  image.save(p2, "lab/view-panel-zoom.png")  image.discard(p2) }
@@ -120,7 +120,7 @@ view.View.home()
 int t0 = time.now_ms()
 int i = 0
 while i < 120 {
-    runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+    runner.Runner.shown(win, world, sheet, face, 0, upto)
     i = i + 1
 }
 int plain_ms = time.elapsed_ms(t0)
@@ -129,7 +129,7 @@ view.View.look(300.0, 300.0, 2.5)
 t0 = time.now_ms()
 i = 0
 while i < 120 {
-    runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+    runner.Runner.shown(win, world, sheet, face, 0, upto)
     i = i + 1
 }
 print("120 frames, no camera .  ", plain_ms, " ms")

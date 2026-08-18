@@ -8,8 +8,8 @@ import std strings
 import std time
 import std fs
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -22,7 +22,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "paths")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
@@ -114,9 +114,9 @@ a.go(4, 180.0, 90.0)
 pool.Pool.home_all()
 painter.Painter.reset()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", upto_all)
 print("clear of 'a' at step ", pool.Pool.get_clear(0), " (expected 3)")
@@ -128,5 +128,5 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

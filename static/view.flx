@@ -33,9 +33,12 @@ Block View {
     float grabx = 0.0       // the world point the drag grabbed, which has to
     float graby = 0.0       // stay under the pointer for the whole drag
 
+    // Home is the middle of the WORLD, which on an artwork the size of the
+    // window is the middle of the window — so nothing about an artwork written
+    // before the world existed changes.
     fn home() nil {
-        tx   = math.to_float(config.W()) * 0.5
-        ty   = math.to_float(config.H()) * 0.5
+        tx   = math.to_float(stage.Stage.world_w()) * 0.5
+        ty   = math.to_float(stage.Stage.world_h()) * 0.5
         zoom = 1.0
         set  = 1
         drag = 0
@@ -50,14 +53,23 @@ Block View {
     // before this Block existed. Harnesses depend on that, and so does anyone
     // comparing a capture against one taken last week.
     fn idle() int {
+        // A world larger than the window has to be drawn through a camera even
+        // when nobody has touched it: at the identity the window would show the
+        // world's top-left corner instead of its middle. This is asked FIRST,
+        // before the untouched case, because untouched is exactly when it
+        // matters.
+        if stage.Stage.bigger() == 1 { return 0 }
         if set == 0 { return 1 }
         if zoom != 1.0 { return 0 }
-        if tx != math.to_float(config.W()) * 0.5 { return 0 }
-        if ty != math.to_float(config.H()) * 0.5 { return 0 }
+        if tx != math.to_float(stage.Stage.world_w()) * 0.5 { return 0 }
+        if ty != math.to_float(stage.Stage.world_h()) * 0.5 { return 0 }
         return 1
     }
 
     fn on(dyn win) nil {
+        // `ensure` first: with a big world the camera is applied from the very
+        // first frame, and a target nobody has set yet is (0,0) — the corner.
+        ensure()
         if idle() == 1 { return }
         graph.begin_cam2d(win, tx, ty, 0.0, zoom)
     }
@@ -81,6 +93,32 @@ Block View {
         zoom = z
         if zoom < 0.2 { zoom = 0.2 }
         if zoom > 8.0 { zoom = 8.0 }
+    }
+
+    // The export's camera, and it is not this Block's state — it is computed
+    // from the stage, every time, so two renders of the same artwork are the
+    // same frames (adr 0006). Nothing a person does with the wheel reaches it.
+    //
+    // With the world the size of the window it is the identity and is not
+    // applied at all, so every video this tool has ever written still comes out
+    // the same. With a bigger world it is the whole world, fitted and centred:
+    // a video of a scene nobody can see all of is not a video of the scene.
+    fn whole(dyn win) nil {
+        if stage.Stage.bigger() == 0 { return }
+        graph.begin_cam2d(win, math.to_float(stage.Stage.world_w()) * 0.5,
+                               math.to_float(stage.Stage.world_h()) * 0.5, 0.0, fit())
+    }
+
+    fn whole_off(dyn win) nil {
+        if stage.Stage.bigger() == 0 { return }
+        graph.end_cam2d(win)
+    }
+
+    fn fit() float {
+        float zx = math.to_float(config.W()) / math.to_float(stage.Stage.world_w())
+        float zy = math.to_float(config.H()) / math.to_float(stage.Stage.world_h())
+        if zy < zx { return zy }
+        return zx
     }
 
     fn get_zoom() float { return zoom }

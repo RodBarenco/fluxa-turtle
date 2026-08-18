@@ -14,8 +14,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -28,7 +28,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "follow")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
@@ -81,9 +81,9 @@ int after = b.follow(1, spiral, 1400.0)
 print("120 points ...........  -> next step ", after, "   (expected 121)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/follow.png")
@@ -121,9 +121,9 @@ print("from a file .......... -> next step ", from_file, "   (expected 7, the sa
 print("reading it took ......  ", time.elapsed_ms(t_read), " ms   (1400 points takes 13)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn ff = graph.capture(win)
     image.save(ff, "lab/follow_file.png")
@@ -165,9 +165,9 @@ while m < 120 {
 }
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn by_hand = graph.capture(win)
     image.save(by_hand, "lab/follow_byhand.png")
@@ -193,9 +193,9 @@ e.path_width(4)
 e.follow_silent(1, box, 4000.0)
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn quiet = graph.capture(win)
     image.save(quiet, "lab/follow_silent.png")
@@ -216,12 +216,12 @@ f.speed(50.0)                       // her own, deliberately slow
 f.path_color(150, 200, 120)
 f.follow(1, line, 400.0)            // and the call says 400
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
+runner.Runner.rebuild(win, world, sheet, face, 0, 0)
 int t0 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 2)
+runner.Runner.animate(win, world, sheet, face, 0, part, 2)
 print("")
 print("400 px at 400 px/s ...  ", time.elapsed_ms(t0), " ms   (expected ~1000: the call's speed, not her 50)")
 
 image.discard(sheet)
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

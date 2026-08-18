@@ -1,0 +1,134 @@
+// lab/world.flx — a scene larger than the window
+//
+// The gate-out of sprint 9: draw a world bigger than the window, point the
+// camera at three places, and check each capture against the region it should
+// show. 1600x1200 of world seen through 800x600 of window.
+//
+// Four marks, one per quarter of the world, each its own colour, so a capture
+// says where the camera was without any arithmetic:
+//
+//     red    (200,150)          green  (1400,150)
+//     blue   (200,1050)         yellow (1400,1050)
+//
+//   ./fluxa run lab/world.flx
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static stage
+import static view
+import static pool
+import static timeline
+import static painter
+import static label
+import static font
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win = graph.init(800, 600, "world")
+stage.Stage.background(18, 18, 26)
+stage.Stage.world(1600, 1200)
+print("world ...................  ", stage.Stage.world_w(), " x ", stage.Stage.world_h(), "   (expected 1600 x 1200)")
+print("bigger than the window ..  ", stage.Stage.bigger(), "   (expected 1)")
+
+dyn world = graph.render_target(win, stage.Stage.world_w(), stage.Stage.world_h())
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)
+runner.Runner.open(win)
+
+Block a typeof turtle.Turtle
+a.spawn(200.0, 150.0)
+a.hide()
+a.speed(4000.0)
+a.path_width(6)
+
+a.path_color(230, 60, 60)
+int s = a.square(1, 200.0, 150.0, 160.0)
+a.path_color(60, 220, 120)
+s = a.square(s, 1400.0, 150.0, 160.0)
+a.path_color(90, 150, 240)
+s = a.square(s, 200.0, 1050.0, 160.0)
+a.path_color(255, 200, 60)
+s = a.square(s, 1400.0, 1050.0, 160.0)
+
+int upto = timeline.Timeline.max_step()
+print("steps ...................  ", upto)
+
+runner.Runner.rebuild(win, world, sheet, face, 0, upto)
+
+// ── the camera untouched: the middle of the world ─────────────────
+//
+// A world larger than the window is never at the identity — at the identity the
+// window would show the world's top left corner. Home is its centre, so this
+// capture has all four marks off-screen and nothing but background in it.
+print("idle at home ............  ", view.View.idle(), "   (expected 0 — a big world is always looked at through a camera)")
+runner.Runner.shown(win, world, sheet, face, 0, upto)
+danger { dyn q = graph.capture(win)  image.save(q, "lab/world-centre.png")  image.discard(q) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── three places ──────────────────────────────────────────────────
+view.View.look(200.0, 150.0, 1.0)
+runner.Runner.shown(win, world, sheet, face, 0, upto)
+danger { dyn q1 = graph.capture(win)  image.save(q1, "lab/world-red.png")  image.discard(q1) }
+if err != nil { print("capture: ", err[0]) }
+
+view.View.look(1400.0, 1050.0, 1.0)
+runner.Runner.shown(win, world, sheet, face, 0, upto)
+danger { dyn q2 = graph.capture(win)  image.save(q2, "lab/world-yellow.png")  image.discard(q2) }
+if err != nil { print("capture: ", err[0]) }
+
+// The whole world at once: 1600 of world in 800 of window is exactly 0.5x.
+view.View.look(800.0, 600.0, 0.5)
+runner.Runner.shown(win, world, sheet, face, 0, upto)
+danger { dyn q3 = graph.capture(win)  image.save(q3, "lab/world-all.png")  image.discard(q3) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── what it costs ─────────────────────────────────────────────────
+graph.set_fps(win, 0)
+int t0 = time.now_ms()
+int i = 0
+while i < 120 {
+    runner.Runner.shown(win, world, sheet, face, 0, upto)
+    i = i + 1
+}
+print("120 frames of a 1600x1200 world  ", time.elapsed_ms(t0), " ms")
+
+int t1 = time.now_ms()
+runner.Runner.rebuild(win, world, sheet, face, 0, upto)
+print("one rebuild of it .......  ", time.elapsed_ms(t1), " ms")
+
+// ── the export sees the whole world, and always the same ──────────
+//
+// A video renders by frame index and must not depend on where anybody left the
+// wheel (adr 0006), so the export's camera is computed from the stage rather
+// than read from this Block: the whole world, fitted and centred. Here that is
+// 800/1600 = 0.5.
+print("the export's zoom .......  ", view.View.fit(), "   (expected 0.5 — 1600 of world in 800 of window)")
+
+view.View.look(200.0, 150.0, 4.0)     // somebody left the wheel far in
+export.Exporter.setup_free("export", 30)
+export.Exporter.range(upto, upto)
+export.Exporter.hold(1, 0)
+runner.Runner.export(win, world, sheet, face, 0)
+print("the wheel is still where it was: ", view.View.get_zoom(), "   (expected 4 — the export did not touch it)")
+
+view.View.home()
+graph.release_render_target(win, world)
+graph.close(win)
+print("")
+print("compared by script:")
+print("  world-centre.png ... background only — every mark is outside the window")
+print("  world-red.png ..... the red square in the middle, nothing else")
+print("  world-yellow.png .. the yellow square in the middle, nothing else")
+print("  world-all.png ..... all four, at half size, in their four quarters")
+print("  export*/frame_000001.png must EQUAL world-all.png — the export ignores the wheel")

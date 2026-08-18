@@ -21,8 +21,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -35,7 +35,6 @@ import static panel
 import static runner
 
 prst dyn win    = graph.init(800, 600, "Leonardo")
-prst dyn canvas = image.new(800, 600)
 prst int done   = 0
 prst dyn part   = [0.0, 0.0]
 prst dyn snd    = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -1946,4 +1945,4 @@ while hold < 206 {
 //
 // export.Video(1, 0, 90)
 
-done = runner.Runner.play(win, canvas, part, snd, done)
+done = runner.Runner.play(win, part, snd, done)

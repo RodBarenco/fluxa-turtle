@@ -19,8 +19,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -33,7 +33,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "resume")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
@@ -59,7 +59,7 @@ a.go(1, 600.0, 0.0)
 
 // ── the whole step ────────────────────────────────────────────────
 int t0 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
+runner.Runner.animate(win, world, sheet, face, 0, part, 1)
 int whole = time.elapsed_ms(t0)
 float endx = pool.Pool.get_x(0)
 print("whole step ...........  ", whole, " ms, ends at x=", math.to_int(endx), "   (expected ~2000 ms, x=700)")
@@ -72,7 +72,7 @@ part[0] = 1.0
 part[1] = 0.6
 
 int t1 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
+runner.Runner.animate(win, world, sheet, face, 0, part, 1)
 int rest = time.elapsed_ms(t1)
 float endx2 = pool.Pool.get_x(0)
 print("resumed at 60% .......  ", rest, " ms, ends at x=", math.to_int(endx2), "   (expected ~800 ms, x=700)")
@@ -84,12 +84,12 @@ part[0] = 9.0
 part[1] = 0.9
 
 int t2 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
+runner.Runner.animate(win, world, sheet, face, 0, part, 1)
 int again = time.elapsed_ms(t2)
 print("stale progress .......  ", again, " ms   (expected ~2000: it belongs to another step)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 
 danger {
     dyn shot = graph.capture(win)
@@ -99,5 +99,5 @@ danger {
 if err != nil { print("capture: ", err[0]) }
 
 image.discard(sheet)
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

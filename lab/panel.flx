@@ -15,8 +15,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -29,7 +29,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "panel")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
@@ -66,10 +66,10 @@ print("after P ...............  ", panel.Panel.visible(), "   (expected 1)")
 
 // walk to step 8, then draw the stage with the panel over it
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 8)
+runner.Runner.rebuild(win, world, sheet, face, 0, 8)
 panel.Panel.at(8, timeline.Timeline.max_step(), 1)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.frame(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.frame(win, world, sheet, face, 0, upto_all)
 panel.Panel.draw(win)
 graph.end_frame(win)
 print("panel says step .......  ", panel.Panel.step(), " of ", upto_all)
@@ -83,10 +83,10 @@ if err != nil { print("capture: ", err[0]) }
 
 // step back: the rebuild is the whole implementation of going backwards
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 5)
+runner.Runner.rebuild(win, world, sheet, face, 0, 5)
 panel.Panel.at(5, timeline.Timeline.max_step(), 1)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.frame(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.frame(win, world, sheet, face, 0, upto_all)
 panel.Panel.draw(win)
 graph.end_frame(win)
 print("after three steps back   ", panel.Panel.step(), "   (expected 5)")
@@ -101,9 +101,9 @@ if err != nil { print("capture: ", err[0]) }
 // and with the panel off, the artwork has to be untouched
 panel.Panel.toggle()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 8)
+runner.Runner.rebuild(win, world, sheet, face, 0, 8)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn s3 = graph.capture(win)
     image.save(s3, "lab/panel_off.png")
@@ -112,5 +112,5 @@ danger {
 if err != nil { print("capture: ", err[0]) }
 
 image.discard(sheet)
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

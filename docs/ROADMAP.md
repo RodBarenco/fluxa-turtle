@@ -467,7 +467,7 @@ three captures after `←` back to them, pixel-identical.
 
 ---
 
-## Sprint 9 — Camera, layers, a scene larger than the screen — HALF DONE
+## Sprint 9 — Camera, layers, a scene larger than the screen — DONE except layers
 
 **Deliver:** the expansions' "Camadas de renderização", "Sistema de câmera com
 deslocamento e zoom" and "Cenários maiores que a área visível" — three items,
@@ -533,11 +533,19 @@ artwork: wheel zooms at the cursor, right button drags, `Z` resets. A way of
 looking — not a step, not in the timeline, ignored by the export, and not
 applied at all while it is untouched. `lab/view.flx` measures six claims.
 
-**Second half — the world.** `stage.Stage.world(w, h)`, the bake moved from
-`graph.capture` + `image.blit` into a `graph.render_target` of that size, and
-layers as several such surfaces composited in order. 0022 has the numbers; what
-it does not answer, and what to settle first, is whether a `prst dyn` render
-target survives a save the way the window does.
+**Second half — DONE (project 0.25.0),
+[adr 0024](adr/0024-a-world-larger-than-the-window.md).**
+`stage.Stage.world(w, h)`, and the bake moved out of `graph.capture` +
+`image.blit` into a `graph.render_target` of that size. The `prst dyn` question
+turned out not to need an answer: `play` rebuilds the bake on every pass, so the
+surface is a local of `play` like the sheet and the typeface, and the `canvas`
+argument left the entry files altogether.
+
+**Layers are what is left of this sprint.** 0022 measured the cost — four
+full-screen surfaces composited at 0.83 ms a frame — so the question is not
+whether it works but what it means in an artwork: which layer a turtle draws on,
+what a layer's opacity is, and whether erasing reaches across them. That is a
+sprint of its own, not a parameter.
 
 **Gate out:** a harness that draws a scene larger than the window, points the
 camera at three places, and checks each capture against the region it should
@@ -554,19 +562,36 @@ adr 0022).
 
 1. **Output size** — render at 1920×1080 from an 800×600 stage. The export
    already renders by frame index, so this is a scale on the capture, not a new
-   pipeline.
-2. **A file name** — `export.Video(1, 0, 30, "leonardo")`. Today it is
+   pipeline. **And the world-sized still**: `graph.capture` returns the window
+   even inside a render target (adr 0022), so a frame at the world's own
+   resolution has to be taken in tiles — point the camera at each region,
+   capture, `image.blit` them into one image.
+
+2. **A video of the replay, not of the frames** — the second kind of export, and
+   the one somebody asks for when they want to show *the tool*. Today's video is
+   deterministic: every step is rendered by frame index, so it is the artwork
+   and nothing else (adr 0006). The other kind records what the live stage
+   actually did — the pauses, the arrows, going back, the zooming in — which is
+   a screen recording of a session rather than a render of a composition.
+   Different thing, different guarantees: it cannot be reproducible, and it
+   should not pretend to be. Where it goes is `Exporter`, as a mode that writes
+   a frame per presented frame while the live loop runs, with the frame rate
+   taken from the clock rather than from the step.
+3. **A file name** — `export.Video(1, 0, 30, "leonardo")`. Today it is
    `artwork.mp4`, `artwork1.mp4`, …
-3. **WebM and GIF** — `std.video` writes H.264 only. The frames are already
+4. **WebM and GIF** — `std.video` writes H.264 only. The frames are already
    written and `finish()` already prints the ffmpeg line
    ([adr 0010](adr/0010-the-video-is-a-second-pass-over-the-frames.md)); this is
    about making that path pleasant, not about writing an encoder.
-4. **Transparent background** — needs the stage to have no colour and the
+5. **Transparent background** — needs the stage to have no colour and the
    capture to keep alpha. Check what `graph.capture` returns before promising
    it.
 
 **Verify:** extend `lab/video.flx` — frame count, size and rate of each output,
-and two runs byte-identical.
+and two runs byte-identical. The replay video is the exception and has to say so
+in its own test: it is recorded from the clock, so what is checked is that a
+frame is written per presented frame and that the rate in the file matches the
+one the session ran at.
 
 
 **Gate in:** check what `graph.capture` actually returns before promising a

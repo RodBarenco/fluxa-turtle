@@ -19,8 +19,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -33,7 +33,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "text")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
@@ -86,9 +86,9 @@ int s3 = a.write(s2, 60.0, 400.0, "HI", 15.0)
 print("three sizes ......... -> next step ", s3, "   (expected 37: three lots of 12)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.rebuild(win, world, sheet, face, 0, upto_all)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/text.png")
@@ -103,5 +103,5 @@ print("          (58,99,138,160), (58,269,99,300), (58,384,79,400) — the two")
 print("          pixels over on each side are the stroke's own width.")
 
 image.discard(sheet)
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

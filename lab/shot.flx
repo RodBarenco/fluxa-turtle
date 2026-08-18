@@ -11,8 +11,8 @@ import std strings
 import std time
 import std fs
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -80,20 +80,21 @@ bia.go_silent(1, 200.0, 0.0)
 bia.go(2, 120.0, 60.0)
 
 // rebuilds the whole composition without animating, bakes and draws a frame
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 pool.Pool.home_all()
 painter.Painter.reset()
 graph.begin_frame(win)
+graph.begin_render_target(win, world)
 stage.Stage.clear(win)
 int s = 1
 while s <= timeline.Timeline.max_step() {
     runner.Runner.instant(win, sheet, face, 0, s)
     s = s + 1
 }
+graph.end_render_target(win)
 graph.end_frame(win)
-painter.Painter.bake(win, canvas)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 
 print("turtles=", pool.Pool.count(), " actions=", timeline.Timeline.count(), " steps=", upto_all)
 print("conflicts_ignored=", timeline.Timeline.conflicts())
@@ -105,5 +106,5 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

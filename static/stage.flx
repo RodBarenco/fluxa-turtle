@@ -44,6 +44,41 @@ Block Stage {
         return 1
     }
 
+    // The stage can be larger than the window. Declared here and nowhere else:
+    // the bake is a surface of this size (adr 0022), the camera's home is its
+    // centre, and the window is a hole you look at it through. Zero means "the
+    // window", which is every artwork written before this existed.
+    int world_w_px = 0
+    int world_h_px = 0
+
+    fn world(int w, int h) nil {
+        world_w_px = w
+        world_h_px = h
+        if world_w_px < 1 { world_w_px = 0 }
+        if world_h_px < 1 { world_h_px = 0 }
+        // The library's own ceiling for an off-screen surface. Past it the
+        // creation fails and the artwork would come up blank with no reason
+        // given, so it is clamped here where the number was asked for.
+        if world_w_px > 16384 { world_w_px = 16384 }
+        if world_h_px > 16384 { world_h_px = 16384 }
+    }
+
+    fn world_w() int {
+        if world_w_px == 0 { return config.W() }
+        return world_w_px
+    }
+
+    fn world_h() int {
+        if world_h_px == 0 { return config.H() }
+        return world_h_px
+    }
+
+    fn bigger() int {
+        if world_w() > config.W() { return 1 }
+        if world_h() > config.H() { return 1 }
+        return 0
+    }
+
     int bg_r = 18
     int bg_g = 18
     int bg_b = 26
@@ -136,7 +171,7 @@ Block Stage {
         if ih < 1 { return }
 
         if mode == 1 {
-            image.resize(img, config.W(), config.H())
+            image.resize(img, world_w(), world_h())
             graph.draw_image(win, img, 0, 0)
             return
         }
@@ -144,7 +179,7 @@ Block Stage {
         if mode == 3 {
             int sw = math.to_int(math.to_float(iw) * img_scale)
             int sh = math.to_int(math.to_float(ih) * img_scale)
-            graph.draw_image(win, img, (config.W() - sw) / 2, (config.H() - sh) / 2, img_scale)
+            graph.draw_image(win, img, (world_w() - sw) / 2, (world_h() - sh) / 2, img_scale)
             return
         }
 
@@ -155,10 +190,10 @@ Block Stage {
         if th < 1 { th = 1 }
 
         int y = 0
-        while y < config.H() {
+        while y < world_h() {
             guard[0] = y
             int x = 0
-            while x < config.W() {
+            while x < world_w() {
                 guard[0] = x
                 graph.draw_image(win, img, x, y, img_scale)
                 x = x + tw

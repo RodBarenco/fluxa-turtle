@@ -14,8 +14,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -28,7 +28,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "video")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
@@ -54,7 +54,7 @@ a.ring(1, 3, 300.0, 25.0)
 // 15 + 90 + 15 = 120 frames, with no PNGs left behind.
 
 export.Video(1, 99, 30)
-runner.Runner.deliver(win, canvas, sheet, face, 0)
+runner.Runner.deliver(win, world, sheet, face, 0)
 
 print("frames rendered ......  ", export.Exporter.frames(), "   (expected 120: 15 + 90 + 15)")
 print("frames folder left ...  ", fs.isdir("export"), "   (expected false)")
@@ -85,7 +85,7 @@ if err != nil { print("read: ", err[0]) }
 // Nothing is written over: the next free name is taken.
 
 export.Video(1, 1, 30)
-runner.Runner.deliver(win, canvas, sheet, face, 0)
+runner.Runner.deliver(win, world, sheet, face, 0)
 print("second video .........  ", export.Exporter.video_path(), "   (expected artwork1.mp4)")
 print("the first one is still there  ", fs.exists("artwork.mp4"), "   (expected true)")
 
@@ -97,7 +97,7 @@ if err != nil { print("cleanup: ", err[0]) }
 // The other declaration: same range rules, PNGs kept on disk.
 
 export.Frames(2, 2, 30)
-runner.Runner.deliver(win, canvas, sheet, face, 0)
+runner.Runner.deliver(win, world, sheet, face, 0)
 
 print("frames exported ......  ", export.Exporter.frames(), "   (expected 60: 15 + 30 + 15)")
 print("frames folder ........  ", export.Exporter.frames_dir(), "   (expected export)")
@@ -127,9 +127,9 @@ if err != nil { print("read: ", err[0]) }
 // export/ is still on disk from step 3, so this one takes the next name.
 
 export.Frames(3, 3, 30)
-runner.Runner.deliver(win, canvas, sheet, face, 0)
+runner.Runner.deliver(win, world, sheet, face, 0)
 print("second frames run ....  ", export.Exporter.frames_dir(), "   (expected export1)")
 print("the first folder is still there  ", fs.exists("export/frame_000000.png"), "   (expected true)")
 
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

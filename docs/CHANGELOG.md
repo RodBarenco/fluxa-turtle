@@ -3,6 +3,51 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.25.0] — 2026-08-18
+
+### Added
+
+- **A stage larger than the window** — `stage.Stage.world(1600, 1200)`, up to
+  16384 px a side. The window becomes a hole you look at it through, with the
+  camera 0.24.0 added: it starts at the middle of the world, the wheel zooms,
+  the right button drags, `Z` comes back
+  ([adr 0024](adr/0024-a-world-larger-than-the-window.md)).
+
+  Not declared, the world **is** the window and every artwork draws exactly the
+  same pixels — the property the whole change was shaped around.
+
+- **`lab/world.flx`** — 1600×1200 through 800×600, four marks in four quarters,
+  the camera pointed at three places and each capture checked against the region
+  it should show. 120 frames cost 92 ms, one rebuild 6 ms. And the export's
+  camera measured against the wheel: left at 4x, the exported frame is
+  pixel-identical to the fitted whole-world view.
+
+### Changed
+
+- **The bake is an off-screen surface, not a captured image.** `Painter.bake` —
+  `graph.capture` plus `image.blit` into a window-sized image — is gone; the
+  rebuild draws straight into a `graph.render_target`
+  ([adr 0022](adr/0022-the-bake-can-be-larger-than-the-window.md)).
+- **`runner.Runner.play(win, part, snd, done)`** — the `canvas` argument is
+  gone, and so is the `prst dyn canvas` line every artwork opened with. It was
+  there so the bake could survive a save, which it never needed to: `play`
+  rebuilds on every pass. **Artworks written against the old signature need
+  those two lines removed.**
+- The background covers the world rather than the window — stretched, centred
+  and tiled all measure themselves against it.
+- The export's camera is computed from the stage, never read from the view, so
+  a video cannot inherit where somebody left the wheel.
+
+### Fixed
+
+- **A step that takes no time was cancelling itself.** The fraction of the step
+  in flight was written as `elapsed / duration`, and a jump to where the turtle
+  already stands has a duration of zero — a division by zero, which in this
+  runtime breaks the loop and carries on at the next statement. Two hundred of
+  those are the last thing the Leonardo artwork does, and every one was being
+  dropped in silence. `lab/toward.flx` measures it now, and `Runner.hit()` is
+  what lets a harness see a cancelled step at all.
+
 ## [0.24.0] — 2026-08-18
 
 ### Added

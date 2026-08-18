@@ -8,8 +8,8 @@ import std strings
 import std time
 import std fs
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -22,7 +22,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "stress")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 graph.set_fps(win, 0)
 
 stage.Stage.background(18, 18, 26)
@@ -58,14 +58,15 @@ int t1 = time.now_ms()
 pool.Pool.home_all()
 painter.Painter.reset()
 graph.begin_frame(win)
+graph.begin_render_target(win, world)
 stage.Stage.clear(win)
 int k = 1
 while k <= 3000 {
     runner.Runner.instant(win, sheet, face, 0, k)
     k = k + 1
 }
+graph.end_render_target(win)
 graph.end_frame(win)
-painter.Painter.bake(win, canvas)
 print("rebuild 3000 + bake ......... ms = ", time.elapsed_ms(t1))
 
 // per-frame cost with the whole artwork in the texture
@@ -73,12 +74,14 @@ int t2 = time.now_ms()
 int f = 0
 while f < 120 {
     upto_all = timeline.Timeline.max_step()
-    runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+    runner.Runner.shown(win, world, sheet, face, 0, upto_all)
     f = f + 1
 }
 print("live stage .................. ms/frame = ", time.elapsed_ms(t2) / 120)
 
-danger { image.save(canvas, "lab/stress.png") }
+// The bake is a surface now, not an image, so what gets saved is the window
+// showing it — which is the same pixels while the world is the window's size.
+danger { dyn q = graph.capture(win)  image.save(q, "lab/stress.png")  image.discard(q) }
 if err != nil { print("save: ", err[0]) }
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

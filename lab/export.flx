@@ -11,8 +11,8 @@ import std strings
 import std time
 import std fs
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -25,7 +25,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "export")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)      // one cleared frame, so the window is not the desktop
@@ -59,7 +59,7 @@ export.Exporter.setup("lab/frames", 30)
 export.Exporter.hold(5, 5)
 
 int t0 = time.now_ms()
-runner.Runner.export(win, canvas, sheet, face, 0)
+runner.Runner.export(win, world, sheet, face, 0)
 int took = time.elapsed_ms(t0)
 
 print("")
@@ -67,5 +67,5 @@ print("frames generated ..... ", export.Exporter.frames(), "  (expected 70: 5 + 
 print("generation time ...... ", took, " ms")
 print("video duration ....... ", math.to_float(export.Exporter.frames()) / 30.0, " s at 30 fps")
 
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

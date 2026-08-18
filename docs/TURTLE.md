@@ -891,6 +891,31 @@ rebuild, once per save, and goes into the baked texture, so it costs nothing per
 frame. A file that cannot be read prints why and the drawing carries on
 ([adr 0011](adr/0011-the-artwork-file-declares.md)).
 
+### `stage.Stage.world(w, h)`
+
+The stage can be larger than the window, and then the window is a hole you look
+at it through.
+
+```fluxa
+stage.Stage.world(1600, 1200)     // the window stays whatever config.W/H says
+```
+
+The camera starts at the middle of it: the wheel zooms, the right button drags,
+`Z` comes back to the middle at 1:1. Up to 16384 px a side, which is the
+library's own ceiling for an off-screen surface.
+
+Not declared, the world **is** the window, and nothing changes.
+
+What it costs: nothing per frame worth measuring — the bake is one surface
+either way and drawing it is one call
+([adr 0024](adr/0024-a-world-larger-than-the-window.md)). What it costs in
+memory is four bytes a pixel, so a 4000×3000 world is 48 MB.
+
+**In an export**, the video is the whole world, fitted into the frame and
+centred — never wherever the wheel was left, because a video renders by frame
+index and two renders have to be identical. A still at the world's own
+resolution is not there yet: `graph.capture` sees the window.
+
 ### `stage.Stage.font(path, size)`
 
 The typeface [`text`](#textstep-x-y-string-size--step) is drawn in — any TTF.

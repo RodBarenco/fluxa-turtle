@@ -12,8 +12,8 @@ import std strings
 import std time
 import std fs
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -26,7 +26,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "speed")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 graph.set_fps(win, 60)
 
 stage.Stage.background(18, 18, 26)
@@ -76,25 +76,25 @@ print("--- step | expected | measured (seconds) ---")
 pool.Pool.home_all()
 painter.Painter.reset()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
+runner.Runner.rebuild(win, world, sheet, face, 0, 0)
 
 int t1 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
+runner.Runner.animate(win, world, sheet, face, 0, part, 1)
 print("  1    |   2.00   | ", math.to_float(time.elapsed_ms(t1)) / 1000.0)
 
 int t2 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 2)
+runner.Runner.animate(win, world, sheet, face, 0, part, 2)
 print("  2    |   0.75   | ", math.to_float(time.elapsed_ms(t2)) / 1000.0)
 
 int t3 = time.now_ms()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 3)
+runner.Runner.animate(win, world, sheet, face, 0, part, 3)
 print("  3    |   4.00   | ", math.to_float(time.elapsed_ms(t3)) / 1000.0)
 
 print("final position slow  x=", pool.Pool.get_x(0), " (expected 300)")
 print("final position fast  x=", pool.Pool.get_x(1), " (expected 800)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/speed.png")
@@ -102,5 +102,5 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

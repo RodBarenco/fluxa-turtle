@@ -25,8 +25,8 @@ import std fs
 import std video
 import std sound
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -39,7 +39,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "audio")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 pool.Pool.reset()
 timeline.Timeline.reset()
@@ -118,16 +118,16 @@ print("hash now stored .......  ", math.to_int(snd[5]) != 12345, "   (expected t
 // ── the rebuild is silent ─────────────────────────────────────────
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 4)
+runner.Runner.rebuild(win, world, sheet, face, 0, 4)
 print("cues after a rebuild .  ", audio.Audio.fires(), "   (expected 0 — a redraw must not make noise)")
 
 // ── and the animation is not ──────────────────────────────────────
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
+runner.Runner.rebuild(win, world, sheet, face, 0, 0)
 int s = 1
 while s <= 4 {
-    runner.Runner.animate(win, canvas, sheet, face, 0, part, s)
+    runner.Runner.animate(win, world, sheet, face, 0, part, s)
     s = s + 1
 }
 print("cues after four steps   ", audio.Audio.fires(),
@@ -164,15 +164,15 @@ audio.Audio.open(snd)
 
 int was = audio.Audio.fires()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 8)
+runner.Runner.rebuild(win, world, sheet, face, 0, 8)
 print("steps heard on rebuild  ", audio.Audio.fires() - was, "   (expected 0 — a redraw is still silent)")
 
 was = audio.Audio.fires()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 4)
+runner.Runner.rebuild(win, world, sheet, face, 0, 4)
 int k = 5
 while k <= 8 {
-    runner.Runner.animate(win, canvas, sheet, face, 0, part, k)
+    runner.Runner.animate(win, world, sheet, face, 0, part, k)
     k = k + 1
 }
 print("steps heard, 5 to 8 ..  ", audio.Audio.fires() - was, "   (expected 4 — 300 ms a step, none dropped)")
@@ -194,10 +194,10 @@ while q <= 20 {
 }
 was = audio.Audio.fires()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
+runner.Runner.rebuild(win, world, sheet, face, 0, 0)
 int r = 1
 while r <= 20 {
-    runner.Runner.animate(win, canvas, sheet, face, 0, part, r)
+    runner.Runner.animate(win, world, sheet, face, 0, part, r)
     r = r + 1
 }
 int rapid = audio.Audio.fires() - was
@@ -228,9 +228,9 @@ e.path_width(3)
 e.go(1, 200.0, 0.0)
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
+runner.Runner.rebuild(win, world, sheet, face, 0, 0)
 int hb = audio.Audio.fires()
-runner.Runner.animate(win, canvas, sheet, face, 0, part, 1)
+runner.Runner.animate(win, world, sheet, face, 0, part, 1)
 print("")
 print("step 1 made a sound ..  ", audio.Audio.fires() - hb, "   (expected 1)")
 print("playing after step 1 .  ", audio.Audio.heard(), "   (expected 1 — a 4470 ms sound on a 100 ms step)")
@@ -238,7 +238,7 @@ print("playing after step 1 .  ", audio.Audio.heard(), "   (expected 1 — a 447
 int fr = 0
 while fr < 12 {
     upto_all = timeline.Timeline.max_step()
-    runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+    runner.Runner.shown(win, world, sheet, face, 0, upto_all)
     audio.Audio.tick()
     time.sleep(10)
     fr = fr + 1
@@ -250,17 +250,17 @@ print("after 120 ms of frames  ", audio.Audio.heard(), "   (expected 0 — faded
 int before = audio.Audio.fires()
 audio.Audio.mute(1)
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, 0)
+runner.Runner.rebuild(win, world, sheet, face, 0, 0)
 int t = 1
 while t <= 4 {
-    runner.Runner.animate(win, canvas, sheet, face, 0, part, t)
+    runner.Runner.animate(win, world, sheet, face, 0, part, t)
     t = t + 1
 }
 audio.Audio.mute(0)
 print("cues while muted .....  ", audio.Audio.fires() - before, "   (expected 0)")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 danger {
     dyn shot = graph.capture(win)
     image.save(shot, "lab/audio.png")
@@ -270,5 +270,5 @@ if err != nil { print("capture: ", err[0]) }
 
 time.sleep(400)
 image.discard(sheet)
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)

@@ -1,7 +1,7 @@
 // static/painter.flx — the trail the turtles leave behind
 //
 // The whole artwork's path lives in a texture: at the start of every run the
-// finished composition is redrawn once and "baked" into the canvas with
+// finished composition is redrawn once and "baked" into the surface with
 // graph.capture + image.blit. From then on the path costs ONE graph.draw_image
 // per frame — the texture stays cached on the GPU and is only re-uploaded when
 // the pixels change. The per-frame cost does not depend on the artwork's size.
@@ -126,19 +126,11 @@ Block Painter {
         return 0
     }
 
-    // Pins the just-presented frame into the path texture.
-    // graph.capture only sees the COMPLETE frame, so this has to come after
-    // end_frame. The blit copies over the buffer that already exists,
-    // preserving the canvas handle — which is what allows re-baking from
-    // inside a method without returning any dyn.
-    fn bake(dyn win, dyn canvas) nil {
-        danger {
-            dyn shot = graph.capture(win)
-            image.blit(canvas, shot, 0, 0)
-            image.discard(shot)
-        }
-        if err != nil { print("[painter] bake: ", err[0]) }
-    }
+    // The bake used to live here: capture the presented frame and blit it into
+    // an image the size of the window. It is gone, and what replaced it is one
+    // line in the runner — the rebuild draws straight into an off-screen
+    // surface. That surface can be larger than the window, which a capture
+    // never could be (adr 0022).
 
     // Opacity without an alpha channel: graph.draw_line only takes R, G and B,
     // so transparency is obtained by mixing the colour with the background.

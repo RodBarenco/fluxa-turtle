@@ -16,11 +16,11 @@
 // Measured, one thing changed at a time, each case in a file of its own so
 // nothing earlier can be blamed for it:
 //
-//   rebuild(win, canvas, sheet, face, 0, Timeline.max_step())  outside a loop   ok
-//   shown(win, canvas, sheet, face, 0, Timeline.max_step())    outside a loop   ok
-//   shown(win, canvas, sheet, face, 0, 1)                      inside a loop    ok
-//   rebuild(win, canvas, sheet, face, 0, Timeline.max_step())  inside a loop    FAILS
-//   shown(win, canvas, sheet, face, 0, Timeline.max_step())    inside a loop    FAILS
+//   rebuild(win, world, sheet, face, 0, Timeline.max_step())  outside a loop   ok
+//   shown(win, world, sheet, face, 0, Timeline.max_step())    outside a loop   ok
+//   shown(win, world, sheet, face, 0, 1)                      inside a loop    ok
+//   rebuild(win, world, sheet, face, 0, Timeline.max_step())  inside a loop    FAILS
+//   shown(win, world, sheet, face, 0, Timeline.max_step())    inside a loop    FAILS
 //
 // Two things about the failure itself:
 //
@@ -49,8 +49,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -63,7 +63,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(400, 300, "repro")
-dyn canvas = image.new(400, 300)
+dyn world  = graph.render_target(win, 400, 300)   // the bake (adr 0022)
 pool.Pool.reset()
 timeline.Timeline.reset()
 dyn sheet = pool.Pool.atlas()
@@ -77,13 +77,13 @@ a.hide()
 a.go(1, 100.0, 0.0)
 
 // Fine.
-runner.Runner.rebuild(win, canvas, sheet, face, 0, timeline.Timeline.max_step())
+runner.Runner.rebuild(win, world, sheet, face, 0, timeline.Timeline.max_step())
 print("outside a loop: ok")
 
 // Fine: the last argument is a literal.
 int k = 0
 while k < 2 {
-    runner.Runner.shown(win, canvas, sheet, face, 0, 1)
+    runner.Runner.shown(win, world, sheet, face, 0, 1)
     k = k + 1
 }
 print("a literal argument inside a loop: ok")
@@ -91,7 +91,7 @@ print("a literal argument inside a loop: ok")
 // This one dies.
 int j = 0
 while j < 2 {
-    runner.Runner.shown(win, canvas, sheet, face, 0, timeline.Timeline.max_step())
+    runner.Runner.shown(win, world, sheet, face, 0, timeline.Timeline.max_step())
     j = j + 1
 }
 print("a method call as an argument inside a loop: ok — the bug is fixed")

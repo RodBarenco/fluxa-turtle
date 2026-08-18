@@ -14,8 +14,8 @@ import std time
 import std fs
 import std video
 import static config
-import static view
 import static stage
+import static view
 import static pool
 import static timeline
 import static painter
@@ -28,7 +28,7 @@ import static panel
 import static runner
 
 dyn win    = graph.init(800, 600, "limits")
-dyn canvas = image.new(800, 600)
+dyn world  = graph.render_target(win, 800, 600)   // the bake (adr 0022)
 
 stage.Stage.background(18, 18, 26)
 runner.Runner.open(win)
@@ -104,11 +104,11 @@ print("empty step 3000 ......  ", timeline.Timeline.action_of(7, 3000), "   (exp
 // number that says what a runaway artwork would cost.
 int t1 = time.now_ms()
 upto_all = timeline.Timeline.max_step()
-runner.Runner.rebuild(win, canvas, sheet, face, 0, config.MAX_STEPS())
+runner.Runner.rebuild(win, world, sheet, face, 0, config.MAX_STEPS())
 print("rebuild of ", config.MAX_STEPS(), " steps   ", time.elapsed_ms(t1), " ms")
 
 upto_all = timeline.Timeline.max_step()
-runner.Runner.shown(win, canvas, sheet, face, 0, upto_all)
+runner.Runner.shown(win, world, sheet, face, 0, upto_all)
 
 danger {
     dyn shot = graph.capture(win)
@@ -117,5 +117,5 @@ danger {
 }
 if err != nil { print("capture: ", err[0]) }
 
-image.discard(canvas)
+graph.release_render_target(win, world)
 graph.close(win)
