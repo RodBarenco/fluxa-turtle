@@ -25,6 +25,7 @@ import std fs
 import std video
 import std sound
 import static config
+import static view
 import static stage
 import static pool
 import static timeline

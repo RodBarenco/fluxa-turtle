@@ -5,6 +5,7 @@ import std strings
 import std time
 import std fs
 import static config
+import static view
 import static stage
 import static pool
 import static timeline

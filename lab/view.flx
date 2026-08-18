@@ -1,0 +1,145 @@
+// lab/view.flx — the camera over the artwork
+//
+// Looking closer is not part of the artwork, and that is the whole design. So
+// what this measures is as much about what the camera does NOT touch:
+//
+//   1. untouched, it is not applied at all — the same pixels as before it
+//      existed;
+//   2. `home()` is the same as untouched, to the pixel;
+//   3. pointed and zoomed, the world lands where the arithmetic says;
+//   4. the round trip screen -> world -> screen is the identity;
+//   5. the zoom is clamped at both ends;
+//   6. what it costs a frame.
+//
+//   ./fluxa run lab/view.flx
+
+import std graph
+import std image
+import std math
+import std strings
+import std time
+import std fs
+import std video
+import static config
+import static view
+import static stage
+import static pool
+import static timeline
+import static painter
+import static label
+import static font
+import static turtle
+import static export
+import static audio
+import static panel
+import static runner
+
+dyn win    = graph.init(800, 600, "view")
+dyn canvas = image.new(800, 600)
+pool.Pool.reset()
+timeline.Timeline.reset()
+dyn sheet = pool.Pool.atlas()
+dyn face  = image.new(1, 1)
+stage.Stage.background(18, 18, 26)
+runner.Runner.open(win)
+
+Block a typeof turtle.Turtle
+a.spawn(200.0, 300.0)
+a.hide()
+a.speed(900.0)
+a.path_color(255, 200, 60)
+a.path_width(4)
+a.go(1, 400.0, 0.0)          // a bar from (200,300) to (600,300)
+
+int upto = timeline.Timeline.max_step()
+runner.Runner.rebuild(win, canvas, sheet, face, 0, upto)
+
+// ── 1: untouched ──────────────────────────────────────────────────
+print("untouched, idle .......  ", view.View.idle(), "   (expected 1 — the camera is not applied at all)")
+runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+danger { dyn q = graph.capture(win)  image.save(q, "lab/view-plain.png")  image.discard(q) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 2: home is the same thing ─────────────────────────────────────
+view.View.home()
+print("after home(), idle ....  ", view.View.idle(), "   (expected 1)")
+runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+danger { dyn q2 = graph.capture(win)  image.save(q2, "lab/view-home.png")  image.discard(q2) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 3: pointed and zoomed ─────────────────────────────────────────
+//
+// The bar's left end is at world (200,300). Looking at (200,300) at 2x puts
+// that end in the middle of the window, and the bar runs to the right edge and
+// past it: 400 px of world at 2x is 800 px of screen.
+view.View.look(200.0, 300.0, 2.0)
+print("pointed, idle .........  ", view.View.idle(), "   (expected 0)")
+runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+danger { dyn q3 = graph.capture(win)  image.save(q3, "lab/view-zoom.png")  image.discard(q3) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 3b: the panel does not zoom with it ───────────────────────────
+//
+// The camera wraps the artwork and stops. The panel and the key line are drawn
+// after it closes, so they are the same pixels at any zoom — which is what
+// makes them readable while you are looking at a corner of the drawing.
+panel.Panel.at(1, upto, 1)
+view.View.home()
+runner.Runner.frame(win, canvas, sheet, face, 0, upto)
+panel.Panel.draw(win)
+graph.end_frame(win)
+danger { dyn p1 = graph.capture(win)  image.save(p1, "lab/view-panel-plain.png")  image.discard(p1) }
+if err != nil { print("capture: ", err[0]) }
+
+view.View.look(200.0, 300.0, 2.0)
+runner.Runner.frame(win, canvas, sheet, face, 0, upto)
+panel.Panel.draw(win)
+graph.end_frame(win)
+danger { dyn p2 = graph.capture(win)  image.save(p2, "lab/view-panel-zoom.png")  image.discard(p2) }
+if err != nil { print("capture: ", err[0]) }
+
+// ── 4: the round trip ─────────────────────────────────────────────
+//
+// world_x is what the wheel uses to keep the point under the cursor still, so
+// it has to be the exact inverse of the transform the library draws with.
+float wx = view.View.world_x(400)
+float wy = view.View.world_y(300)
+print("centre of the screen ..  ", wx, " , ", wy, "   (expected 200 , 300 — what we are looking at)")
+float ex = view.View.world_x(800)
+print("the right edge ........  ", ex, "   (expected 400 — 200 plus half a window at 2x)")
+
+// ── 5: the clamps ─────────────────────────────────────────────────
+view.View.look(400.0, 300.0, 40.0)
+print("zoom asked 40 .........  ", view.View.get_zoom(), "   (expected 8)")
+view.View.look(400.0, 300.0, 0.01)
+print("zoom asked 0.01 .......  ", view.View.get_zoom(), "   (expected 0.2)")
+
+// ── 6: what it costs ──────────────────────────────────────────────
+graph.set_fps(win, 0)
+view.View.home()
+int t0 = time.now_ms()
+int i = 0
+while i < 120 {
+    runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+    i = i + 1
+}
+int plain_ms = time.elapsed_ms(t0)
+
+view.View.look(300.0, 300.0, 2.5)
+t0 = time.now_ms()
+i = 0
+while i < 120 {
+    runner.Runner.shown(win, canvas, sheet, face, 0, upto)
+    i = i + 1
+}
+print("120 frames, no camera .  ", plain_ms, " ms")
+print("120 frames, zoomed 2.5x  ", time.elapsed_ms(t0), " ms")
+
+view.View.home()
+graph.close(win)
+print("")
+print("compared by script, as in lab/rewind.flx:")
+print("  view-plain.png must EQUAL view-home.png — an untouched camera changes nothing")
+print("  view-zoom.png: the bar starts at x=400 and runs off the right edge, 8 px tall")
+print("  view-panel-plain.png and view-panel-zoom.png must differ ONLY in the bar's rows —")
+print("  the panel and the key line are drawn after the camera closes")

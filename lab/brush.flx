@@ -20,6 +20,7 @@ import std time
 import std fs
 import std video
 import static config
+import static view
 import static stage
 import static pool
 import static timeline

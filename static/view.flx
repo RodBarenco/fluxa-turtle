@@ -1,0 +1,147 @@
+// static/view.flx — looking closer at the artwork
+//
+// The camera over what is drawn: the wheel zooms at the cursor, the right
+// button drags, and `0` puts it back. It is a way of LOOKING, not part of the
+// artwork — nothing here is a step, nothing is saved, nothing reaches the bake
+// and nothing reaches the export.
+//
+// That last one is the rule that matters. A video renders by frame index and
+// two renders have to be identical (adr 0006), so the export never asks this
+// Block for anything. Neither does the rebuild: the bake is the artwork at 1:1,
+// and the camera is applied when the bake is drawn to the window, not while it
+// is being painted.
+//
+// The transform is arithmetic here rather than a call to
+// `graph.screen_to_world`, because that one answers from the camera the library
+// currently has active — and the keys are read after `end_frame`, where there
+// is none. The convention is the library's own: the offset is the window
+// centre, so
+//
+//     screen = (world - target) * zoom + centre
+//     world  = (screen - centre) / zoom + target
+//
+// which is what puts the point under the cursor back under the cursor after a
+// zoom.
+
+Block View {
+    float zoom = 1.0
+    float tx   = 0.0        // the world point at the centre of the window
+    float ty   = 0.0
+    int   set  = 0          // has the target been given the window's centre yet
+
+    int   drag  = 0
+    float grabx = 0.0       // the world point the drag grabbed, which has to
+    float graby = 0.0       // stay under the pointer for the whole drag
+
+    fn home() nil {
+        tx   = math.to_float(config.W()) * 0.5
+        ty   = math.to_float(config.H()) * 0.5
+        zoom = 1.0
+        set  = 1
+        drag = 0
+    }
+
+    fn ensure() nil {
+        if set == 0 { home() }
+    }
+
+    // Untouched, the camera is the identity — and then it is not applied at
+    // all, so an artwork nobody has zoomed draws exactly the same pixels it did
+    // before this Block existed. Harnesses depend on that, and so does anyone
+    // comparing a capture against one taken last week.
+    fn idle() int {
+        if set == 0 { return 1 }
+        if zoom != 1.0 { return 0 }
+        if tx != math.to_float(config.W()) * 0.5 { return 0 }
+        if ty != math.to_float(config.H()) * 0.5 { return 0 }
+        return 1
+    }
+
+    fn on(dyn win) nil {
+        if idle() == 1 { return }
+        graph.begin_cam2d(win, tx, ty, 0.0, zoom)
+    }
+
+    fn off(dyn win) nil {
+        if idle() == 1 { return }
+        graph.end_cam2d(win)
+    }
+
+    // The camera set from code. The wheel and the drag end up here, and so
+    // does a harness — a key cannot be pressed from one, and a camera nobody
+    // can point is a camera nobody can measure.
+    //
+    // It is deliberately not on the turtle and not a step: the export ignores
+    // this Block entirely, so an artwork that "zoomed" would render one thing
+    // on screen and another into the video.
+    fn look(float x, float y, float z) nil {
+        ensure()
+        tx = x
+        ty = y
+        zoom = z
+        if zoom < 0.2 { zoom = 0.2 }
+        if zoom > 8.0 { zoom = 8.0 }
+    }
+
+    fn get_zoom() float { return zoom }
+    fn get_x()    float { return tx }
+    fn get_y()    float { return ty }
+
+    fn world_x(int sx) float {
+        return (math.to_float(sx) - math.to_float(config.W()) * 0.5) / zoom + tx
+    }
+
+    fn world_y(int sy) float {
+        return (math.to_float(sy) - math.to_float(config.H()) * 0.5) / zoom + ty
+    }
+
+    // Read once per presented frame, next to the hotkeys, for the same reason
+    // they are: raylib holds `pressed` true for the whole frame, so a second
+    // read inside one frame counts a press twice (adr 0015).
+    fn input(dyn win) nil {
+        ensure()
+
+        int mx = graph.mouse_x(win)
+        int my = graph.mouse_y(win)
+
+        int w = graph.mouse_wheel(win)
+        if w != 0 {
+            // The point under the cursor before the zoom is the point under it
+            // after: take it, scale, then move the target so it lands back.
+            float wx = world_x(mx)
+            float wy = world_y(my)
+
+            float f = 1.0
+            if w > 0 { f = 1.25 }
+            if w < 0 { f = 0.8 }
+            zoom = zoom * f
+            if zoom < 0.2 { zoom = 0.2 }
+            if zoom > 8.0 { zoom = 8.0 }
+
+            tx = wx - (math.to_float(mx) - math.to_float(config.W()) * 0.5) / zoom
+            ty = wy - (math.to_float(my) - math.to_float(config.H()) * 0.5) / zoom
+        }
+
+        // The RIGHT button drags. The left one is left alone: the studio wants
+        // it, and a tool that pans when you click on the artwork is a tool that
+        // cannot be clicked on.
+        if graph.mouse_btn_pressed(win, "RIGHT") {
+            drag  = 1
+            grabx = world_x(mx)
+            graby = world_y(my)
+        }
+        if graph.mouse_btn_down(win, "RIGHT") == false { drag = 0 }
+
+        if drag == 1 {
+            tx = grabx - (math.to_float(mx) - math.to_float(config.W()) * 0.5) / zoom
+            ty = graby - (math.to_float(my) - math.to_float(config.H()) * 0.5) / zoom
+        }
+
+        // Z, and 0 for the people whose fingers expect it there. An unknown
+        // key name is silently false on this backend rather than an error, and
+        // a key cannot be pressed from a harness, so the letter is the one the
+        // key line promises and the digit is a courtesy.
+        if graph.key_pressed(win, "Z") { home() }
+        if graph.key_pressed(win, "0") { home() }
+    }
+}

@@ -384,6 +384,11 @@ Block Runner {
         }
         if graph.key_pressed(win, "RIGHT") { forward = 1 }
         if graph.key_pressed(win, "LEFT")  { back = 1 }
+
+        // The wheel zooms, the right button drags, Z puts it back. Read here
+        // and nowhere else, for the reason every key in this function is
+        // (adr 0015).
+        view.View.input(win)
     }
 
     // The whole video in one call: from which step, to which step, and how many
@@ -543,10 +548,17 @@ Block Runner {
     fn frame(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int upto) nil {
         graph.begin_frame(win)
         stage.Stage.clear(win)
+        // The camera is a way of looking, so it wraps the ARTWORK and stops
+        // there: the panel and the key line are drawn by the caller, after this
+        // returns, and stay where they are however far in you zoom. An export
+        // never has one — a video renders by frame index and two renders have
+        // to be identical (adr 0006).
+        if exporting == 0 { view.View.on(win) }
         graph.draw_image(win, canvas, 0, 0)
         painter.Painter.draw(win, sheet)
         label.Label.draw_fresh(win, face, has_face, upto)
         pool.Pool.draw(win, sheet)
+        if exporting == 0 { view.View.off(win) }
     }
 
     fn shown(dyn win, dyn canvas, dyn sheet, dyn face, int has_face, int upto) nil {
@@ -762,6 +774,7 @@ Block Runner {
 
             graph.begin_frame(win)
             stage.Stage.clear(win)
+            if exporting == 0 { view.View.on(win) }
             graph.draw_image(win, canvas, 0, 0)
             painter.Painter.draw(win, sheet)
             label.Label.draw_fresh(win, face, has_face, s)
@@ -783,6 +796,7 @@ Block Runner {
             }
 
             pool.Pool.draw(win, sheet)
+            if exporting == 0 { view.View.off(win) }
             if exporting == 0 { panel.Panel.draw(win) }
             graph.end_frame(win)
 
@@ -890,6 +904,7 @@ Block Runner {
 
             graph.begin_frame(win)
             stage.Stage.clear(win)
+            view.View.on(win)
             graph.draw_image(win, canvas, 0, 0)
             painter.Painter.draw(win, sheet)
             label.Label.draw_fresh(win, face, has_face, s)
@@ -912,6 +927,7 @@ Block Runner {
             }
 
             pool.Pool.draw(win, sheet)
+            view.View.off(win)
             panel.Panel.draw(win)
             graph.end_frame(win)
             hotkeys(win)

@@ -162,9 +162,9 @@ Block Panel {
     // nothing here for the frame loop to allocate.
     fn keys() str {
         if audio.Audio.is_off() == 1 {
-            return "SPACE pause    RIGHT one step    LEFT back one    R replay    F fullscreen    P panel    A sound off"
+            return "SPACE pause   RIGHT one step   LEFT back one   R replay   F fullscreen   P panel   A sound off   WHEEL zoom   Z reset"
         }
-        return "SPACE pause    RIGHT one step    LEFT back one    R replay    F fullscreen    P panel    A sound"
+        return "SPACE pause   RIGHT one step   LEFT back one   R replay   F fullscreen   P panel   A sound   WHEEL zoom   Z reset"
     }
 
     // The keys, along the bottom. A fixed string: nothing to cache and nothing

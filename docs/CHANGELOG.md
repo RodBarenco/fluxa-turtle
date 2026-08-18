@@ -3,6 +3,38 @@
 All notable changes to this project.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.24.0] — 2026-08-18
+
+### Added
+
+- **Look closer** — the wheel zooms at the cursor (0.2x to 8x), the right button
+  drags, `Z` goes back to 1:1.
+
+  A **way of looking**, and the line is drawn on purpose
+  ([adr 0023](adr/0023-the-camera-is-a-way-of-looking.md)): it is not a step,
+  not on the turtle, not in the timeline, and **the export ignores it entirely**
+  — a video renders by frame index and two renders have to be identical
+  ([adr 0006](adr/0006-deterministic-render-by-frame-index.md)). The camera
+  wraps the artwork and closes before the panel is drawn, so the panel and the
+  key line stay put and stay readable at any zoom; measured, two captures at 1x
+  and 2x differ only in the rows the stroke occupies. Untouched it is not
+  applied at all, so every capture this project has ever compared still matches.
+
+  The transform is arithmetic in `static/view.flx` rather than
+  `graph.screen_to_world`, because that one answers from the camera the library
+  currently has active and the keys are read after `end_frame`, where there is
+  none.
+
+- **`lab/view.flx`** — six claims: untouched is idle; `home()` is pixel-identical
+  to untouched; looking at (200,300) at 2x puts world 200 at screen 400 and the
+  right edge at world 400; the screen→world round trip is exact; the zoom clamps
+  at both ends; and 120 frames zoomed cost the same as 120 frames flat.
+
+### Changed
+
+- The key line reads `… A sound   WHEEL zoom   Z reset`.
+- `README.md` had the sound key twice in the key table; once now.
+
 ## [0.23.0] — 2026-08-18
 
 ### Added

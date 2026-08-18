@@ -467,7 +467,7 @@ three captures after `←` back to them, pixel-identical.
 
 ---
 
-## Sprint 9 — Camera, layers, a scene larger than the screen
+## Sprint 9 — Camera, layers, a scene larger than the screen — HALF DONE
 
 **Deliver:** the expansions' "Camadas de renderização", "Sistema de câmera com
 deslocamento e zoom" and "Cenários maiores que a área visível" — three items,
@@ -527,10 +527,24 @@ So the "if yes" branch is the real one. One thing does not follow:
 `graph.capture` inside a render target still returns the **window**, so a
 world-sized still has to be taken in tiles.
 
+**First half — DONE (project 0.24.0),
+[adr 0023](adr/0023-the-camera-is-a-way-of-looking.md).** The camera over the
+artwork: wheel zooms at the cursor, right button drags, `Z` resets. A way of
+looking — not a step, not in the timeline, ignored by the export, and not
+applied at all while it is untouched. `lab/view.flx` measures six claims.
+
+**Second half — the world.** `stage.Stage.world(w, h)`, the bake moved from
+`graph.capture` + `image.blit` into a `graph.render_target` of that size, and
+layers as several such surfaces composited in order. 0022 has the numbers; what
+it does not answer, and what to settle first, is whether a `prst dyn` render
+target survives a save the way the window does.
+
 **Gate out:** a harness that draws a scene larger than the window, points the
 camera at three places, and checks each capture against the region it should
-show; the per-frame cost of a camera measured against no camera; and the bake
-strategy recorded in an ADR that supersedes the relevant part of adr 0003.
+show; the per-frame cost of a camera measured against no camera (**done**: 120
+frames at 2.5x against 120 at 1x, inside the noise); and the bake strategy
+recorded in an ADR that supersedes the relevant part of adr 0003 (**done**:
+adr 0022).
 
 ---
 

@@ -965,6 +965,16 @@ composition. With the window focused:
 | **←** | One step back, animated in reverse. |
 | **R** | Replay from step 1. |
 | **F** | Fullscreen, and back. |
+| **wheel** | Zoom, at the cursor: the point under the pointer stays under it. 0.2x to 8x. |
+| **right drag** | Pan. The left button is left alone. |
+| **Z** | Back to 1:1. |
+
+The camera is a way of **looking**, not part of the artwork: it is not a step,
+it does not reach the bake, and the export ignores it entirely — a video renders
+by frame index and two renders have to be identical
+([adr 0006](adr/0006-deterministic-render-by-frame-index.md)). The panel and the
+key line are drawn after it closes, so they stay put and stay readable at any
+zoom. Untouched, it is not applied at all: the same pixels as before it existed.
 
 ### The panel
 

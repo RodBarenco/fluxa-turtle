@@ -386,7 +386,6 @@ With the window focused:
 
 | Key | What it does |
 |---|---|
-| **A** | Sound off, and A again to bring it back. |
 | **A** | Sound off, and A again to bring it back. Off does not survive a save; the soundtrack does. |
 | **P** | The panel. Which step the artwork is on, how many were declared, how many actions and how many were ignored, and one line per turtle with her colour, position, heading and whether the pen is down. Off by default, and never in an export. |
 | **SPACE** | Pause, and SPACE again to carry on. Paused, the drawing stays exactly where it stopped — including in the middle of a movement. |
@@ -396,6 +395,7 @@ With the window focused:
 Neither arrow needs SPACE first — pressing one pauses the stage by itself.
 | **R** | Replay. The artwork is redone from step 1, animated, the way someone would see the whole composition at once. Same code path as normal execution — it is not a recording. |
 | **F** | Fullscreen, and F again to come back. Made for two monitors: the code on one, the artwork filling the other. The stage keeps its proportions, scaled up with bars on the sides if the screen is wider. |
+| **wheel** · **right drag** · **Z** | Look closer: zoom at the cursor from 0.2x to 8x, drag to pan, Z back to 1:1. A way of looking and nothing more — it is not a step, it never reaches the video, and the panel stays where it is at any zoom. |
 
 Pause and walk one step at a time is the honest way to answer "why did it draw
 *that*": the panel tells you where the turtle is and where she is pointing, `→`
